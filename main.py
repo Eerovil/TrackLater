@@ -3,6 +3,7 @@
 
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
+import requests
 import json
 
 parser = ArgumentParser()
@@ -16,6 +17,8 @@ parser.add_argument("-n", "--consecutive", dest="consecutive",
                     help="consecutive")
 parser.add_argument("-c", "--cutoff", dest="cutoff",
                     help="cutoff", default=60, type=int)
+parser.add_argument("-a", "--api_key", dest="api_key",
+                    help="api_key")
 
 def main():
     filename = args.filename
@@ -34,6 +37,7 @@ def main():
         sessions = SessionGenerator(snapshots)
         sessions.generate()
     
+    toggl = Toggl(args.api_key)
     
     while True:
         sessions.print_sessions()
@@ -49,16 +53,40 @@ def main():
             if command == 'w':
                 sessions.sessions[selection].print_windows()
             elif command == 'p':
-                push_session(sessions.sessions[selection])
-        except:
+                toggl.push_session(sessions.sessions[selection - 1])
+        except Exception as e:
+            print(e)
             pass
 
-def push_session(session):
-    uinput = raw_input("Name: ")
-    if uinput == 'q' or len(uinput) == 0:
-        return
-    print('Pushed session to toggl')
-    pass
+class Toggl():
+    def __init__(self, api_key):
+        response = requests.get('https://www.toggl.com/api/v8/me', auth=(api_key, 'api_token'))
+        data = response.json()['data']
+        self.api_key = api_key
+        self.email = data['email']
+        self.default_wid = data['default_wid']
+        self.id = data['id']
+
+    def push_session(self, session):
+        uinput = raw_input("Name: ")
+        if uinput == 'q':
+            return
+        headers = {
+            "Content-Type": "application/json"
+        }
+        data = {
+            'time_entry': {
+                "description": uinput,
+                "start":session.start_time.isoformat() + '+03:00',
+                "duration":(session.end_time - session.start_time).seconds,
+                "created_with":"thyme-toggl-cli"
+            }
+        }
+        response = requests.post(
+            'https://www.toggl.com/api/v8/time_entries',
+            data=json.dumps(data), headers=headers, auth=(self.api_key, 'api_token'))
+        print(u'Pushed session to toggl: {}'.format(response.text))
+        pass
 
 def get_window_name(snapshot):
     if snapshot is None:
