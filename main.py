@@ -32,12 +32,17 @@ def main():
             _date = date.today() - timedelta(days=int(args.yesterday or 0))
         filename = '../thyme/{}.json'.format(_date.strftime('%Y-%m-%d'))
 
+    toggl_start_date = datetime.combine(_date - timedelta(days=1), datetime.min.time(), )
+
     filenames = [filename]
     if args.consecutive:
         for i in range(args.consecutive):
             _date = _date + timedelta(days=1)
             filenames.append('../thyme/{}.json'.format(_date.strftime('%Y-%m-%d')))
 
+    toggl_end_date = datetime.combine(_date + timedelta(days=1), datetime.min.time())
+
+    toggl.time_entries = toggl.get_time_entries(start_time=toggl_start_date, end_time=toggl_end_date)
 
     sessions = SessionGenerator()
 
@@ -148,9 +153,16 @@ class Toggl():
         self.time_entries = self.get_time_entries()
         return response.json()
 
-    def get_time_entries(self, start_time=None):
-        response = requests.get('https://www.toggl.com/api/v8/time_entries', auth=(self.api_key, 'api_token'))
-        return response.json()
+    def get_time_entries(self, start_time=None, end_time=None):
+        if start_time:
+            params = {'start_date': start_time.isoformat() + "+03:00", 'end_date': end_time.isoformat() + "+03:00"}
+        else:
+            params = {}
+        headers = {
+            "Content-Type": "application/json"
+        }
+        response = requests.get('https://www.toggl.com/api/v8/time_entries', headers=headers, params=params, auth=(self.api_key, 'api_token'))
+        return json.loads(response.text)
     
     def check_overlap(self):
         for entry1 in self.time_entries:
@@ -164,6 +176,8 @@ class Toggl():
                 if start1 <= start2 <= stop1:
                     print "OVERLAP IN ENTRY {}".format(start1)
                 elif start1 <= stop2 <= stop1:
+                    print "OVERLAP IN ENTRY {}".format(start1)
+                elif start1 <= start2 and stop2 <= stop1:
                     print "OVERLAP IN ENTRY {}".format(start1)
 
         return None
@@ -180,6 +194,10 @@ class Toggl():
             if start <= session.start_time <= stop:
                 return entry['id']
             if start <= session.end_time <= stop:
+                return entry['id']
+            if session.start_time <= start and stop <= session.end_time:
+                return entry['id']
+            if start <= session.start_time and session.end_time <= stop:
                 return entry['id']
         return None
 
@@ -215,7 +233,7 @@ class Session():
     def guess_category(self):
         top_windows = self.sorted_windows()[-3:]
         medium_windows = self.sorted_windows()[-6:-3]
-        score = settings.SCORE
+        score = dict(settings.SCORE)
         for window in top_windows:
             for l in settings.LEISURE:
                 if l in window:
