@@ -3,6 +3,7 @@
 
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
+from dateutil import parser as dateparser
 import requests
 import json
 
@@ -60,12 +61,13 @@ def main():
 
 class Toggl():
     def __init__(self, api_key):
-        response = requests.get('https://www.toggl.com/api/v8/me', auth=(api_key, 'api_token'))
-        data = response.json()['data']
         self.api_key = api_key
+        response = requests.get('https://www.toggl.com/api/v8/me', auth=(self.api_key, 'api_token'))
+        data = response.json()['data']
         self.email = data['email']
         self.default_wid = data['default_wid']
         self.id = data['id']
+        self.time_entries = self.get_time_entries()
 
     def push_session(self, session):
         uinput = raw_input("Name: ")
@@ -77,16 +79,44 @@ class Toggl():
         data = {
             'time_entry': {
                 "description": uinput,
-                "start":session.start_time.isoformat() + '+03:00',
+                "start": session.start_time.isoformat(),
                 "duration":(session.end_time - session.start_time).seconds,
                 "created_with":"thyme-toggl-cli"
             }
         }
+        entry_id = self.check_session_exists(session)
+        if entry_id:
+            self.update_time_entry(entry_id, data)
+            return
         response = requests.post(
             'https://www.toggl.com/api/v8/time_entries',
             data=json.dumps(data), headers=headers, auth=(self.api_key, 'api_token'))
         print(u'Pushed session to toggl: {}'.format(response.text))
+        self.time_entries = self.get_time_entries()
         pass
+
+    def update_time_entry(self, entry_id, data):
+        response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id), data=json.dumps(data), auth=(self.api_key, 'api_token'))
+        print(u'Updated session to toggl: {}'.format(response.text))
+        self.time_entries = self.get_time_entries()
+        return response.json()
+
+    def get_time_entries(self, start_time=None):
+        response = requests.get('https://www.toggl.com/api/v8/time_entries', auth=(self.api_key, 'api_token'))
+        return response.json()
+    
+    def check_session_exists(self, session):
+        for entry in self.time_entries:
+            start = parse_time(entry['start'])
+            stop = parse_time(entry['stop'])
+            if start <= session.start_time <= stop:
+                return entry['id']
+            if start <= session.end_time <= stop:
+                return entry['id']
+        return None
+
+def parse_time(timestr):
+    return dateparser.parse(timestr)
 
 def get_window_name(snapshot):
     if snapshot is None:
@@ -99,9 +129,8 @@ def get_window_name(snapshot):
 class Session():
     def print_out(self):
         duration = (self.end_time - self.start_time)
-
-        print u"{} - {}, time: {}".format(
-            self.start_time, self.end_time, duration)
+        print u"{}, time: {}".format(
+            self.start_time.strftime('%d.%m %H:%M'), str(duration)[:-10])
 
     def print_windows(self):
         for window in self.windows:
@@ -150,7 +179,7 @@ class SessionGenerator():
         prev_snapshot = None
         for snapshot in self.snapshots:
             prev_time = new_time
-            new_time = datetime.strptime(snapshot['Time'][:19], '%Y-%m-%dT%H:%M:%S')
+            new_time = parse_time(snapshot['Time'])
             if not prev_time:  # first loop
                 continue
             diff = new_time - prev_time
