@@ -4,8 +4,10 @@
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 from dateutil import parser as dateparser
+from colorama import Fore, Style
 import requests
 import json
+import settings
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
@@ -77,10 +79,28 @@ def parse_selection(uinput):
 def print_sessions(sessions):
     count = 1
     for session in sessions.sessions:
-        print u"{}. {} {}".format(
+        entry_id = toggl.check_session_exists(session)
+        category = session.guess_category()
+        if category == 'work':
+            color = Fore.RED
+            if entry_id:
+                color = Fore.GREEN
+        else:
+            color = Fore.GREEN
+            if entry_id:
+                color = Fore.RED
+        print u"{}{}. {} {} - {}{}".format(color,
             count, session.print_out(out=False),
-            'exported' if toggl.check_session_exists(session) else ''
+            'exported: {}'.format(toggl.get_entry(entry_id).get('description', '')) if entry_id else '',
+            category,
+            Style.RESET_ALL
         )
+        print ""
+        for window in session.sorted_windows()[-3:]:
+            print u"    {}s - {}".format(
+                session.windows[window], window
+            )
+        print ""
         count += 1
 
 class Toggl():
@@ -148,6 +168,11 @@ class Toggl():
 
         return None
     
+    def get_entry(self, entry_id):
+        for entry in self.time_entries:
+            if entry['id'] == entry_id:
+                return entry
+    
     def check_session_exists(self, session):
         for entry in self.time_entries:
             start = parse_time(entry['start'])
@@ -180,9 +205,36 @@ class Session():
             print print_str
         return print_str
 
+    def sorted_windows(self):
+        return sorted(self.windows, key=lambda x: self.windows[x])
+
     def print_windows(self):
-        for window in sorted(self.windows, key=lambda x: self.windows[x]):
+        for window in self.sorted_windows():
             print u"{}s - {}".format(self.windows[window], window)
+
+    def guess_category(self):
+        top_windows = self.sorted_windows()[-3:]
+        medium_windows = self.sorted_windows()[-6:-3]
+        score = settings.SCORE
+        for window in top_windows:
+            for l in settings.LEISURE:
+                if l in window:
+                    score['leisure'] += 2
+                    break
+            for l in settings.WORK:
+                if l in window:
+                    score['work'] += 2
+                    break
+        for window in medium_windows:
+            for l in settings.LEISURE:
+                if l in window:
+                    score['leisure'] += 1
+                    break
+            for l in settings.WORK:
+                if l in window:
+                    score['work'] += 1
+                    break
+        return max(score.iterkeys(), key=(lambda key: score[key]))
 
     def __init__(self, time):
         self.start_time = time
@@ -197,6 +249,8 @@ class Session():
         self.running = False
     
     def add_window(self, diff, window_name):
+        if 'eero@eero-ThinkPad-L470' in window_name:
+            return
         if window_name not in self.windows:
             self.windows[window_name] = 0
         self.windows[window_name] += diff.seconds
@@ -243,5 +297,5 @@ class SessionGenerator():
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    toggl = Toggl(args.api_key)
+    toggl = Toggl(args.api_key or settings.API_KEY)
     main()
