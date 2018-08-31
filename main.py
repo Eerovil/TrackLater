@@ -8,6 +8,7 @@ from colorama import Fore, Style
 import requests
 import json
 import settings
+import time
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
@@ -19,7 +20,7 @@ parser.add_argument("-y", "--yesterday", dest="yesterday",
 parser.add_argument("-n", "--consecutive", dest="consecutive",
                     help="consecutive", type=int)
 parser.add_argument("-c", "--cutoff", dest="cutoff",
-                    help="cutoff", default=60, type=int)
+                    help="cutoff", default=900, type=int)
 parser.add_argument("-a", "--api_key", dest="api_key",
                     help="api_key")
 
@@ -32,7 +33,7 @@ def main():
             _date = date.today() - timedelta(days=int(args.yesterday or 0))
         filename = '../thyme/{}.json'.format(_date.strftime('%Y-%m-%d'))
 
-    toggl_start_date = datetime.combine(_date - timedelta(days=1), datetime.min.time(), )
+    toggl.start_date = datetime.combine(_date - timedelta(days=1), datetime.min.time(), )
 
     filenames = [filename]
     if args.consecutive:
@@ -40,9 +41,9 @@ def main():
             _date = _date + timedelta(days=1)
             filenames.append('../thyme/{}.json'.format(_date.strftime('%Y-%m-%d')))
 
-    toggl_end_date = datetime.combine(_date + timedelta(days=1), datetime.min.time())
+    toggl.end_date = datetime.combine(_date + timedelta(days=1), datetime.min.time())
 
-    toggl.time_entries = toggl.get_time_entries(start_time=toggl_start_date, end_time=toggl_end_date)
+    toggl.time_entries = toggl.get_time_entries()
 
     sessions = SessionGenerator()
 
@@ -70,8 +71,12 @@ def main():
                 for i in selection:
                     sessions.sessions[i].print_windows()
             elif command == 'p':
+                name = raw_input("Name: ")
+                if uinput == 'q':
+                    continue
                 for i in selection:
-                    toggl.push_session(sessions.sessions[i])
+                    toggl.push_session(sessions.sessions[i], name)
+            time.sleep(2)
         except Exception as e:
             raise
 
@@ -90,13 +95,15 @@ def print_sessions(sessions):
             color = Fore.RED
             if entry_id:
                 color = Fore.GREEN
+                if not toggl.get_entry(entry_id).get('description', None):
+                    color = Fore.MAGENTA
         else:
             color = Fore.GREEN
             if entry_id:
                 color = Fore.RED
         print u"{}{}. {} {} - {}{}".format(color,
             count, session.print_out(out=False),
-            'exported: {}'.format(toggl.get_entry(entry_id).get('description', '')) if entry_id else '',
+            u'exported: {}'.format(toggl.get_entry(entry_id).get('description', '')) if entry_id else '',
             category,
             Style.RESET_ALL
         )
@@ -116,19 +123,21 @@ class Toggl():
         self.email = data['email']
         self.default_wid = data['default_wid']
         self.id = data['id']
+        self.start_date = None
+        self.end_date = None
         self.time_entries = self.get_time_entries()
         self.check_overlap()
 
-    def push_session(self, session):
-        uinput = raw_input("Name: ")
-        if uinput == 'q':
+    def push_session(self, session, name):
+        if session.guess_category() == 'leisure':
+            print "skipping - leisure"
             return
         headers = {
             "Content-Type": "application/json"
         }
         data = {
             'time_entry': {
-                "description": uinput,
+                "description": name,
                 "start": session.start_time.isoformat(),
                 "duration":(session.end_time - session.start_time).seconds,
                 "created_with":"thyme-toggl-cli"
@@ -136,8 +145,8 @@ class Toggl():
         }
         entry_id = self.check_session_exists(session)
         if entry_id:
-            del data['start']
-            del data['duration']
+            del data['time_entry']['start']
+            del data['time_entry']['duration']
             self.update_time_entry(entry_id, data)
             return
         response = requests.post(
@@ -153,9 +162,9 @@ class Toggl():
         self.time_entries = self.get_time_entries()
         return response.json()
 
-    def get_time_entries(self, start_time=None, end_time=None):
-        if start_time:
-            params = {'start_date': start_time.isoformat() + "+03:00", 'end_date': end_time.isoformat() + "+03:00"}
+    def get_time_entries(self):
+        if self.start_date:
+            params = {'start_date': self.start_date.isoformat() + "+03:00", 'end_date': self.end_date.isoformat() + "+03:00"}
         else:
             params = {}
         headers = {
@@ -300,7 +309,10 @@ class SessionGenerator():
     def generate(self):
         new_time = None
         prev_snapshot = None
+        last_active = 0
         for snapshot in self.snapshots:
+            if snapshot['Active'] == last_active:
+                continue
             prev_time = new_time
             new_time = parse_time(snapshot['Time'])
             if not prev_time:  # first loop
@@ -311,6 +323,7 @@ class SessionGenerator():
             else:
                 self.end_session(prev_time)
             prev_snapshot = snapshot
+            last_active = snapshot['Active']
         self.end_session(new_time)
 
 if __name__ == '__main__':
