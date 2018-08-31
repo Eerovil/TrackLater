@@ -15,7 +15,7 @@ parser.add_argument("-d", "--date", dest="date",
 parser.add_argument("-y", "--yesterday", dest="yesterday",
                     help="yesterday")
 parser.add_argument("-n", "--consecutive", dest="consecutive",
-                    help="consecutive")
+                    help="consecutive", type=int)
 parser.add_argument("-c", "--cutoff", dest="cutoff",
                     help="cutoff", default=60, type=int)
 parser.add_argument("-a", "--api_key", dest="api_key",
@@ -30,18 +30,26 @@ def main():
             _date = date.today() - timedelta(days=int(args.yesterday or 0))
         filename = '../thyme/{}.json'.format(_date.strftime('%Y-%m-%d'))
 
-    print("opening file {}".format(filename))
-    with open(filename) as f:
-        data = json.load(f)
-        snapshots = data.get('Snapshots')
+    filenames = [filename]
+    if args.consecutive:
+        for i in range(args.consecutive):
+            _date = _date + timedelta(days=1)
+            filenames.append('../thyme/{}.json'.format(_date.strftime('%Y-%m-%d')))
 
-        sessions = SessionGenerator(snapshots)
-        sessions.generate()
+
+    sessions = SessionGenerator()
+
+    for filename in filenames:
+        print("opening file {}".format(filename))
+        with open(filename) as f:
+            data = json.load(f)
+            snapshots = data.get('Snapshots')
+            sessions.add(snapshots)
     
-    toggl = Toggl(args.api_key)
+    sessions.generate()
     
     while True:
-        sessions.print_sessions()
+        print_sessions(sessions)
         uinput = raw_input("select command (w, p, q): ")
         if uinput not in ['w', 'p', 'q']:
             continue
@@ -50,14 +58,30 @@ def main():
             break
         uinput = raw_input("Select session (1-{}): ".format(len(sessions.sessions)))
         try:
-            selection = int(uinput)
+            selection = parse_selection(uinput)
             if command == 'w':
-                sessions.sessions[selection].print_windows()
+                for i in selection:
+                    sessions.sessions[i].print_windows()
             elif command == 'p':
-                toggl.push_session(sessions.sessions[selection - 1])
+                for i in selection:
+                    toggl.push_session(sessions.sessions[i])
         except Exception as e:
-            print(e)
-            pass
+            raise
+
+def parse_selection(uinput):
+    if '-' in uinput:
+        vals = [int(i)-1 for i in uinput.split('-')]
+        return range(vals[0], vals[1]+1)
+    return [int(uinput)-1]
+
+def print_sessions(sessions):
+    count = 1
+    for session in sessions.sessions:
+        print u"{}. {} {}".format(
+            count, session.print_out(out=False),
+            'exported' if toggl.check_session_exists(session) else ''
+        )
+        count += 1
 
 class Toggl():
     def __init__(self, api_key):
@@ -68,6 +92,7 @@ class Toggl():
         self.default_wid = data['default_wid']
         self.id = data['id']
         self.time_entries = self.get_time_entries()
+        self.check_overlap()
 
     def push_session(self, session):
         uinput = raw_input("Name: ")
@@ -86,6 +111,8 @@ class Toggl():
         }
         entry_id = self.check_session_exists(session)
         if entry_id:
+            del data['start']
+            del data['duration']
             self.update_time_entry(entry_id, data)
             return
         response = requests.post(
@@ -104,6 +131,22 @@ class Toggl():
     def get_time_entries(self, start_time=None):
         response = requests.get('https://www.toggl.com/api/v8/time_entries', auth=(self.api_key, 'api_token'))
         return response.json()
+    
+    def check_overlap(self):
+        for entry1 in self.time_entries:
+            for entry2 in self.time_entries:
+                if entry1 == entry2:
+                    continue
+                start1 = parse_time(entry1['start'])
+                stop1 = parse_time(entry1['stop'])
+                start2 = parse_time(entry2['start'])
+                stop2 = parse_time(entry2['stop'])
+                if start1 <= start2 <= stop1:
+                    print "OVERLAP IN ENTRY {}".format(start1)
+                elif start1 <= stop2 <= stop1:
+                    print "OVERLAP IN ENTRY {}".format(start1)
+
+        return None
     
     def check_session_exists(self, session):
         for entry in self.time_entries:
@@ -127,13 +170,18 @@ def get_window_name(snapshot):
 
 
 class Session():
-    def print_out(self):
+    def print_out(self, out=True):
         duration = (self.end_time - self.start_time)
-        print u"{}, time: {}".format(
-            self.start_time.strftime('%d.%m %H:%M'), str(duration)[:-10])
+        print_str = u"{}, time: {}".format(
+            self.start_time.strftime('%a %d.%m %H:%M'),
+            str(duration)[:-10]
+        )
+        if out:
+            print print_str
+        return print_str
 
     def print_windows(self):
-        for window in self.windows:
+        for window in sorted(self.windows, key=lambda x: self.windows[x]):
             print u"{}s - {}".format(self.windows[window], window)
 
     def __init__(self, time):
@@ -155,9 +203,12 @@ class Session():
 
 
 class SessionGenerator():
-    def __init__(self, snapshots):
+    def __init__(self):
         self.sessions = []
-        self.snapshots = snapshots
+        self.snapshots = []
+
+    def add(self, snapshots):
+        self.snapshots += snapshots
     
     def print_sessions(self):
         for session in self.sessions:
@@ -192,4 +243,5 @@ class SessionGenerator():
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    toggl = Toggl(args.api_key)
     main()
