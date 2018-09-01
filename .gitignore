@@ -109,3 +109,4 @@ venv.bak/
 .dmypy.json
 dmypy.json
 settings.py
+jira-cache
