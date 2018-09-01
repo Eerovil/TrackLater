@@ -2,13 +2,14 @@
 # -*- encoding: utf-8 -*-
 
 from argparse import ArgumentParser
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, tzinfo
 from dateutil import parser as dateparser
 from colorama import Fore, Style
 import requests
 import json
 import settings
 import time
+import git
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
@@ -111,6 +112,11 @@ def print_sessions(sessions):
         for window in session.sorted_windows()[-3:]:
             print u"    {}s - {}".format(
                 session.windows[window], window
+            )
+        print ""
+        for commit in gitparser.get_commits(session.start_time, session.end_time):
+            print u"    {}".format(
+                commit['message']
             )
         print ""
         count += 1
@@ -326,7 +332,65 @@ class SessionGenerator():
             last_active = snapshot['Active']
         self.end_session(new_time)
 
+class GitParser():
+    def __init__(self, repos):
+        self.repos = repos
+        self.log = []  # List of git.refs.log.RefLogEntry objects
+    
+    def parse(self):
+        for repo_path in self.repos:
+            repo = git.Repo(repo_path)
+            for branch in repo.branches:
+                for log_entry in branch.log():
+                    if log_entry.actor.email not in settings.GIT_EMAILS:
+                        continue
+                    if not log_entry.message.startswith('commit'):
+                        continue
+                    message = ''.join(log_entry.message.split(':')[1:])
+                    self.log.append({
+                        'repo': repo_path.split('/')[-1],
+                        'message': message,
+                        'time': datetime.fromtimestamp(
+                            log_entry.time[0], tz=FixedOffset(log_entry.time[1], 'Helsinki')
+                        ),
+                    })
+    
+    def get_commits(self, start_time, end_time):
+        ret = []
+        for log in self.log:
+            if start_time <= log['time'] <= end_time:
+                ret.append(log)
+        return ret
+
+    def print_commits(self, out=True, sort='time'):
+        print_str = (
+            "\n".join(['{} - {} - {}'.format(
+                log['time'], log['repo'], log['message']
+            ) for log in sorted(self.log, key=lambda x: x[sort])])
+        )
+        if out:
+            print(print_str)
+        return print_str
+
+class FixedOffset(tzinfo):
+    """Fixed offset in minutes west from UTC."""
+
+    def __init__(self, offset, name):
+        self.__offset = timedelta(seconds = -offset)
+        self.__name = name
+
+    def utcoffset(self, dt):
+        return self.__offset
+
+    def tzname(self, dt):
+        return self.__name
+
+    def dst(self, dt):
+        return timedelta(0)
+
 if __name__ == '__main__':
     args = parser.parse_args()
     toggl = Toggl(args.api_key or settings.API_KEY)
+    gitparser = GitParser(settings.GIT_REPOS)
+    gitparser.parse()
     main()
