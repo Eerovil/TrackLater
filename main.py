@@ -10,6 +10,9 @@ import json
 import settings
 import time
 import git
+import re
+import os
+import codecs
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
@@ -114,9 +117,10 @@ def print_sessions(sessions):
                 session.windows[window], window
             )
         print ""
-        for commit in gitparser.get_commits(session.start_time, session.end_time):
-            print u"    {}".format(
-                commit['message']
+        for commit in gitjiraparser.get_commits(session.start_time, session.end_time):
+            print u"    {} - {}".format(
+                commit['message'],
+                commit['issue'].get('summary', None) if commit['issue'] else None
             )
         print ""
         count += 1
@@ -332,12 +336,12 @@ class SessionGenerator():
             last_active = snapshot['Active']
         self.end_session(new_time)
 
-class GitParser():
+class GitMixin():
     def __init__(self, repos):
         self.repos = repos
         self.log = []  # List of git.refs.log.RefLogEntry objects
     
-    def parse(self):
+    def parse_git(self):
         for repo_path in self.repos:
             repo = git.Repo(repo_path)
             for branch in repo.branches:
@@ -388,9 +392,59 @@ class FixedOffset(tzinfo):
     def dst(self, dt):
         return timedelta(0)
 
+class JiraMixin():
+    def __init__(self, credentials):
+        self.credentials = credentials
+        self.issues = []
+    
+    def get_cached(self, *args, **kwargs):
+        if os.path.exists('jira-cache'):
+            try:
+                with codecs.open('jira-cache', 'rb', encoding='utf8') as f:
+                    return json.load(f)
+            except ValueError:
+                print 'cache error'
+
+        response = requests.get(*args, **kwargs)
+
+        with codecs.open('jira-cache', 'wb', encoding='utf8') as f:
+            f.write(response.text)
+
+        return response.json()
+
+    def parse_jira(self):
+        data = self.get_cached(settings.JIRA_URL + '/rest/api/2/search?jql=project={}'.format(settings.JIRA_KEY), auth=self.credentials)
+        for issue in data['issues']:
+            self.issues.append({
+                'key': issue['key'],
+                'summary': issue['fields']['summary'],
+            })
+    
+    def get_issue(self, key):
+        for issue in self.issues:
+            if issue['key'] == key:
+                return issue
+
+class GitJiraParser(GitMixin, JiraMixin):
+    def __init__(self, jira_credentials, git_repos):
+        self.credentials = jira_credentials
+        self.repos = git_repos
+        self.log = []
+        self.issues = []
+    
+    def parse(self):
+        self.parse_git()
+        self.parse_jira()
+        for log in self.log:
+            issue = None
+            m = re.match('.*({}-\d+)'.format(settings.JIRA_KEY), log['message'])
+            if m:
+                issue = self.get_issue(m.groups()[0])
+            log['issue'] = issue
+
 if __name__ == '__main__':
     args = parser.parse_args()
     toggl = Toggl(args.api_key or settings.API_KEY)
-    gitparser = GitParser(settings.GIT_REPOS)
-    gitparser.parse()
+    gitjiraparser = GitJiraParser(settings.JIRA_CREDENTIALS, settings.GIT_REPOS)
+    gitjiraparser.parse()
     main()
