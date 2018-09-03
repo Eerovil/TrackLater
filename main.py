@@ -181,20 +181,25 @@ class TogglMixin(object):
             }
         }
         if entry_id:
-            self.update_time_entry(entry_id, data)
-            return
+            return self.update_time_entry(entry_id, data)
+
         response = requests.post(
             'https://www.toggl.com/api/v8/time_entries',
             data=json.dumps(data), headers=headers, auth=(self.api_key, 'api_token'))
         print(u'Pushed session to toggl: {}'.format(response.text))
-        self.parse_toggl()
-        return response.text
+        entry = response.json()['data']
+        entry['start_time'] = parse_time(entry['start'])
+        entry['end_time'] = parse_time(entry['stop'])
+        return entry
 
     def update_time_entry(self, entry_id, data):
         response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id), data=json.dumps(data), auth=(self.api_key, 'api_token'))
         print(u'Updated session to toggl: {}'.format(response.text))
+        entry = response.json()['data']
+        entry['start_time'] = parse_time(entry['start'])
+        entry['end_time'] = parse_time(entry['stop'])
         self.parse_toggl()
-        return response.json()
+        return entry
 
     def parse_toggl(self):
         if self.start_date:

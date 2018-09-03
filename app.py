@@ -8,6 +8,9 @@ app = Flask(__name__)
 
 parser = None
 
+import logging
+logger = logging.getLogger(__name__)
+
 @app.route("/")
 def hello():
     return render_template(
@@ -39,11 +42,11 @@ def parseTimestamp(stamp):
 def export():
     if request.method == 'POST':
         parser = Parser(None, None)
-        response = parser.push_session({
+        entry = parser.push_session({
             'start_time': parseTimestamp(request.form['start_time']),
             'end_time': parseTimestamp(request.form['end_time']),
         }, request.form['name'], request.form.get('id', None))
-        return json.dumps(response, default=str)
+        return json.dumps(entry, default=str)
 
 
 @app.route('/log', methods=['GET'])
