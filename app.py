@@ -8,8 +8,7 @@ app = Flask(__name__)
 
 parser = None
 
-import logging
-logger = logging.getLogger(__name__)
+logger = app.logger
 
 @app.route("/")
 def hello():
@@ -28,7 +27,7 @@ def sessions():
             'sessions': parser.sessions,
             'time_entries': parser.time_entries,
             'log': parser.log,
-            'issues': parser.issues
+            'issues': parser.issues[:100]
         }, default=str)
 
 

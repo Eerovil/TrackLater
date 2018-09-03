@@ -15,7 +15,6 @@ import os
 import codecs
 
 import logging
-logger = logging.getLogger(__name__)
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
@@ -145,7 +144,7 @@ class ThymeMixin(object):
             date = date + timedelta(days=1)
 
         for filename in filenames:
-            logger.info("opening file {}".format(filename))
+            logging.info("opening file {}".format(filename))
             with open(filename) as f:
                 data = json.load(f)
                 snapshots = data.get('Snapshots')
@@ -446,14 +445,8 @@ class JiraMixin(object):
     def __init__(self, credentials):
         self.credentials = credentials
         self.issues = []
-    
+
     def get_cached(self, *args, **kwargs):
-        if os.path.exists('jira-cache'):
-            try:
-                with codecs.open('jira-cache', 'rb', encoding='utf8') as f:
-                    return json.load(f)
-            except ValueError:
-                print 'cache error'
 
         response = requests.get(*args, **kwargs)
 
@@ -462,13 +455,36 @@ class JiraMixin(object):
 
         return response.json()
 
+    def fetch_issues(self, start_from=None):
+        start_str = '&startAt={}'.format(start_from) if start_from is not None else ''
+        response = requests.get(
+            '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary&maxResults=100'
+            '{start_str}'.format(
+                JIRA_URL=settings.JIRA_URL, JIRA_KEY=settings.JIRA_KEY, start_str=start_str
+            ), auth=self.credentials
+        )
+        return response.json()
+
     def parse_jira(self):
-        data = self.get_cached(settings.JIRA_URL + '/rest/api/2/search?jql=project={}'.format(settings.JIRA_KEY), auth=self.credentials)
-        for issue in data['issues']:
-            self.issues.append({
-                'key': issue['key'],
-                'summary': issue['fields']['summary'],
-            })
+        self.issues = []
+        if os.path.exists('jira-cache'):
+            try:
+                with codecs.open('jira-cache', 'rb', encoding='utf8') as f:
+                    self.issues = json.load(f)
+            except ValueError:
+                print 'cache error'
+
+        latest_issues = self.fetch_issues()
+        logging.warning('latest_issues: %s cached: %s', latest_issues['total'], len(self.issues))
+        while latest_issues['total'] - len(self.issues) > 0:
+            logging.warning('Fetching issues %s to %s', len(self.issues), len(self.issues) + 100)
+            for issue in self.fetch_issues(start_from=len(self.issues))['issues']:
+                self.issues.append({
+                    'key': issue['key'],
+                    'summary': issue['fields']['summary'],
+                })
+            with codecs.open('jira-cache', 'wb', encoding='utf8') as f:
+                f.write(json.dumps(self.issues))
     
     def get_issue(self, key):
         for issue in self.issues:
