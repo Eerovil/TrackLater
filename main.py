@@ -14,6 +14,9 @@ import re
 import os
 import codecs
 
+import logging
+logger = logging.getLogger(__name__)
+
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", dest="filename",
                     help="json file to parse", metavar="FILE")
@@ -47,7 +50,7 @@ def main():
 
     toggl.end_date = datetime.combine(_date + timedelta(days=1), datetime.min.time())
 
-    toggl.time_entries = toggl.get_time_entries()
+    toggl.parse_toggl()
 
     sessions = SessionGenerator()
 
@@ -75,6 +78,7 @@ def main():
                 for i in selection:
                     sessions.sessions[i].print_windows()
             elif command == 'p':
+                print("\n".join(parser.get_issues()))
                 name = raw_input("Name: ")
                 if uinput == 'q':
                     continue
@@ -117,7 +121,7 @@ def print_sessions(sessions):
                 session.windows[window], window
             )
         print ""
-        for commit in gitjiraparser.get_commits(session.start_time, session.end_time):
+        for commit in parser.get_commits(session.start_time, session.end_time):
             print u"    {} - {}".format(
                 commit['message'],
                 commit['issue'].get('summary', None) if commit['issue'] else None
@@ -125,7 +129,34 @@ def print_sessions(sessions):
         print ""
         count += 1
 
-class Toggl():
+
+class ThymeMixin(object):
+    def parse_thyme(self, start_date=None, end_date=None):
+        if start_date is None:
+            start_date = self.start_date
+        if end_date is None:
+            end_date = self.end_date
+
+        generator = SessionGenerator()
+        filenames = []
+        date = start_date
+        while date <= end_date:
+            filenames.append('../thyme/{}.json'.format(date.strftime('%Y-%m-%d')))
+            date = date + timedelta(days=1)
+
+        for filename in filenames:
+            logger.info("opening file {}".format(filename))
+            with open(filename) as f:
+                data = json.load(f)
+                snapshots = data.get('Snapshots')
+                generator.add(snapshots)
+
+        generator.generate()
+
+        self.sessions = generator.to_list()
+
+
+class TogglMixin(object):
     def __init__(self, api_key):
         self.api_key = api_key
         response = requests.get('https://www.toggl.com/api/v8/me', auth=(self.api_key, 'api_token'))
@@ -135,44 +166,37 @@ class Toggl():
         self.id = data['id']
         self.start_date = None
         self.end_date = None
-        self.time_entries = self.get_time_entries()
         self.check_overlap()
 
-    def push_session(self, session, name):
-        if session.guess_category() == 'leisure':
-            print "skipping - leisure"
-            return
+    def push_session(self, session, name, entry_id=None):
         headers = {
             "Content-Type": "application/json"
         }
         data = {
             'time_entry': {
                 "description": name,
-                "start": session.start_time.isoformat(),
-                "duration":(session.end_time - session.start_time).seconds,
-                "created_with":"thyme-toggl-cli"
+                "start": session['start_time'].isoformat(),
+                "duration": (session['end_time'] - session['start_time']).seconds,
+                "created_with": "thyme-toggl-cli"
             }
         }
-        entry_id = self.check_session_exists(session)
         if entry_id:
-            del data['time_entry']['start']
-            del data['time_entry']['duration']
             self.update_time_entry(entry_id, data)
             return
         response = requests.post(
             'https://www.toggl.com/api/v8/time_entries',
             data=json.dumps(data), headers=headers, auth=(self.api_key, 'api_token'))
         print(u'Pushed session to toggl: {}'.format(response.text))
-        self.time_entries = self.get_time_entries()
-        pass
+        self.parse_toggl()
+        return response.text
 
     def update_time_entry(self, entry_id, data):
         response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id), data=json.dumps(data), auth=(self.api_key, 'api_token'))
         print(u'Updated session to toggl: {}'.format(response.text))
-        self.time_entries = self.get_time_entries()
+        self.parse_toggl()
         return response.json()
 
-    def get_time_entries(self):
+    def parse_toggl(self):
         if self.start_date:
             params = {'start_date': self.start_date.isoformat() + "+03:00", 'end_date': self.end_date.isoformat() + "+03:00"}
         else:
@@ -181,17 +205,23 @@ class Toggl():
             "Content-Type": "application/json"
         }
         response = requests.get('https://www.toggl.com/api/v8/time_entries', headers=headers, params=params, auth=(self.api_key, 'api_token'))
-        return json.loads(response.text)
-    
+        data = response.json()
+        self.time_entries = []
+        for entry in data:
+            entry['start_time'] = parse_time(entry['start'])
+            entry['end_time'] = parse_time(entry['stop'])
+            self.time_entries.append(entry)
+        return self.time_entries
+
     def check_overlap(self):
         for entry1 in self.time_entries:
             for entry2 in self.time_entries:
                 if entry1 == entry2:
                     continue
-                start1 = parse_time(entry1['start'])
-                stop1 = parse_time(entry1['stop'])
-                start2 = parse_time(entry2['start'])
-                stop2 = parse_time(entry2['stop'])
+                start1 = (entry1['start_time'])
+                stop1 = (entry1['end_time'])
+                start2 = (entry2['start_time'])
+                stop2 = (entry2['end_time'])
                 if start1 <= start2 <= stop1:
                     print "OVERLAP IN ENTRY {}".format(start1)
                 elif start1 <= stop2 <= stop1:
@@ -208,15 +238,15 @@ class Toggl():
     
     def check_session_exists(self, session):
         for entry in self.time_entries:
-            start = parse_time(entry['start'])
-            stop = parse_time(entry['stop'])
-            if start <= session.start_time <= stop:
+            start = (entry['start_time'])
+            stop = (entry['end_time'])
+            if start <= session['start_time'] <= stop:
                 return entry['id']
-            if start <= session.end_time <= stop:
+            if start <= session['end_time'] <= stop:
                 return entry['id']
-            if session.start_time <= start and stop <= session.end_time:
+            if session['start_time'] <= start and stop <= session['end_time']:
                 return entry['id']
-            if start <= session.start_time and session.end_time <= stop:
+            if start <= session['start_time'] and session['end_time'] <= stop:
                 return entry['id']
         return None
 
@@ -231,7 +261,7 @@ def get_window_name(snapshot):
             return window['Name']
 
 
-class Session():
+class Session(object):
     def print_out(self, out=True):
         duration = (self.end_time - self.start_time)
         print_str = u"{}, time: {}".format(
@@ -292,8 +322,17 @@ class Session():
             self.windows[window_name] = 0
         self.windows[window_name] += diff.seconds
 
+    def to_dict(self):
+        return {
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'duration': (self.end_time - self.start_time).seconds,
+            'windows': [{'name': window, 'time': self.windows[window]} for window in self.windows],
+            'category': self.guess_category(),
+        }
 
-class SessionGenerator():
+
+class SessionGenerator(object):
     def __init__(self):
         self.sessions = []
         self.snapshots = []
@@ -315,11 +354,13 @@ class SessionGenerator():
 
     def end_session(self, time):
         self.sessions[-1].end(time)
-    
+
     def generate(self):
         new_time = None
         prev_snapshot = None
         last_active = 0
+        if len(self.snapshots) == 0:
+            return
         for snapshot in self.snapshots:
             if snapshot['Active'] == last_active:
                 continue
@@ -328,7 +369,7 @@ class SessionGenerator():
             if not prev_time:  # first loop
                 continue
             diff = new_time - prev_time
-            if diff.seconds < args.cutoff:
+            if diff.seconds < settings.CUTOFF:
                 self.start_or_continue_session(prev_time, diff=diff, window=get_window_name(prev_snapshot))
             else:
                 self.end_session(prev_time)
@@ -336,7 +377,11 @@ class SessionGenerator():
             last_active = snapshot['Active']
         self.end_session(new_time)
 
-class GitMixin():
+    def to_list(self):
+        return [session.to_dict() for session in self.sessions]
+
+
+class GitMixin(object):
     def __init__(self, repos):
         self.repos = repos
         self.log = []  # List of git.refs.log.RefLogEntry objects
@@ -392,7 +437,7 @@ class FixedOffset(tzinfo):
     def dst(self, dt):
         return timedelta(0)
 
-class JiraMixin():
+class JiraMixin(object):
     def __init__(self, credentials):
         self.credentials = credentials
         self.issues = []
@@ -424,17 +469,54 @@ class JiraMixin():
         for issue in self.issues:
             if issue['key'] == key:
                 return issue
+    
+    def get_issues(self):
+        return [issue['key'] + " " + issue['summary'] for issue in sorted(self.issues, key=lambda x: x['key'])]
 
-class GitJiraParser(GitMixin, JiraMixin):
-    def __init__(self, jira_credentials, git_repos):
-        self.credentials = jira_credentials
-        self.repos = git_repos
+
+class DateGroupMixin(object):
+    """
+    Includes a 'date_group' key that allows grouping entries by date.
+    """
+    def __init__(self):
+        self.cutoff_hour = 3
+
+    def _parse_list(self, l, key='start_time'):
+        for item in l:
+            item_time = item[key]
+            offset = item_time.tzinfo.utcoffset(None)
+            _cutoff = self.cutoff_hour + (getattr(offset, 'seconds', 0) / 3600)
+            if item_time.hour >= _cutoff:
+                item['date_group'] = item_time.strftime('%Y-%m-%d')
+            else:
+                item['date_group'] = (item_time - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    def parse_group(self):
+        self._parse_list(self.sessions)
+        self._parse_list(self.time_entries)
+        self._parse_list(self.log, key='time')
+
+
+class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
+    def __init__(self, start_date, end_date, jira_credentials=None, git_repos=None):
+        self.start_date = start_date
+        self.end_date = end_date
+        self.credentials = jira_credentials or settings.JIRA_CREDENTIALS
+        self.repos = git_repos or settings.GIT_REPOS
         self.log = []
         self.issues = []
-    
-    def parse(self):
-        self.parse_git()
-        self.parse_jira()
+        self.time_entries = []
+        self.sessions = []
+        self.api_key = settings.API_KEY
+        self.cutoff_hour = 3  # Used to group dates
+
+    def parse_toggl(self):
+        super(Parser, self).parse_toggl()
+        for session in self.sessions:
+            session['exported'] = self.check_session_exists(session)
+
+    def parse_jira(self):
+        super(Parser, self).parse_jira()
         for log in self.log:
             issue = None
             m = re.match('.*({}-\d+)'.format(settings.JIRA_KEY), log['message'])
@@ -442,9 +524,16 @@ class GitJiraParser(GitMixin, JiraMixin):
                 issue = self.get_issue(m.groups()[0])
             log['issue'] = issue
 
+    def parse(self):
+        self.parse_git()
+        self.parse_jira()
+        self.parse_thyme()
+        self.parse_toggl()
+        self.parse_group()
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    toggl = Toggl(args.api_key or settings.API_KEY)
-    gitjiraparser = GitJiraParser(settings.JIRA_CREDENTIALS, settings.GIT_REPOS)
-    gitjiraparser.parse()
+    parser = Parser(settings.JIRA_CREDENTIALS, settings.GIT_REPOS)
+    parser.parse()
     main()

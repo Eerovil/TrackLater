@@ -1,0 +1,26 @@
+<html>
+<head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script
+    src="https://code.jquery.com/jquery-3.3.1.min.js"
+    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='index.js') }}" ></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" >
+</head>
+<body>
+        <div id="timeline" style="height: 180px;"></div>
+
+<div id="actions">
+<input class="btn_export" type="button" value="Export">
+<input class="description" type="text" value="" list="issues">
+<datalist id="issues">
+
+</datalist>
+<div class="toggl_actions">
+        <input class="start_time" type="time" >
+        <input class="end_time" type="time" >
+</div>
+</div>
+</body>
+</html>
