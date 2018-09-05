@@ -366,7 +366,11 @@ class SessionGenerator(object):
         if len(self.snapshots) == 0:
             return
         for snapshot in self.snapshots:
-            if snapshot['Active'] == last_active:
+            def _get_window(id):
+                for w in snapshot['Windows']:
+                    if w['ID'] == id:
+                        return w
+            if _get_window(snapshot['Active']) == last_active:
                 continue
             prev_time = new_time
             new_time = parse_time(snapshot['Time'])
@@ -378,7 +382,7 @@ class SessionGenerator(object):
             else:
                 self.end_session(prev_time)
             prev_snapshot = snapshot
-            last_active = snapshot['Active']
+            last_active = _get_window(snapshot['Active'])
         self.end_session(new_time)
 
     def to_list(self):
