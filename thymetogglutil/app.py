@@ -49,6 +49,20 @@ def export():
         return json.dumps(entry, default=str)
 
 
+@app.route('/split', methods=['POST'])
+def split():
+    if request.method == 'POST':
+        parser = Parser(None, None)
+        (entry1, entry2) = parser.split_time_entry(
+            request.form.get('id'),
+            parseTimestamp(request.form['start_time']),
+            parseTimestamp(request.form['split_time']),
+            parseTimestamp(request.form['end_time']),
+            request.form.get('name')
+        )
+        return json.dumps({'entry1': entry1, 'entry2': entry2}, default=str)
+
+
 @app.route('/log', methods=['GET'])
 def log():
     if request.method == 'GET':
