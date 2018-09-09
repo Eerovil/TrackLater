@@ -10,6 +10,13 @@ $(document).ready(function() {
             }
         }
     });
+    $('#actions .btn_split').on('click', () => {
+        if (global_selected) {
+            if (global_selected.type == 'entry') {
+                splitEntry(global_selected.item.id, global_selected.item.date_group);
+            }
+        }
+    });
     console.log('hello2');
 });
 
@@ -107,6 +114,19 @@ function updateEntry(entryId, date_str) {
         'name': $('#actions input.description').val(),
     }, function(data) {
         refreshEntry(data);
+    }, 'json')
+}
+
+function splitEntry(entryId, date_str) {
+    $.post('split', {
+        'id': entryId,
+        'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
+        'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
+        'split_time': new Date(date_str + " " + $('#actions .split_time').val()).getTime(),
+        'name': $('#actions input.description').val(),
+    }, function(data) {
+        refreshEntry(data.entry1);
+        createEntry({date_group: date_str}, data.entry2);
     }, 'json')
 }
 
@@ -267,6 +287,7 @@ function updateTable() {
                 $('div#actions input.description').val(entry.description);
                 $('div#actions .toggl_actions input.start_time').val(dateToTimestr(entry.start_time));
                 $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
+                $('div#actions .toggl_actions input.split_time').val(dateToTimestr(entry.start_time));
             }
             console.log(category, start_time);
         });

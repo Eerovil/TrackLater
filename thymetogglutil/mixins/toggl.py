@@ -51,6 +51,17 @@ class TogglMixin(object):
         self.parse_toggl()
         return entry
 
+    def split_time_entry(self, entry_id, start_time, split_time, end_time, description):
+        entry1 = self.push_session({
+            "start_time": start_time,
+            "end_time": split_time
+        }, description, entry_id)
+        entry2 = self.push_session({
+            "start_time": split_time,
+            "end_time": end_time
+        }, description)
+        return (entry1, entry2)
+
     def parse_toggl(self):
         if self.start_date:
             params = {'start_date': self.start_date.isoformat() + "+03:00",
