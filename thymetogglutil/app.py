@@ -1,9 +1,10 @@
 from flask import Flask, request, render_template
-from main import Parser
+from thymetogglutil.main import Parser
 from datetime import datetime, timedelta
-import settings
+from thymetogglutil import settings
 import json
 import pytz
+
 app = Flask(__name__)
 
 parser = None
