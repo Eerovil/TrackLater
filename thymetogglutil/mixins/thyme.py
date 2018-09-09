@@ -154,7 +154,8 @@ class SessionGenerator(object):
                 continue
             diff = new_time - prev_time
             if diff.seconds < settings.CUTOFF:
-                self.start_or_continue_session(prev_time, diff=diff, window=get_window_name(prev_snapshot))
+                self.start_or_continue_session(prev_time, diff=diff,
+                                               window=get_window_name(prev_snapshot))
             else:
                 self.end_session(prev_time)
             prev_snapshot = snapshot

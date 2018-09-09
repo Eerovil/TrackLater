@@ -7,7 +7,8 @@ from thymetogglutil.utils import parse_time
 class TogglMixin(object):
     def __init__(self, api_key):
         self.api_key = api_key
-        response = requests.get('https://www.toggl.com/api/v8/me', auth=(self.api_key, 'api_token'))
+        response = requests.get('https://www.toggl.com/api/v8/me',
+                                auth=(self.api_key, 'api_token'))
         data = response.json()['data']
         self.email = data['email']
         self.default_wid = data['default_wid']
@@ -41,7 +42,8 @@ class TogglMixin(object):
         return entry
 
     def update_time_entry(self, entry_id, data):
-        response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id), data=json.dumps(data), auth=(self.api_key, 'api_token'))
+        response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
+                                data=json.dumps(data), auth=(self.api_key, 'api_token'))
         print(u'Updated session to toggl: {}'.format(response.text))
         entry = response.json()['data']
         entry['start_time'] = parse_time(entry['start'])
@@ -51,13 +53,15 @@ class TogglMixin(object):
 
     def parse_toggl(self):
         if self.start_date:
-            params = {'start_date': self.start_date.isoformat() + "+03:00", 'end_date': self.end_date.isoformat() + "+03:00"}
+            params = {'start_date': self.start_date.isoformat() + "+03:00",
+                      'end_date': self.end_date.isoformat() + "+03:00"}
         else:
             params = {}
         headers = {
             "Content-Type": "application/json"
         }
-        response = requests.get('https://www.toggl.com/api/v8/time_entries', headers=headers, params=params, auth=(self.api_key, 'api_token'))
+        response = requests.get('https://www.toggl.com/api/v8/time_entries', headers=headers,
+                                params=params, auth=(self.api_key, 'api_token'))
         data = response.json()
         self.time_entries = []
         for entry in data:

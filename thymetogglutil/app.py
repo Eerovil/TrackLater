@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template
 from thymetogglutil.main import Parser
 from datetime import datetime, timedelta
-from thymetogglutil import settings
 import json
 import pytz
 
@@ -10,6 +9,7 @@ app = Flask(__name__)
 parser = None
 
 logger = app.logger
+
 
 @app.route("/")
 def hello():
