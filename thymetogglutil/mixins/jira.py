@@ -53,7 +53,9 @@ class JiraMixin(object):
         logging.warning('latest_issues: %s cached: %s', latest_issues['total'], len(self.issues))
         while latest_issues['total'] - len(self.issues) > 0:
             logging.warning('Fetching issues %s to %s', len(self.issues), len(self.issues) + 100)
-            new_issues = self.fetch_issues(start_from=(latest_issues['total'] - len(self.issues)))['issues']
+            new_issues = self.fetch_issues(
+                start_from=(latest_issues['total'] - len(self.issues))
+            )['issues']
             for issue in new_issues:
                 self._add_issue({
                     'key': issue['key'],
@@ -61,12 +63,14 @@ class JiraMixin(object):
                 })
             with codecs.open('jira-cache', 'wb', encoding='utf8') as f:
                 f.write(json.dumps(self.issues))
-    
+
     def get_issue(self, key):
         for issue in self.issues:
             if issue['key'] == key:
                 return issue
-    
-    def get_issues(self):
-        return [issue['key'] + " " + issue['summary'] for issue in sorted(self.issues, key=lambda x: x['key'])]
 
+    def get_issues(self):
+        return [
+            issue['key'] + " " + issue['summary']
+            for issue in sorted(self.issues, key=lambda x: x['key'])
+        ]
