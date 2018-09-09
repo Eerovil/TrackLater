@@ -253,7 +253,6 @@ function updateTable() {
                 let session = sessions.filter((session) => session.start_time == start_time)[0]
                 global_selected = {type: 'session', item: session};
                 $('div#actions').show();
-                $('div#actions input.btn_export').attr('disabled', (session.exported != null));
                 if (session.exported){
                     let timeEntry = timeEntries.filter(e => e.id == session.exported)[0];
                     $('div#actions input.description').val(timeEntry.description);
