@@ -28,7 +28,7 @@ def sessions():
             'sessions': parser.sessions,
             'time_entries': parser.time_entries,
             'log': parser.log,
-            'issues': parser.sorted_issues()[:100]
+            'issues': [value for key, value in parser.latest_issues.iteritems()]
         }, default=str)
 
 
