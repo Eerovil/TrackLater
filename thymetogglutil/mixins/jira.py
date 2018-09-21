@@ -23,7 +23,7 @@ class JiraMixin(object):
         return response.json()
 
     def fetch_issues(self, start_from=None):
-        start_str = '&startAt={}'.format(start_from) if (start_from is not None and start_from > 0) else ''
+        start_str = '&startAt={}'.format(start_from) if (start_from and start_from > 0) else ''
         response = requests.get(
             '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary&maxResults=100'
             '{start_str}'.format(
