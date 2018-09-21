@@ -36,6 +36,7 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         self.repos = git_repos or settings.GIT_REPOS
         self.log = []
         self.issues = []
+        self.latest_issues = {}
         self.time_entries = []
         self.sessions = []
         self.api_key = settings.API_KEY
@@ -53,7 +54,11 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
             m = re.match('.*({}-\d+)'.format(settings.JIRA_KEY), log['message'])
             if m:
                 issue = self.get_issue(m.groups()[0])
-            log['issue'] = issue
+                log['issue'] = issue
+                self.latest_issues[issue['key']] = issue
+
+        for issue in self.sorted_issues()[:100]:
+            self.latest_issues[issue['key']] = issue
 
     def parse(self):
         self.parse_git()
