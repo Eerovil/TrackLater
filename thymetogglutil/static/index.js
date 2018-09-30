@@ -190,86 +190,95 @@ function wcmp(a, b) {
     return 0;
 }
 
-function makeRow(session) {
-    return [
-        session.date_group, session.category,
-        session.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
-        session.start_time, session.end_time,
-    ]
-}
-
-function makeEntryRow(entry) {
-    return [
-        entry.date_group, 'toggl',
-        entry.description,
-        entry.start_time, entry.end_time,
-    ]
-}
-
-function makeCommitRow(commit) {
-    return [
-        commit.date_group, 'commit',
-        commit.message + (commit.issue ? "<br />" + commit.issue.summary : ''),
-        commit.time, commit.time,
-    ]
-}
-
 function updateTable() {
-    $('#t_data').html('');
 
-    function drawCharts() {
-        let dateGroups = new Set();
-        sessions.forEach(session => {
-            dateGroups.add(session.date_group);
-        })
-        dateGroups.forEach(dateGroup => {
-            drawDayChart(
-                sessions.filter(s => s.date_group == dateGroup),
-                timeEntries.filter(s => s.date_group == dateGroup),
-                log.filter(s => s.date_group == dateGroup),
-            )
-        })
-    }
+    let dateGroups = new Set();
+    sessions.forEach(session => {
+        dateGroups.add(session.date_group);
+    })
+    dateGroups.forEach(dateGroup => {
+        drawDayChart(
+            sessions.filter(s => s.date_group == dateGroup),
+            timeEntries.filter(s => s.date_group == dateGroup),
+            log.filter(s => s.date_group == dateGroup),
+        )
+    })
 
-    google.charts.load('current', {'packages':['timeline']});
-    google.charts.setOnLoadCallback(drawCharts);
 
     function drawDayChart(day_sessions, day_entries, day_log) {
         var container = document.getElementById('timeline');
         var day_container = container.appendChild(document.createElement('div'));
-        var chart = new google.visualization.Timeline(day_container);
-        var dataTable = new google.visualization.DataTable();
-
-        dataTable.addColumn({ type: 'string', id: 'Session' });
-        dataTable.addColumn({ type: 'string', id: 'Type' });
-        dataTable.addColumn({ type: 'string', role: 'tooltip', p: {'html': true}});
-        dataTable.addColumn({ type: 'datetime', id: 'Start' });
-        dataTable.addColumn({ type: 'datetime', id: 'End' });
 
         let rows = [];
         day_sessions.forEach(session => {
-            rows.push(makeRow(session));
+            rows.push({
+                content: '',
+                start: session.start_time,
+                end: session.end_time,
+                group: 'session',
+                className: 'session-' + session.category,
+                title: session.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
+            });
         })
         day_entries.forEach(entry => {
-            rows.push(makeEntryRow(entry));
+            rows.push({
+                content: entry.description,
+                start: entry.start_time,
+                end: entry.end_time,
+                group: 'entry',
+                className: 'entry',
+                title: entry.description,
+            });
         })
         day_log.forEach(commit => {
-            rows.push(makeCommitRow(commit));
+            rows.push({
+                content: '',
+                start: commit.time,
+                group: 'commit',
+                className: 'commit',
+                title: commit.message + (commit.issue ? "<br />" + commit.issue.key + " " + commit.issue.summary : ''),
+                type: 'point',
+            });
         })
-        dataTable.addRows(rows);
+        var items = new vis.DataSet(rows);
 
-        chartItems[day_sessions[0].date_group] = {chart: chart, data: dataTable};
-        
-        drawChart(chart, dataTable);
+        // Configuration for the Timeline
+        var options = {
+            zoomable: false,
+            horizontalScroll: true,
+            margin: {
+                item: 0
+            }
+        };
 
-        google.visualization.events.addListener(chart, 'select', (event) => {
+        var groups = [
+            {
+                id: 'entry',
+                content: 'entry',
+                className: 'entry-group',
+            },
+            {
+                id: 'session',
+                content: 'session',
+                className: 'session-group',
+            },
+            {
+                id: 'commit',
+                content: 'commit',
+                className: 'commit-group',
+            }
+        ]
+    
+        // Create a Timeline
+        var timeline = new vis.Timeline(day_container, items, options, groups);
+        timeline.on('select', (properties) => {
             $('div#actions').hide();
             $('div#actions .toggl_actions').hide();
             $('div#actions input.description').val('');
-            let selection = chart.getSelection()[0].row;
-            let category = chartItems[day_sessions[0].date_group].data.getValue(selection, 1)
-            let start_time = chartItems[day_sessions[0].date_group].data.getValue(selection, 3);
-            if (category == 'work' || category == 'leisure') {
+            let selection = items.get(properties.items[0]);
+            let category = selection.group;
+            let start_time = selection.start;
+            if (category == 'session') {
                 let session = sessions.filter((session) => session.start_time == start_time)[0]
                 global_selected = {type: 'session', item: session};
                 $('div#actions').show();
@@ -278,7 +287,7 @@ function updateTable() {
                     $('div#actions input.description').val(timeEntry.description);
                 }
             }
-            if (category == 'toggl') {
+            if (category == 'entry') {
                 let entry = timeEntries.filter((entry) => entry.start_time == start_time)[0];
                 global_selected = {type: 'entry', item: entry};
                 $('div#actions').show();
@@ -292,22 +301,5 @@ function updateTable() {
             console.log(category, start_time);
         });
     }
-}
 
-function old_updatetable() {
-    for (let key in sessions){
-        let session = sessions[key];
-        let btn_export = $('<input type="button" value="Export"></input>');
-        if (session.exported != null) {
-            btn_export.attr('disabled', 'true');
-        }
-        let row = $(
-            `<tr><td><div>
-            ${formatDate(session.start_time)} - ${formatDate(session.end_time)} <br />
-            ${session.category}
-            </div></td></tr>`
-        );
-        row.find('div').append(btn_export);
-        $('#t_data').append(row);
-    }
 }
