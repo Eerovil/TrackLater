@@ -89,6 +89,7 @@ class ThymeMixin(object):
             return session
 
         def _update_category(session, category, seconds):
+
             if category == 'work':
                 session['category']['work'] += seconds * 2
             elif category == 'leisure':
@@ -100,12 +101,13 @@ class ThymeMixin(object):
             if prev_entry['active_window'] == entry['active_window']:
                 continue
 
-            diff = entry['time'] - prev_entry['time']
+            diff = (entry['time'] - prev_entry['time']).seconds
+            session_length = (entry['time'] - sessions[-1]['start_time']).seconds
 
-            _add_window(sessions[-1], prev_entry['active_window'], diff.seconds)
-            _update_category(sessions[-1], prev_entry['category'], diff.seconds)
+            _add_window(sessions[-1], prev_entry['active_window'], diff)
+            _update_category(sessions[-1], prev_entry['category'], diff)
 
-            if diff.seconds >= settings.CUTOFF:
+            if diff >= settings.IDLE or session_length >= settings.CUTOFF:
                 _end_session(sessions[-1], prev_entry)
                 sessions.append(_init_session(entry))
 
