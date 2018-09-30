@@ -23,6 +23,7 @@ $(document).ready(function() {
 
 var sessions = [];
 var timeEntries = [];
+var idCounter = 0;
 var log = [];
 
 var chartItems = {};
@@ -42,16 +43,19 @@ function getSessions() {
         _sessions = data.sessions;
         for (let i=0; i<_sessions.length; i++){
             let session = parseSession(_sessions[i]);
+            session.idcounter = idCounter++;
             sessions.push(session);
         }
         _timeEntries = data.time_entries;
         for (let i=0; i<_timeEntries.length; i++){
             let time_entry = parseTimeEntry(_timeEntries[i]);
+            time_entry.idcounter = idCounter++;
             timeEntries.push(time_entry);
         }
         _log = data.log;
         for (let i=0; i<_log.length; i++){
             let commit = parseCommit(_log[i]);
+            commit.idcounter = idCounter++;
             log.push(commit);
         }
         data.issues.forEach(issue => {
@@ -69,19 +73,11 @@ function refreshEntry(newEntry) {
     for (i in timeEntries) {
         let entry = timeEntries[i];
         if (entry.id == newEntry.id) {
-            let old_start_time = entry.start_time;
             entry.start_time = parseTime(newEntry.start_time)
             entry.end_time = parseTime(newEntry.end_time)
             entry.description = newEntry.description
             let c = chartItems[entry.date_group]
-            let id_found;
-            c.forEach((element, id) => {
-                if (element.start == old_start_time){
-                    id_found = element.id;
-                    return;
-                }
-            });
-            c.update({id: id_found,
+            c.update({id: entry.idcounter,
                 title: entry.description,
                 content: entry.description,
                 start: entry.start_time,
@@ -94,6 +90,7 @@ function refreshEntry(newEntry) {
 function createEntry(session, entry) {
     entry = parseTimeEntry(entry);
     entry.date_group = session.date_group;
+    entry.idcounter = idCounter++;
     timeEntries.push(entry);
     let c = chartItems[entry.date_group];
     c.add(makeRow(entry, 'entry'));
@@ -197,6 +194,7 @@ function makeRow(obj, type) {
     switch (type) {
         case 'session':
         return {
+                id: obj.idcounter,
                 content: '',
                 start: obj.start_time,
                 end: obj.end_time,
@@ -206,6 +204,7 @@ function makeRow(obj, type) {
         }
         case 'entry':
         return {
+                id: obj.idcounter,
                 content: obj.description,
                 start: obj.start_time,
                 end: obj.end_time,
@@ -215,6 +214,7 @@ function makeRow(obj, type) {
         }
         case 'commit':
         return {
+                id: obj.idcounter,
                 content: '',
                 start: obj.time,
                 group: 'commit',
@@ -292,9 +292,8 @@ function updateTable() {
             $('div#actions input.description').val('');
             let selection = items.get(properties.items[0]);
             let category = selection.group;
-            let start_time = selection.start;
             if (category == 'session') {
-                let session = sessions.filter((session) => session.start_time == start_time)[0]
+                let session = sessions.filter((session) => session.idcounter == selection.id)[0]
                 global_selected = {type: 'session', item: session};
                 $('div#actions').show();
                 if (session.exported){
@@ -303,7 +302,7 @@ function updateTable() {
                 }
             }
             if (category == 'entry') {
-                let entry = timeEntries.filter((entry) => entry.start_time == start_time)[0];
+                let entry = timeEntries.filter((entry) => entry.idcounter == selection.id)[0];
                 global_selected = {type: 'entry', item: entry};
                 $('div#actions').show();
                 $('div#actions .toggl_actions').show();
@@ -313,7 +312,6 @@ function updateTable() {
                 $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
                 $('div#actions .toggl_actions input.split_time').val(dateToTimestr(entry.start_time));
             }
-            console.log(category, start_time);
         });
     }
 
