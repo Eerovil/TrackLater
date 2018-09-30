@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from argparse import ArgumentParser
 from mixins.gitmixin import GitMixin
 from mixins.thyme import ThymeMixin
 from mixins.toggl import TogglMixin
@@ -12,20 +11,6 @@ import re
 
 import logging
 logger = logging.getLogger(__name__)
-
-parser = ArgumentParser()
-parser.add_argument("-f", "--file", dest="filename",
-                    help="json file to parse", metavar="FILE")
-parser.add_argument("-d", "--date", dest="date",
-                    help="date")
-parser.add_argument("-y", "--yesterday", dest="yesterday",
-                    help="yesterday")
-parser.add_argument("-n", "--consecutive", dest="consecutive",
-                    help="consecutive", type=int)
-parser.add_argument("-c", "--cutoff", dest="cutoff",
-                    help="cutoff", default=900, type=int)
-parser.add_argument("-a", "--api_key", dest="api_key",
-                    help="api_key")
 
 
 class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
