@@ -4,7 +4,7 @@ $(document).ready(function() {
     $('#actions .btn_export').on('click', () => {
         if (global_selected) {
             if (global_selected.type == 'session') {
-                exportSession(global_selected.item);
+                exportSession(global_selected.item, global_selected_last.item.end_time);
             } else if (global_selected.type == 'entry') {
                 updateEntry(global_selected.item.id, global_selected.item.date_group);
             }
@@ -28,6 +28,7 @@ var log = [];
 
 var chartItems = {};
 var global_selected = null;
+var global_selected_last = null;
 
 function getSessions() {
     $.ajax('sessions', {
@@ -96,10 +97,10 @@ function createEntry(session, entry) {
     c.add(makeRow(entry, 'entry'));
 }
 
-function exportSession(session) {
+function exportSession(session, end_time) {
     $.post('export', {
         'start_time': session.start_time.getTime(),
-        'end_time': session.end_time.getTime(),
+        'end_time': end_time.getTime(),
         'name': $('#actions input.description').val(),
     }, function(data) {
         createEntry(session, data);
@@ -280,6 +281,8 @@ function updateTable() {
             margin: {
                 item: 0
             },
+            multiselect: true,
+            multiselectPerGroup: true,
             snap: null,
 
             onMove: function(item, callback) {
@@ -333,10 +336,13 @@ function updateTable() {
             $('div#actions .toggl_actions').hide();
             $('div#actions input.description').val('');
             let selection = items.get(properties.items[0]);
+            let selectionLast = items.get(properties.items[properties.items.length - 1]);
             let category = selection.group;
             if (category == 'session') {
                 let session = sessions.filter((session) => session.idcounter == selection.id)[0]
+                let sessionLast = sessions.filter((session) => session.idcounter == selectionLast.id)[0]
                 global_selected = {type: 'session', item: session};
+                global_selected_last = {type: 'session', item: sessionLast};
                 $('div#actions').show();
                 if (session.exported){
                     let timeEntry = timeEntries.filter(e => e.id == session.exported)[0];
