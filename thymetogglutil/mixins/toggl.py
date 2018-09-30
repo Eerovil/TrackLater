@@ -3,6 +3,9 @@ import json
 
 from thymetogglutil.utils import parse_time
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class TogglMixin(object):
     def __init__(self, api_key):
@@ -61,6 +64,12 @@ class TogglMixin(object):
             "end_time": end_time
         }, description)
         return (entry1, entry2)
+
+    def delete_time_entry(self, entry_id):
+        logger.info('deleting %s', entry_id)
+        response = requests.delete('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
+                                   auth=(self.api_key, 'api_token'))
+        return response.text
 
     def parse_toggl(self):
         if self.start_date:

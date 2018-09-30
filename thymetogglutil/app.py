@@ -22,7 +22,7 @@ def hello():
 def sessions():
     if request.method == 'GET':
         now = datetime.now()
-        parser = Parser(now - timedelta(days=15), now - timedelta(days=0))
+        parser = Parser(now - timedelta(days=10), now - timedelta(days=0))
         parser.parse()
         return json.dumps({
             'sessions': parser.sessions,
@@ -47,6 +47,14 @@ def export():
             'end_time': parseTimestamp(request.form['end_time']),
         }, request.form['name'], request.form.get('id', None))
         return json.dumps(entry, default=str)
+
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    if request.method == 'POST':
+        parser = Parser(None, None)
+        ret = parser.delete_time_entry(request.form.get('id'))
+        return json.dumps(ret, default=str)
 
 
 @app.route('/split', methods=['POST'])

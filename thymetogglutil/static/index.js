@@ -117,6 +117,14 @@ function updateEntry(entryId, date_str) {
     }, 'json')
 }
 
+function deleteEntry(entryId) {
+    $.post('delete', {
+        'id': entryId
+    }, function(data) {
+        alert("deleted entry " + entryId + ": " + data);
+    }, 'json')
+}
+
 function splitEntry(entryId, date_str) {
     $.post('split', {
         'id': entryId,
@@ -201,6 +209,7 @@ function makeRow(obj, type) {
                 group: 'session',
                 className: 'session-' + obj.category,
                 title: obj.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
+                editable: false,
         }
         case 'entry':
         return {
@@ -211,6 +220,11 @@ function makeRow(obj, type) {
                 group: 'entry',
                 className: 'entry',
                 title: obj.description,
+                editable: {
+                    updateTime: true,  // drag items horizontally
+                    remove: true,       // delete an item by tapping the delete button top right
+                    overrideItems: true  // allow these options to override item.editable
+                },
         }
         case 'commit':
         return {
@@ -221,6 +235,7 @@ function makeRow(obj, type) {
                 className: 'commit',
                 title: obj.message + (obj.issue ? "<br />" + obj.issue.key + " " + obj.issue.summary : ''),
                 type: 'point',
+                editable: false,
         }
     }
 }
@@ -259,10 +274,37 @@ function updateTable() {
 
         // Configuration for the Timeline
         var options = {
+            editable: true,
             zoomable: false,
             horizontalScroll: true,
             margin: {
                 item: 0
+            },
+            snap: null,
+
+            onMove: function(item, callback) {
+                if (item.group == 'entry') {
+                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+                    
+                    $.post('export', {
+                        'id': entry.id,
+                        'start_time': item.start.getTime(),
+                        'end_time': item.end.getTime(),
+                        'name': $('#actions input.description').val(),
+                    }, function(data) {
+                        refreshEntry(data);
+                    }, 'json')
+                }
+                return callback(item);
+            },
+
+            onRemove: function(item, callback) {
+                if (item.group == 'entry') {
+                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+                    
+                    deleteEntry(entry.id);
+                }
+                return callback(item);
             }
         };
 
