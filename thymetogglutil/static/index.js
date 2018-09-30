@@ -74,15 +74,19 @@ function refreshEntry(newEntry) {
             entry.end_time = parseTime(newEntry.end_time)
             entry.description = newEntry.description
             let c = chartItems[entry.date_group]
-            for (let row=0; row<c.data.getNumberOfRows(); row++) {
-                if (c.data.getValue(row, 3) == old_start_time){
-                    c.data.setValue(row, 2, entry.description);
-                    c.data.setValue(row, 3, entry.start_time);
-                    c.data.setValue(row, 4, entry.end_time);
-                    drawChart(c.chart, c.data)
-                    break;
+            let id_found;
+            c.forEach((element, id) => {
+                if (element.start == old_start_time){
+                    id_found = element.id;
+                    return;
                 }
-            }
+            });
+            c.update({id: id_found,
+                title: entry.description,
+                content: entry.description,
+                start: entry.start_time,
+                end: entry.end_time,
+            })
         }
     }
 }
@@ -92,8 +96,7 @@ function createEntry(session, entry) {
     entry.date_group = session.date_group;
     timeEntries.push(entry);
     let c = chartItems[entry.date_group];
-    c.data.addRow(makeEntryRow(entry));
-    drawChart(c.chart, c.data);
+    c.add(makeRow(entry, 'entry'));
 }
 
 function exportSession(session) {
@@ -190,6 +193,38 @@ function wcmp(a, b) {
     return 0;
 }
 
+function makeRow(obj, type) {
+    switch (type) {
+        case 'session':
+        return {
+                content: '',
+                start: obj.start_time,
+                end: obj.end_time,
+                group: 'session',
+                className: 'session-' + obj.category,
+                title: obj.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
+        }
+        case 'entry':
+        return {
+                content: obj.description,
+                start: obj.start_time,
+                end: obj.end_time,
+                group: 'entry',
+                className: 'entry',
+                title: obj.description,
+        }
+        case 'commit':
+        return {
+                content: '',
+                start: obj.time,
+                group: 'commit',
+                className: 'commit',
+                title: obj.message + (obj.issue ? "<br />" + obj.issue.key + " " + obj.issue.summary : ''),
+                type: 'point',
+        }
+    }
+}
+
 function updateTable() {
 
     let dateGroups = new Set();
@@ -211,36 +246,16 @@ function updateTable() {
 
         let rows = [];
         day_sessions.forEach(session => {
-            rows.push({
-                content: '',
-                start: session.start_time,
-                end: session.end_time,
-                group: 'session',
-                className: 'session-' + session.category,
-                title: session.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
-            });
+            rows.push(makeRow(session, 'session'));
         })
         day_entries.forEach(entry => {
-            rows.push({
-                content: entry.description,
-                start: entry.start_time,
-                end: entry.end_time,
-                group: 'entry',
-                className: 'entry',
-                title: entry.description,
-            });
+            rows.push(makeRow(entry, 'entry'));
         })
         day_log.forEach(commit => {
-            rows.push({
-                content: '',
-                start: commit.time,
-                group: 'commit',
-                className: 'commit',
-                title: commit.message + (commit.issue ? "<br />" + commit.issue.key + " " + commit.issue.summary : ''),
-                type: 'point',
-            });
+            rows.push(makeRow(commit, 'commit'));
         })
         var items = new vis.DataSet(rows);
+        chartItems[day_sessions[0].date_group] = items;
 
         // Configuration for the Timeline
         var options = {
