@@ -28,7 +28,7 @@ class TogglMixin(object):
             'time_entry': {
                 "description": name,
                 "start": session['start_time'].isoformat(),
-                "duration": (session['end_time'] - session['start_time']).seconds,
+                "duration": int((session['end_time'] - session['start_time']).total_seconds()),
                 "created_with": "thyme-toggl-cli"
             }
         }
