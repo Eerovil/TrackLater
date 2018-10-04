@@ -70,7 +70,7 @@ class ThymeMixin(object):
 
         def _end_session(session, entry):
             session['end_time'] = entry['time']
-            session['duration'] = (entry['time'] - session['start_time']).total_seconds()
+            session['duration'] = int((entry['time'] - session['start_time']).total_seconds())
             session['windows'] = [{'name': window, 'time': session['windows'][window]}
                                   for window in session['windows']]
             if session['category']['work'] >= session['category']['leisure']:
