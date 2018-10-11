@@ -1,0 +1,25 @@
+table, th, td {
+    border: 1px solid black;
+ }
+
+ div#actions {
+     position: fixed;
+     z-index: 99;
+ }
+
+ .session-work {
+    background-color: darkblue;
+ }
+ .session-leisure {
+    background-color: green;
+ }
+ .commit {
+    background-color: grey;
+ }
+ .entry {
+    background-color: darkred;
+ }
+
+ .vis-range {
+     color: white;
+ }
