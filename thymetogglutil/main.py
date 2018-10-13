@@ -23,6 +23,7 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         self.issues = []
         self.latest_issues = {}
         self.time_entries = []
+        self.projects = []
         self.sessions = []
         self.api_key = settings.API_KEY
         self.cutoff_hour = 3  # Used to group dates

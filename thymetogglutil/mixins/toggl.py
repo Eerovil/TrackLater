@@ -2,6 +2,7 @@ import requests
 import json
 
 from thymetogglutil.utils import parse_time
+from thymetogglutil import settings
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,7 +19,20 @@ class TogglMixin(object):
         self.id = data['id']
         self.start_date = None
         self.end_date = None
+        self.time_entries = []
+        self.projects = []
         self.check_overlap()
+
+    def request(self, endpoint, **kwargs):
+        url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
+        kwargs['headers'] = kwargs.get('headers', {
+            "Content-Type": "application/json"
+        })
+        kwargs['auth'] = kwargs.get('auth', (self.api_key, 'api_token'))
+
+        method = kwargs.get('method', 'POST').lower()
+        del kwargs['method']
+        return getattr(requests, method)(url, **kwargs)
 
     def push_session(self, session, name, entry_id=None):
         headers = {
@@ -71,6 +85,28 @@ class TogglMixin(object):
                                    auth=(self.api_key, 'api_token'))
         return response.text
 
+    def get_projects(self):
+        clients = self.request('clients', method='GET').json()
+        self.projects = []
+        for client in clients:
+            if client['name'] not in settings.CLIENTS.keys():
+                continue
+            settings_regex = settings.CLIENTS[client['name']]['regex']
+            settings_projects = settings.CLIENTS[client['name']]['projects']
+            resp = self.request('clients/{}/projects'.format(client['id']),
+                                method='GET')
+            my_projects = []
+            for project in resp.json():
+                if project['name'] not in settings_projects:
+                    continue
+                project['client'] = client
+                project['type'] = settings_projects[project['name']]
+                project['regex'] = settings_regex
+                my_projects.append(project)
+            self.projects += my_projects
+
+        return self.projects
+
     def parse_toggl(self):
         if self.start_date:
             params = {'start_date': self.start_date.isoformat() + "+03:00",
@@ -88,6 +124,9 @@ class TogglMixin(object):
             entry['start_time'] = parse_time(entry['start'])
             entry['end_time'] = parse_time(entry['stop'])
             self.time_entries.append(entry)
+
+        self.get_projects()
+
         return self.time_entries
 
     def check_overlap(self):
