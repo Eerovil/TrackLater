@@ -139,11 +139,11 @@ class TogglMixin(object):
                 start2 = (entry2['start_time'])
                 stop2 = (entry2['end_time'])
                 if start1 <= start2 <= stop1:
-                    print "OVERLAP IN ENTRY {}".format(start1)
+                    print("OVERLAP IN ENTRY {}".format(start1))
                 elif start1 <= stop2 <= stop1:
-                    print "OVERLAP IN ENTRY {}".format(start1)
+                    print("OVERLAP IN ENTRY {}".format(start1))
                 elif start1 <= start2 and stop2 <= stop1:
-                    print "OVERLAP IN ENTRY {}".format(start1)
+                    print("OVERLAP IN ENTRY {}".format(start1))
 
         return None
     
