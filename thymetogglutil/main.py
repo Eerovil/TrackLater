@@ -32,6 +32,17 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         super(Parser, self).parse_toggl()
         for session in self.sessions:
             session['exported'] = self.check_session_exists(session)
+        for key, issue in self.latest_issues.iteritems():
+            for project in self.projects:
+                name = project['client']['name']
+                if name not in settings.CLIENTS or settings.CLIENTS[name]['from'] != 'jira':
+                    continue
+
+                if project['type'] == 'default':
+                    self.latest_issues[key]['project'] = project['id']
+                if project['type'].lower() == issue['type'].lower():
+                    self.latest_issues[key]['project'] = project['id']
+                    break
 
     def parse_jira(self):
         super(Parser, self).parse_jira()
