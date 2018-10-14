@@ -17,6 +17,15 @@ $(document).ready(function() {
             }
         }
     });
+    $('#actions input.description').on('change', () => {
+        // Update project field to match the one specified on the issue
+        issue = issues.filter((issue) => {
+            return ($('#actions input.description').val().indexOf(issue.key) > -1);
+        });
+        if (issues.length > 0 && issue[0].project) {
+            $('#project').val(issue[0].project);
+        }
+    });
     console.log('hello2');
 });
 
@@ -25,6 +34,8 @@ var sessions = [];
 var timeEntries = [];
 var idCounter = 0;
 var log = [];
+var projects = [];
+var issues = [];
 
 var chartItems = {};
 var global_selected = null;
@@ -39,6 +50,7 @@ function getSessions() {
         sessions = [];
         timeEntries = [];
         log = [];
+        projects = [];
         chartItems = {};
         console.log(data)
         _sessions = data.sessions;
@@ -59,9 +71,18 @@ function getSessions() {
             commit.idcounter = idCounter++;
             log.push(commit);
         }
+        _projects = data.projects;
+        for (let i=0; i<_projects.length; i++){
+            let project = _projects[i];
+            projects.push(project);
+        }
+        data.projects.forEach(project => {
+            $('#project').append(`<option value="${project.id}">${project.client.name} - ${project.name}</option>`)
+        });
         data.issues.forEach(issue => {
-            $('#issues').append(`<option>${issue.key} ${issue.summary}</option>`)
-        })
+            issues.push(issue);
+            $('#issues').append(`<option value="${issue.key} ${issue.summary}"></option>`)
+        });
         updateTable();
     })
     .fail((err) => {
@@ -102,6 +123,7 @@ function exportSession(session, end_time) {
         'start_time': session.start_time.getTime(),
         'end_time': end_time.getTime(),
         'name': $('#actions input.description').val(),
+        'project': $('#project > option:selected').val(),
     }, function(data) {
         createEntry(session, data);
     }, 'json')
@@ -113,6 +135,7 @@ function updateEntry(entryId, date_str) {
         'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
         'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
         'name': $('#actions input.description').val(),
+        'project': $('#project > option:selected').val(),
     }, function(data) {
         refreshEntry(data);
     }, 'json')
@@ -133,6 +156,7 @@ function splitEntry(entryId, date_str) {
         'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
         'split_time': new Date(date_str + " " + $('#actions .split_time').val()).getTime(),
         'name': $('#actions input.description').val(),
+        'project': $('#project > option:selected').val(),
     }, function(data) {
         refreshEntry(data.entry1);
         createEntry({date_group: date_str}, data.entry2);
@@ -347,6 +371,7 @@ function updateTable() {
                 if (session.exported){
                     let timeEntry = timeEntries.filter(e => e.id == session.exported)[0];
                     $('div#actions input.description').val(timeEntry.description);
+                    $('#project').val(timeEntry.project);
                 }
             }
             if (category == 'entry') {
@@ -356,6 +381,7 @@ function updateTable() {
                 $('div#actions .toggl_actions').show();
                 $('div#actions input.btn_export').attr('disabled', false);
                 $('div#actions input.description').val(entry.description);
+                $('#project').val(entry.project);
                 $('div#actions .toggl_actions input.start_time').val(dateToTimestr(entry.start_time));
                 $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
                 $('div#actions .toggl_actions input.split_time').val(dateToTimestr(entry.start_time));

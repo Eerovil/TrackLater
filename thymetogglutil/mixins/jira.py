@@ -25,8 +25,8 @@ class JiraMixin(object):
     def fetch_issues(self, start_from=None):
         start_str = '&startAt={}'.format(start_from) if (start_from and start_from > 0) else ''
         response = requests.get(
-            '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary&maxResults=100'
-            '{start_str}'.format(
+            '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary,issuetype'
+            '&maxResults=100{start_str}'.format(
                 JIRA_URL=settings.JIRA_URL, JIRA_KEY=settings.JIRA_KEY, start_str=start_str
             ), auth=self.credentials
         )
@@ -55,7 +55,7 @@ class JiraMixin(object):
         run_once = False
         while latest_issues['total'] - len(self.issues) > 0 or not run_once:
             run_once = True
-            logging.warning('Fetching issues %s to %s', len(self.issues), len(self.issues) + 100)
+            logging.info('Fetching issues %s to %s', len(self.issues), len(self.issues) + 100)
             new_issues = self.fetch_issues(
                 start_from=(latest_issues['total'] - len(self.issues) - 100)
             )['issues']
@@ -63,10 +63,10 @@ class JiraMixin(object):
                 self._add_issue({
                     'key': issue['key'],
                     'summary': issue['fields']['summary'],
+                    'type': issue['fields']['issuetype']['name'],
                 })
             with codecs.open('jira-cache', 'wb', encoding='utf8') as f:
                 f.write(json.dumps(self.issues))
-        logging.warning(self.get_issues()[-10:])
 
     def get_issue(self, key):
         for issue in self.issues:
