@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 from thymetogglutil.mixins.gitmixin import GitMixin
-from thymetogglutil.mixins.thyme import ThymeMixin
+from thymetogglutil.timemodules import thyme
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.utils import DateGroupMixin
@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
+class Parser(GitMixin, JiraMixin, TogglMixin, DateGroupMixin):
     def __init__(self, start_date, end_date, jira_credentials=None, git_repos=None):
         self.start_date = start_date
         self.end_date = end_date
@@ -56,6 +56,11 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
 
         for issue in self.sorted_issues()[:100]:
             self.latest_issues[issue['key']] = issue
+
+    def parse_thyme(self):
+        self.sessions = [
+            s.__dict__ for s in thyme.Parser(self.start_date, self.end_date).get_entries()
+        ]
 
     def parse(self):
         self.parse_git()

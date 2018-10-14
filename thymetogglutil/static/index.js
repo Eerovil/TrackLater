@@ -232,8 +232,8 @@ function makeRow(obj, type) {
                 start: obj.start_time,
                 end: obj.end_time,
                 group: 'session',
-                className: 'session-' + obj.category,
-                title: obj.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
+                className: 'session-' + obj.extra_data.category,
+                title: obj.extra_data.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
                 editable: false,
         }
         case 'entry':
