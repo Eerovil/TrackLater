@@ -255,10 +255,10 @@ function makeRow(obj, type) {
         return {
                 id: obj.idcounter,
                 content: '',
-                start: obj.time,
+                start: obj.start_time,
                 group: 'commit',
                 className: 'commit',
-                title: obj.message + (obj.issue ? "<br />" + obj.issue.key + " " + obj.issue.summary : ''),
+                title: obj.extra_data.message + (obj.extra_data.issue ? "<br />" + obj.extra_data.issue.key + " " + obj.extra_data.issue.summary : ''),
                 type: 'point',
                 editable: false,
         }
