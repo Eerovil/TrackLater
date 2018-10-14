@@ -30,7 +30,6 @@ class JiraMixin(object):
                 JIRA_URL=settings.JIRA_URL, JIRA_KEY=settings.JIRA_KEY, start_str=start_str
             ), auth=self.credentials
         )
-        logging.warning(response.text)
         return response.json()
 
     def _add_issue(self, issue):
@@ -48,7 +47,7 @@ class JiraMixin(object):
                 with codecs.open('jira-cache', 'rb', encoding='utf8') as f:
                     self.issues = json.load(f)
             except ValueError:
-                print 'cache error'
+                print('cache error')
 
         latest_issues = self.fetch_issues()
         logging.warning('latest_issues: %s cached: %s', latest_issues['total'], len(self.issues))

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from mixins.gitmixin import GitMixin
-from mixins.thyme import ThymeMixin
-from mixins.toggl import TogglMixin
-from mixins.jira import JiraMixin
+from thymetogglutil.mixins.gitmixin import GitMixin
+from thymetogglutil.mixins.thyme import ThymeMixin
+from thymetogglutil.mixins.toggl import TogglMixin
+from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.utils import DateGroupMixin
 from thymetogglutil import settings
 import re
@@ -32,7 +32,7 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         super(Parser, self).parse_toggl()
         for session in self.sessions:
             session['exported'] = self.check_session_exists(session)
-        for key, issue in self.latest_issues.iteritems():
+        for key, issue in self.latest_issues.items():
             for project in self.projects:
                 name = project['client']['name']
                 if name not in settings.CLIENTS or settings.CLIENTS[name]['from'] != 'jira':

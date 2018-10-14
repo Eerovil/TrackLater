@@ -1,0 +1,17 @@
+certifi==2018.8.24
+chardet==3.0.4
+Click==7.0
+Flask==1.0.2
+gitdb2==2.0.5
+GitPython==2.1.11
+idna==2.7
+itsdangerous==0.24
+Jinja2==2.10
+MarkupSafe==1.0
+python-dateutil==2.7.3
+pytz==2018.5
+requests==2.19.1
+six==1.11.0
+smmap2==2.0.5
+urllib3==1.23
+Werkzeug==0.14.1
