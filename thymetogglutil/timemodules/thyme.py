@@ -2,6 +2,8 @@ from thymetogglutil import settings
 import json
 from datetime import timedelta
 from thymetogglutil.utils import parse_time
+from thymetogglutil.timemodules.interfaces import AbstractParser, Entry
+from typing import List
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,12 +16,16 @@ def get_window(entry, id):
     return None
 
 
-class ThymeMixin(object):
-    def parse_thyme(self):
-        snapshot_entries = self.read_files()
-        self.sessions = self.generate_sessions(snapshot_entries)
+class Parser(AbstractParser):
+    """
+    Only implements "get".
+    """
+    def get_entries(self) -> List[Entry]:
+        snapshot_entries = self._read_files()
+        self.sessions = self._generate_sessions(snapshot_entries)
+        return self.sessions
 
-    def read_files(self):
+    def _read_files(self):
         snapshot_entries = []
         filenames = []
         date = self.start_date
@@ -33,23 +39,23 @@ class ThymeMixin(object):
                 data = json.load(f)
                 entries = data.get('Snapshots')
                 for entry in entries:
-                    parsed_entry = self.parse_snapshot_entry(entry)
+                    parsed_entry = self._parse_snapshot_entry(entry)
                     if parsed_entry is not None:
                         snapshot_entries.append(parsed_entry)
 
         return snapshot_entries
 
-    def parse_snapshot_entry(self, entry):
+    def _parse_snapshot_entry(self, entry):
         active_window = get_window(entry, entry['Active'])
         if active_window is None:
             return None
         return {
             'active_window': active_window,
             'time': parse_time(entry['Time']),
-            'category': self.guess_category(active_window),
+            'category': self._guess_category(active_window),
         }
 
-    def guess_category(self, window):
+    def _guess_category(self, window):
         for l in settings.LEISURE:
             if l in window['Name']:
                 return 'leisure'
@@ -58,42 +64,43 @@ class ThymeMixin(object):
                 return 'work'
         return 'unknown'
 
-    def generate_sessions(self, entries):
+    def _generate_sessions(self, entries):
         def _init_session(entry):
-            return {
-                'start_time': entry['time'],
-                'end_time': None,
-                'windows': {},
-                'duration': None,
-                'category': {'work': 0, 'leisure': 0}
-            }
+            return Entry(
+                start_time=entry['time'],
+                extra_data={
+                    'windows': {},
+                    'category': {'work': 0, 'leisure': 0}
+                }
+            )
 
         def _end_session(session, entry):
-            session['end_time'] = entry['time']
-            session['duration'] = int((entry['time'] - session['start_time']).total_seconds())
-            session['windows'] = [{'name': window, 'time': session['windows'][window]}
-                                  for window in session['windows']]
-            if session['category']['work'] >= session['category']['leisure']:
-                session['category'] = 'work'
+            session.end_time = entry['time']
+            extra = session.extra_data
+            extra['windows'] = [
+                {'name': window, 'time': extra['windows'][window]}
+                for window in extra['windows']
+            ]
+            if extra['category']['work'] >= extra['category']['leisure']:
+                extra['category'] = 'work'
             else:
-                session['category'] = 'leisure'
+                extra['category'] = 'leisure'
 
         def _add_window(session, window, seconds):
             if 'eero@eero-ThinkPad-L470' in window['Name']:
                 return session
 
-            if window['Name'] not in session['windows']:
-                session['windows'][window['Name']] = 0
-            session['windows'][window['Name']] += seconds
+            if window['Name'] not in session.extra_data['windows']:
+                session.extra_data['windows'][window['Name']] = 0
+            session.extra_data['windows'][window['Name']] += seconds
 
             return session
 
         def _update_category(session, category, seconds):
-
             if category == 'work':
-                session['category']['work'] += seconds * 2
+                session.extra_data['category']['work'] += seconds * 2
             elif category == 'leisure':
-                session['category']['leisure'] += seconds * 2
+                session.extra_data['category']['leisure'] += seconds * 2
 
         prev_entry = entries[0]
         sessions = [_init_session(prev_entry)]
@@ -102,7 +109,7 @@ class ThymeMixin(object):
                 continue
 
             diff = (entry['time'] - prev_entry['time']).total_seconds()
-            session_length = (prev_entry['time'] - sessions[-1]['start_time']).total_seconds()
+            session_length = (prev_entry['time'] - sessions[-1].start_time).total_seconds()
 
             _add_window(sessions[-1], prev_entry['active_window'], diff)
             _update_category(sessions[-1], prev_entry['category'], diff)
