@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from thymetogglutil.mixins.gitmixin import GitMixin
-from thymetogglutil.timemodules import thyme
+from thymetogglutil.timemodules import thyme, _git
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.utils import DateGroupMixin
@@ -13,12 +12,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(GitMixin, JiraMixin, TogglMixin, DateGroupMixin):
-    def __init__(self, start_date, end_date, jira_credentials=None, git_repos=None):
+class Parser(JiraMixin, TogglMixin, DateGroupMixin):
+    def __init__(self, start_date, end_date, jira_credentials=None):
         self.start_date = start_date
         self.end_date = end_date
         self.credentials = jira_credentials or settings.JIRA_CREDENTIALS
-        self.repos = git_repos or settings.GIT_REPOS
         self.log = []
         self.issues = []
         self.latest_issues = {}
@@ -48,10 +46,10 @@ class Parser(GitMixin, JiraMixin, TogglMixin, DateGroupMixin):
         super(Parser, self).parse_jira()
         for log in self.log:
             issue = None
-            m = re.match('.*({}-\d+)'.format(settings.JIRA_KEY), log['message'])
+            m = re.match('.*({}-\d+)'.format(settings.JIRA_KEY), log['extra_data']['message'])
             if m:
                 issue = self.get_issue(m.groups()[0])
-                log['issue'] = issue
+                log['extra_data']['issue'] = issue
                 self.latest_issues[issue['key']] = issue
 
         for issue in self.sorted_issues()[:100]:
@@ -60,6 +58,11 @@ class Parser(GitMixin, JiraMixin, TogglMixin, DateGroupMixin):
     def parse_thyme(self):
         self.sessions = [
             s.__dict__ for s in thyme.Parser(self.start_date, self.end_date).get_entries()
+        ]
+
+    def parse_git(self):
+        self.log = [
+            c.__dict__ for c in _git.Parser(self.start_date, self.end_date).get_entries()
         ]
 
     def parse(self):
