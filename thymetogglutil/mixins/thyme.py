@@ -1,5 +1,6 @@
 from thymetogglutil import settings
 import json
+import os
 from datetime import timedelta
 from thymetogglutil.utils import parse_time
 
@@ -29,6 +30,8 @@ class ThymeMixin(object):
 
         for filename in filenames:
             logging.info("opening file {}".format(filename))
+            if not os.path.exists(filename):
+                continue
             with open(filename) as f:
                 data = json.load(f)
                 entries = data.get('Snapshots')
