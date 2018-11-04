@@ -270,8 +270,14 @@ function updateTable() {
     let dateGroups = new Set();
     sessions.forEach(session => {
         dateGroups.add(session.date_group);
-    })
-    dateGroups.forEach(dateGroup => {
+    });
+    log.forEach(commit => {
+        dateGroups.add(commit.date_group);
+    });
+    timeEntries.forEach(entry => {
+        dateGroups.add(entry.date_group);
+    });
+    Array.from(dateGroups).sort().forEach(dateGroup => {
         drawDayChart(
             sessions.filter(s => s.date_group == dateGroup),
             timeEntries.filter(s => s.date_group == dateGroup),
@@ -295,7 +301,8 @@ function updateTable() {
             rows.push(makeRow(commit, 'commit'));
         })
         var items = new vis.DataSet(rows);
-        chartItems[day_sessions[0].date_group] = items;
+        let firstDateGroup = (day_sessions.concat(day_entries, day_log))[0].date_group;
+        chartItems[firstDateGroup] = items;
 
         // Configuration for the Timeline
         var options = {
