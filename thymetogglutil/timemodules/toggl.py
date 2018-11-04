@@ -1,29 +1,34 @@
 import requests
 import json
 
+from typing import List, Dict
+from datetime import datetime
+
 from thymetogglutil.utils import parse_time
+from thymetogglutil.timemodules.interfaces import (
+    AbstractParser, Entry, AddMixin, UpdateMixin, DeleteMixin
+)
 from thymetogglutil import settings
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class TogglMixin(object):
-    def __init__(self, api_key):
-        self.api_key = api_key
-        response = requests.get('https://www.toggl.com/api/v8/me?with_related_data=true',
+class Parser(AbstractParser, DeleteMixin):
+    def __init__(self, *args, **kwargs) -> None:
+        super(Parser, self).__init__(*args, **kwargs)
+        self.api_key = settings.API_KEY
+        response = requests.get('https://www.toggl.com/api/v8/me',
                                 auth=(self.api_key, 'api_token'))
         data = response.json()['data']
-        self.email = data['email']
-        self.default_wid = data['default_wid']
-        self.id = data['id']
-        self.start_date = None
-        self.end_date = None
-        self.time_entries = []
-        self.projects = data['projects']
+        self.email: str = data['email']
+        self.default_wid: str = data['default_wid']
+        self.id: str = data['id']
+        self.time_entries: List[Entry] = []
+        self.projects: List = []
         self.check_overlap()
 
-    def request(self, endpoint, **kwargs):
+    def request(self, endpoint: str, **kwargs) -> requests.Response:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
         kwargs['headers'] = kwargs.get('headers', {
             "Content-Type": "application/json"
@@ -34,7 +39,7 @@ class TogglMixin(object):
         del kwargs['method']
         return getattr(requests, method)(url, **kwargs)
 
-    def push_session(self, session, name, entry_id=None, project_id=None):
+    def push_session(self, session: dict, name: str, entry_id: str=''):
         headers = {
             "Content-Type": "application/json"
         }
@@ -46,8 +51,6 @@ class TogglMixin(object):
                 "created_with": "thyme-toggl-cli"
             }
         }
-        if project_id:
-            data['time_entry']['pid'] = project_id
         if entry_id:
             return self.update_time_entry(entry_id, data)
 
@@ -60,17 +63,18 @@ class TogglMixin(object):
         entry['end_time'] = parse_time(entry['stop'])
         return entry
 
-    def update_time_entry(self, entry_id, data):
+    def update_time_entry(self, entry_id: str, data: dict):
         response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
                                 data=json.dumps(data), auth=(self.api_key, 'api_token'))
         print(u'Updated session to toggl: {}'.format(response.text))
         entry = response.json()['data']
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
-        self.parse_toggl()
+        self.get_entries()
         return entry
 
-    def split_time_entry(self, entry_id, start_time, split_time, end_time, description):
+    def split_time_entry(self, entry_id: str, start_time: datetime, split_time: datetime,
+                         end_time: datetime, description: str):
         entry1 = self.push_session({
             "start_time": start_time,
             "end_time": split_time
@@ -81,14 +85,16 @@ class TogglMixin(object):
         }, description)
         return (entry1, entry2)
 
-    def delete_time_entry(self, entry_id):
+    def delete_entry(self, entry_id: str) -> bool:
+        # TODO: Error handling
         logger.info('deleting %s', entry_id)
-        response = requests.delete('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
-                                   auth=(self.api_key, 'api_token'))
-        return response.text
+        requests.delete('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
+                        auth=(self.api_key, 'api_token'))
+        return True
 
     def get_projects(self):
         clients = self.request('clients', method='GET').json()
+        self.projects = []
         for client in clients:
             if client['name'] not in settings.CLIENTS.keys():
                 continue
@@ -96,26 +102,19 @@ class TogglMixin(object):
             settings_projects = settings.CLIENTS[client['name']]['projects']
             resp = self.request('clients/{}/projects'.format(client['id']),
                                 method='GET')
+            my_projects = []
             for project in resp.json():
                 if project['name'] not in settings_projects:
                     continue
                 project['client'] = client
                 project['type'] = settings_projects[project['name']]
                 project['regex'] = settings_regex
-                for p in self.projects:
-                    if p['id'] == project['id']:
-                        p.update(project)
-                        break
+                my_projects.append(project)
+            self.projects += my_projects
 
-        for project in self.projects:
-            if 'client' not in project:
-                project['client'] = {'name': 'No client', 'id': ''}
-                project['type'] = 'default'
-                project['regex'] = ''
-        logger.warning(self.projects)
         return self.projects
 
-    def parse_toggl(self):
+    def get_entries(self) -> List[Entry]:
         if self.start_date:
             params = {'start_date': self.start_date.isoformat() + "+03:00",
                       'end_date': self.end_date.isoformat() + "+03:00"}
@@ -129,9 +128,11 @@ class TogglMixin(object):
         data = response.json()
         self.time_entries = []
         for entry in data:
-            entry['start_time'] = parse_time(entry['start'])
-            entry['end_time'] = parse_time(entry['stop'])
-            self.time_entries.append(entry)
+            self.time_entries.append(Entry(
+                start_time=parse_time(entry['start']),
+                end_time=parse_time(entry['stop']),
+                extra_data=entry
+            ))
 
         self.get_projects()
 
@@ -154,12 +155,12 @@ class TogglMixin(object):
                     print("OVERLAP IN ENTRY {}".format(start1))
 
         return None
-    
+
     def get_entry(self, entry_id):
         for entry in self.time_entries:
             if entry['id'] == entry_id:
                 return entry
-    
+
     def check_session_exists(self, session):
         for entry in self.time_entries:
             start = (entry['start_time'])
