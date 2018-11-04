@@ -23,9 +23,10 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         self.issues = []
         self.latest_issues = {}
         self.time_entries = []
-        self.projects = []
         self.sessions = []
         self.api_key = settings.API_KEY
+        self.projects = (self.request("/me?with_related_data=true", method='GET')
+                         .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
 
     def parse_toggl(self):

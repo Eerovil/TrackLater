@@ -22,7 +22,7 @@ $(document).ready(function() {
         issue = issues.filter((issue) => {
             return ($('#actions input.description').val().indexOf(issue.key) > -1);
         });
-        if (issues.length > 0 && issue[0].project) {
+        if (issues.length > 0 && issue[0] !== undefined && issue[0].project) {
             $('#project').val(issue[0].project);
         }
     });
@@ -123,7 +123,7 @@ function exportSession(session, end_time) {
         'start_time': session.start_time.getTime(),
         'end_time': end_time.getTime(),
         'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
+        'project': $('#project').val(),
     }, function(data) {
         createEntry(session, data);
     }, 'json')
@@ -135,7 +135,7 @@ function updateEntry(entryId, date_str) {
         'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
         'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
         'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
+        'project': $('#project').val(),
     }, function(data) {
         refreshEntry(data);
     }, 'json')
