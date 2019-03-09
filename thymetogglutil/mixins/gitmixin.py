@@ -20,7 +20,11 @@ class GitMixin(object):
         for repo_path in self.repos:
             repo = git.Repo(repo_path)
             for branch in repo.branches:
-                for log_entry in branch.log():
+                try:
+                    entries = branch.log()
+                except Exception:
+                    continue
+                for log_entry in entries:
                     if log_entry.actor.email not in settings.GIT_EMAILS:
                         continue
                     if not log_entry.message.startswith('commit'):
