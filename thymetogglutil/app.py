@@ -22,7 +22,7 @@ def hello():
 def sessions():
     if request.method == 'GET':
         now = datetime.now()
-        parser = Parser(now - timedelta(days=10), now - timedelta(days=0))
+        parser = Parser(now - timedelta(days=20), now - timedelta(days=0))
         parser.parse()
         return json.dumps({
             'sessions': parser.sessions,
