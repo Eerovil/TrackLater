@@ -5,6 +5,7 @@ from thymetogglutil.mixins.gitmixin import GitMixin
 from thymetogglutil.mixins.thyme import ThymeMixin
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
+from thymetogglutil.mixins.taiga import TaigaMixin
 from thymetogglutil.utils import DateGroupMixin
 from thymetogglutil import settings
 import re
@@ -13,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
+class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaMixin):
     def __init__(self, start_date, end_date, jira_credentials=None, git_repos=None):
         self.start_date = start_date
         self.end_date = end_date
@@ -33,17 +34,20 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         super(Parser, self).parse_toggl()
         for session in self.sessions:
             session['exported'] = self.check_session_exists(session)
+
         for key, issue in self.latest_issues.items():
             for project in self.projects:
                 name = project['client']['name']
-                if name not in settings.CLIENTS or settings.CLIENTS[name]['from'] != 'jira':
+                if name not in settings.CLIENTS:
                     continue
 
-                if project['type'] == 'default':
+                if settings.CLIENTS[name]['from'] == 'jira' and issue.get('from', '') == 'jira':
+                    if project['type'] == 'default':
+                        self.latest_issues[key]['project'] = project['id']
+                    if project['type'].lower() == issue['type'].lower():
+                        self.latest_issues[key]['project'] = project['id']
+                elif issue.get('client', "") == name:
                     self.latest_issues[key]['project'] = project['id']
-                if project['type'].lower() == issue['type'].lower():
-                    self.latest_issues[key]['project'] = project['id']
-                    break
 
     def parse_jira(self):
         super(Parser, self).parse_jira()
@@ -58,9 +62,16 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin):
         for issue in self.sorted_issues()[:100]:
             self.latest_issues[issue['key']] = issue
 
+    def parse_taiga(self):
+        self.issues = []
+        super(Parser, self).parse_taiga()
+        for issue in self.issues:
+            self.latest_issues[issue['key']] = issue
+
     def parse(self):
         self.parse_git()
         self.parse_jira()
+        self.parse_taiga()
         self.parse_thyme()
         self.parse_toggl()
         self.parse_group()
