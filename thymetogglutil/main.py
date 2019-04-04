@@ -35,17 +35,21 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaM
         for session in self.sessions:
             session['exported'] = self.check_session_exists(session)
 
+        # toggl parser will populate self.projects with client names.
+        # Now we can match issues with projects.
         for key, issue in self.latest_issues.items():
             for project in self.projects:
                 name = project['client']['name']
                 if name not in settings.CLIENTS:
                     continue
 
+                # Jira issues have 'from': 'jira', and have types for bug/improvement etc
                 if settings.CLIENTS[name]['from'] == 'jira' and issue.get('from', '') == 'jira':
                     if project['type'] == 'default':
                         self.latest_issues[key]['project'] = project['id']
                     if project['type'].lower() == issue['type'].lower():
                         self.latest_issues[key]['project'] = project['id']
+                # Taiga issues just have the client name
                 elif issue.get('client', "") == name:
                     self.latest_issues[key]['project'] = project['id']
 
@@ -65,6 +69,7 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaM
     def parse_taiga(self):
         self.issues = []
         super(Parser, self).parse_taiga()
+        # Dump all taiga issues to latest issues (other issues will not be sent to client)
         for issue in self.issues:
             self.latest_issues[issue['key']] = issue
 

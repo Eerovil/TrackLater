@@ -28,6 +28,8 @@ class TaigaMixin(object):
         }
         self.issues = []
         self.taiga_projects = []
+        # Get taiga project id for all clients
+        # "No client" not supported yet
         for client, data in settings.CLIENTS.iteritems():
             if data['from'] != 'taiga':
                 continue
@@ -40,15 +42,6 @@ class TaigaMixin(object):
                 'slug': data['project_slug'],
                 'client': client
             })
-
-    def get_cached(self, *args, **kwargs):
-
-        response = requests.get(*args, **kwargs)
-
-        with codecs.open('taiga-cache', 'wb', encoding='utf8') as f:
-            f.write(response.text)
-
-        return response.json()
 
     def taiga_fetch_issues(self, start_from=None):
         issues = []
@@ -81,6 +74,7 @@ class TaigaMixin(object):
                 'key': "#{}".format(issue['ref']),
                 'summary': issue['subject'],
                 'type': '',
+                'from': 'taiga',
                 'client': taiga_project['client']
             })
 
