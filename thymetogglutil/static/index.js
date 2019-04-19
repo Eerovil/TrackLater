@@ -397,8 +397,3 @@ function updateTable() {
     }
 
 }
-
-function projectChanged() {
-    // Set a default text for some quick exporting
-    $('div#actions input.description').val($('#project option:selected').html().replace("No client - ", ""))
-}
