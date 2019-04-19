@@ -51,7 +51,8 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaM
                         self.latest_issues[key]['project'] = project['id']
                 # Taiga issues just have the client name
                 elif issue.get('client', "") == name:
-                    self.latest_issues[key]['project'] = project['id']
+                    if project['type'] == 'default':
+                        self.latest_issues[key]['project'] = project['id']
 
     def parse_jira(self):
         super(Parser, self).parse_jira()
