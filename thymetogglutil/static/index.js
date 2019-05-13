@@ -50,6 +50,7 @@ function getSessions() {
         sessions = [];
         timeEntries = [];
         log = [];
+        slack_messages = [];
         projects = [];
         chartItems = {};
         console.log(data)
@@ -70,6 +71,12 @@ function getSessions() {
             let commit = parseCommit(_log[i]);
             commit.idcounter = idCounter++;
             log.push(commit);
+        }
+        _slack_messages = data.slack_messages;
+        for (let i=0; i<_slack_messages.length; i++){
+            let message = parseSlack(_slack_messages[i]);
+            message.idcounter = idCounter++;
+            slack_messages.push(message);
         }
         _projects = data.projects;
         for (let i=0; i<_projects.length; i++){
@@ -181,6 +188,11 @@ function parseCommit(commit) {
     return commit;
 }
 
+function parseSlack(message) {
+    message.time = parseTime(message.time);
+    return message;
+}
+
 function parseTime(time_str) {
     return new Date(time_str);
 }
@@ -262,6 +274,17 @@ function makeRow(obj, type) {
                 type: 'point',
                 editable: false,
         }
+        case 'slack':
+        return {
+                id: obj.idcounter,
+                content: '',
+                start: obj.time,
+                group: 'slack',
+                className: 'slack',
+                title: obj.info + "<br />" + obj.text,
+                type: 'point',
+                editable: false,
+        }
     }
 }
 
@@ -274,6 +297,9 @@ function updateTable() {
     log.forEach(commit => {
         dateGroups.add(commit.date_group);
     });
+    slack_messages.forEach(message => {
+        dateGroups.add(message.date_group);
+    });
     timeEntries.forEach(entry => {
         dateGroups.add(entry.date_group);
     });
@@ -282,11 +308,12 @@ function updateTable() {
             sessions.filter(s => s.date_group == dateGroup),
             timeEntries.filter(s => s.date_group == dateGroup),
             log.filter(s => s.date_group == dateGroup),
+            slack_messages.filter(s => s.date_group == dateGroup),
         )
     })
 
 
-    function drawDayChart(day_sessions, day_entries, day_log) {
+    function drawDayChart(day_sessions, day_entries, day_log, day_slack) {
         var container = document.getElementById('timeline');
         var day_container = container.appendChild(document.createElement('div'));
 
@@ -300,8 +327,11 @@ function updateTable() {
         day_log.forEach(commit => {
             rows.push(makeRow(commit, 'commit'));
         })
+        day_slack.forEach(slack => {
+            rows.push(makeRow(slack, 'slack'));
+        })
         var items = new vis.DataSet(rows);
-        let firstDateGroup = (day_sessions.concat(day_entries, day_log))[0].date_group;
+        let firstDateGroup = (day_sessions.concat(day_entries, day_log, day_slack))[0].date_group;
         chartItems[firstDateGroup] = items;
 
         // Configuration for the Timeline
@@ -357,6 +387,11 @@ function updateTable() {
                 id: 'commit',
                 content: 'commit',
                 className: 'commit-group',
+            },
+            {
+                id: 'slack',
+                content: 'slack',
+                className: 'slack-group',
             }
         ]
     
