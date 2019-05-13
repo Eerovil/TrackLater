@@ -24,7 +24,7 @@ class SlackMixin(object):
                 )
 
             for channel in sc.api_call("conversations.list",
-                                       types='public_channel,private_channel')['channels']:
+                                       types='public_channel,private_channel,mpim,im')['channels']:
                 history = sc.api_call(
                     "conversations.history", channel=channel['id'],
                     oldest=(self.start_date - datetime(1970, 1, 1)).total_seconds(),
