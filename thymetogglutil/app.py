@@ -30,6 +30,7 @@ def sessions():
             'log': parser.log,
             'issues': [value for key, value in parser.latest_issues.items()],
             'projects': parser.projects,
+            'slack_messages': parser.slack_messages,
         }, default=str)
 
 

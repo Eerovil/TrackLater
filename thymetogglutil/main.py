@@ -6,6 +6,7 @@ from thymetogglutil.mixins.thyme import ThymeMixin
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.mixins.taiga import TaigaMixin
+from thymetogglutil.mixins.slack import SlackMixin
 from thymetogglutil.utils import DateGroupMixin
 from thymetogglutil import settings
 import re
@@ -14,7 +15,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaMixin):
+class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaMixin, SlackMixin):
     def __init__(self, start_date, end_date, jira_credentials=None, git_repos=None):
         self.start_date = start_date
         self.end_date = end_date
@@ -29,6 +30,7 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaM
         self.projects = (self.request("/me?with_related_data=true", method='GET')
                          .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
+        self.slack_messages = []
 
     def parse_toggl(self):
         super(Parser, self).parse_toggl()
@@ -80,4 +82,5 @@ class Parser(GitMixin, JiraMixin, ThymeMixin, TogglMixin, DateGroupMixin, TaigaM
         self.parse_taiga()
         self.parse_thyme()
         self.parse_toggl()
+        self.parse_slack()
         self.parse_group()
