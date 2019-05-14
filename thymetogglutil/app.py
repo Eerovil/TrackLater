@@ -23,7 +23,7 @@ def hello():
 @app.route('/listmodules', methods=['GET'])
 def listmodules():
     if request.method == 'GET':
-        data = settings.ENABLED_TIMEMODULES
+        data = settings.ENABLED_TIMEMODULES + settings.ENABLED_ISSUEMODULES
         return json.dumps(data, default=str)
 
 
@@ -52,6 +52,11 @@ def fetchdata():
                                         for entry in parser.modules[key].entries]
                 data[key]['projects'] = [project.to_dict()
                                          for project in parser.modules[key].projects]
+        for key in settings.ENABLED_ISSUEMODULES:
+            if keys == "all" or key in keys:
+                data[key] = {}
+                data[key]['issues'] = [issue.to_dict()
+                                       for issue in parser.modules[key].issues]
         return json.dumps(data, default=str)
 
 

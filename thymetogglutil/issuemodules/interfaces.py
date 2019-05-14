@@ -4,13 +4,15 @@ from typing import List
 
 @dataclass
 class Issue:
-    id: str
+    key: str
     title: str
+    project: str
 
     def to_dict(self):
         return {
             "title": self.title,
-            "id": self.id
+            "key": self.key,
+            "project": self.project
         }
 
 
