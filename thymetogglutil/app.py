@@ -22,7 +22,7 @@ def hello():
 def sessions():
     if request.method == 'GET':
         now = datetime.now()
-        parser = Parser(now - timedelta(days=10), now - timedelta(days=0))
+        parser = Parser(now - timedelta(days=20), now - timedelta(days=0))
         parser.parse()
         return json.dumps({
             'sessions': parser.sessions,
@@ -30,6 +30,7 @@ def sessions():
             'log': parser.log,
             'issues': [value for key, value in parser.latest_issues.items()],
             'projects': parser.projects,
+            'slack_messages': parser.slack_messages,
         }, default=str)
 
 
@@ -46,7 +47,7 @@ def export():
         entry = parser.push_session({
             'start_time': parseTimestamp(request.form['start_time']),
             'end_time': parseTimestamp(request.form['end_time']),
-        }, request.form['name'], request.form.get('id', None))
+        }, request.form['name'], request.form.get('id', None), request.form.get('project', None))
         return json.dumps(entry, default=str)
 
 

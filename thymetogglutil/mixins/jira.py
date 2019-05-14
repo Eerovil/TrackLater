@@ -63,6 +63,7 @@ class JiraMixin(object):
                     'key': issue['key'],
                     'summary': issue['fields']['summary'],
                     'type': issue['fields']['issuetype']['name'],
+                    'from': 'jira'
                 })
             with codecs.open('jira-cache', 'wb', encoding='utf8') as f:
                 f.write(json.dumps(self.issues))

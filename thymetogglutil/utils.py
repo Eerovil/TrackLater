@@ -44,4 +44,5 @@ class DateGroupMixin(object):
     def parse_group(self):
         self._parse_list(self.sessions)
         self._parse_list(self.time_entries)
-        self._parse_list(self.log)
+        self._parse_list(self.log, key='time')
+        self._parse_list(self.slack_messages, key='time')
