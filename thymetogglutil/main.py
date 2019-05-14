@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from thymetogglutil.timemodules import thyme, _git
+from thymetogglutil import timemodules
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.utils import DateGroupMixin
@@ -25,6 +25,7 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         self.sessions = []
         self.api_key = settings.API_KEY
         self.cutoff_hour = 3  # Used to group dates
+        self.data = []
 
     def parse_toggl(self):
         super(Parser, self).parse_toggl()
@@ -62,12 +63,11 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
 
     def parse_git(self):
         self.log = [
-            c.__dict__ for c in _git.Parser(self.start_date, self.end_date).get_entries()
+            c.__dict__ for c in gitmodule.Parser(self.start_date, self.end_date).get_entries()
         ]
 
     def parse(self):
-        self.parse_git()
-        self.parse_jira()
-        self.parse_thyme()
-        self.parse_toggl()
-        self.parse_group()
+        for module in settings.ENABLED_MODULES:
+            parser = getattr(timemodules, module).Parser(self.start_date, self.end_date)
+            parser.parse(self.data)
+            parser = None
