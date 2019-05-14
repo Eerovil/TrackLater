@@ -28,8 +28,8 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         self.projects = (self.request("/me?with_related_data=true", method='GET')
                          .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
-        self.data = {}
         self.slack_messages = []
+        self.modules = {}
 
     def parse_toggl(self):
         super(Parser, self).parse_toggl()
@@ -76,8 +76,9 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
             self.latest_issues[issue['key']] = issue
 
     def parse(self):
-        for module_name in settings.ENABLED_MODULES:
+        for module_name in settings.ENABLED_TIMEMODULES:
             module = importlib.import_module('thymetogglutil.timemodules.{}'.format(module_name))
             parser = module.Parser(self.start_date, self.end_date)
-            self.data[module_name] = parser.parse()  # Pass data variable as
+            parser.parse()
+            self.modules[module_name] = parser
             parser = None

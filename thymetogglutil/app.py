@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template
 from thymetogglutil.main import Parser
+from thymetogglutil import settings
 from datetime import datetime, timedelta
+from dataclasses import asdict
 import json
 import pytz
 
@@ -18,20 +20,39 @@ def hello():
     )
 
 
-@app.route('/sessions', methods=['GET'])
-def sessions():
+@app.route('/listmodules', methods=['GET'])
+def listmodules():
     if request.method == 'GET':
+        data = settings.ENABLED_TIMEMODULES
+        return json.dumps(data, default=str)
+
+
+@app.route('/fetchdata', methods=['GET'])
+def fetchdata():
+    if request.method == 'GET':
+        keys = request.values.get('keys[]', 'all')
         now = datetime.now()
-        parser = Parser(now - timedelta(days=20), now - timedelta(days=0))
+        if 'from' in request.values:
+            from_date = parseTimestamp(request.values['from'])
+        else:
+            from_date = now - timedelta(days=14)
+
+        if 'to' in request.values:
+            to_date = parseTimestamp(request.values['to'])
+        else:
+            to_date = now
+
+        parser = Parser(from_date, to_date)
         parser.parse()
-        return json.dumps({
-            'sessions': parser.sessions,
-            'time_entries': parser.time_entries,
-            'log': parser.log,
-            'issues': [value for key, value in parser.latest_issues.items()],
-            'projects': parser.projects,
-            'slack_messages': parser.slack_messages,
-        }, default=str)
+        data = {}
+        for key in settings.ENABLED_TIMEMODULES:
+            if keys == "all" or key in keys:
+                data[key] = {}
+                data[key]['entries'] = [entry.to_dict()
+                                        for entry in parser.modules[key].entries]
+                data[key]['projects'] = [project.to_dict()
+                                         for project in parser.modules[key].projects]
+        return json.dumps(data, default=str)
 
 
 def parseTimestamp(stamp):

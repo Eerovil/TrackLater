@@ -1,3 +1,4 @@
+from typing import List
 from thymetogglutil import settings
 import git
 import pytz
@@ -11,7 +12,7 @@ HEL = pytz.timezone('Europe/Helsinki')
 
 
 class Parser(AbstractEntryParser):
-    def get_entries(self):
+    def get_entries(self) -> List[Entry]:
         start_date = self.start_date.replace(tzinfo=HEL)
         end_date = self.end_date.replace(tzinfo=HEL)
         log = []
