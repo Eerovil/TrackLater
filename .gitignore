@@ -110,3 +110,6 @@ venv.bak/
 dmypy.json
 settings.py
 jira-cache
+
+#virtualenv
+thymetogglutil/thyme

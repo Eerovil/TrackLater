@@ -2,7 +2,7 @@ from thymetogglutil import settings
 import json
 from datetime import timedelta
 from thymetogglutil.utils import parse_time
-from thymetogglutil.timemodules.interfaces import AbstractParser, Entry
+from thymetogglutil.timemodules.interfaces import AbstractEntryParser, Entry
 from typing import List
 
 import logging
@@ -16,10 +16,11 @@ def get_window(entry, id):
     return None
 
 
-class Parser(AbstractParser):
+class Parser(AbstractEntryParser):
     """
     Only implements "get".
     """
+
     def get_entries(self) -> List[Entry]:
         snapshot_entries = self._read_files()
         self.sessions = self._generate_sessions(snapshot_entries)
@@ -80,6 +81,10 @@ class Parser(AbstractParser):
             extra['windows'] = [
                 {'name': window, 'time': extra['windows'][window]}
                 for window in extra['windows']
+            ]
+            session.text = [
+                "{} - {}".format(data['name'], data['name'])
+                for data in sorted(extra['windows'], key="time", reverse=True)
             ]
             if extra['category']['work'] >= extra['category']['leisure']:
                 extra['category'] = 'work'
