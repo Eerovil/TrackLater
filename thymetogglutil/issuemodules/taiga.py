@@ -1,8 +1,7 @@
 import requests
 from thymetogglutil import settings
-import codecs
-import os
-import json
+
+from thymetogglutil.issuemodules.interfaces import AbstractIssueParser, Issue
 
 import logging
 logger = logging.getLogger(__name__)
@@ -12,7 +11,21 @@ ISSUE_URL = 'https://api.taiga.io/api/v1/userstories'
 PROJECT_URL = 'https://api.taiga.io/api/v1/projects/by_slug?slug={}'
 
 
-class TaigaMixin(object):
+class Parser(AbstractIssueParser):
+    def get_issues(self):
+        self.taiga_login()
+        issues = []
+
+        latest_issues = self.taiga_fetch_issues()
+        for issue in latest_issues:
+            taiga_project = [p for p in self.taiga_projects if p['id'] == issue['project']][0]
+            issues.append(Issue(
+                key="#{}".format(issue['ref']),
+                title=issue['subject'],
+                project=taiga_project['slug']
+            ))
+        return issues
+
     def taiga_login(self):
         credentials = settings.TAIGA_CREDENTIALS
         response = requests.post(
@@ -22,15 +35,15 @@ class TaigaMixin(object):
                 'password': credentials[1]
             }
         )
-        self.token = response.json()['auth_token']
+        token = response.json()['auth_token']
         self.headers = {
-            "Authorization": "Bearer {}".format(self.token), 'x-disable-pagination': 'True'
+            "Authorization": "Bearer {}".format(token), 'x-disable-pagination': 'True'
         }
         self.issues = []
         self.taiga_projects = []
         # Get taiga project id for all clients
         # "No client" not supported yet
-        for client, data in settings.CLIENTS.iteritems():
+        for client, data in settings.CLIENTS.items():
             if data['from'] != 'taiga':
                 continue
             response = requests.get(
@@ -54,40 +67,3 @@ class TaigaMixin(object):
             )
             issues += response.json()
         return issues
-
-    def _add_issue(self, issue):
-        for _issue in self.issues:
-            if issue['key'] == _issue['key']:
-                _issue = issue
-                return False
-        self.issues.append(issue)
-        return True
-
-    def parse_taiga(self):
-        self.taiga_login()
-        self.issues = []
-
-        latest_issues = self.taiga_fetch_issues()
-        for issue in latest_issues:
-            taiga_project = [p for p in self.taiga_projects if p['id'] == issue['project']][0]
-            self._add_issue({
-                'key': "#{}".format(issue['ref']),
-                'summary': issue['subject'],
-                'type': '',
-                'from': 'taiga',
-                'client': taiga_project['client']
-            })
-
-    def get_issue(self, key):
-        for issue in self.issues:
-            if issue['key'] == key:
-                return issue
-
-    def sorted_issues(self):
-        return sorted(self.issues, key=lambda x: int(x['key'][4:]), reverse=True)
-
-    def get_issues(self):
-        return [
-            issue['key'] + " " + issue['summary']
-            for issue in sorted(self.issues, key=lambda x: int(x['key'][4:]))
-        ]
