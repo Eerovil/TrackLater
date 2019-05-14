@@ -28,7 +28,7 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         self.projects = (self.request("/me?with_related_data=true", method='GET')
                          .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
-        self.data = []
+        self.data = {}
         self.slack_messages = []
 
     def parse_toggl(self):

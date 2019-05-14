@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Union, Dict
 from datetime import datetime, timedelta
+from thymetogglutil import settings
 
 
 @dataclass
@@ -24,7 +25,7 @@ class Entry:
         # Calculate date_group immediately
         item_time = self.start_time
         offset = item_time.tzinfo.utcoffset(None)
-        _cutoff = self.cutoff_hour + (getattr(offset, 'seconds', 0) / 3600)
+        _cutoff = getattr(settings, 'CUTOFF_HOUR', 3) + (getattr(offset, 'seconds', 0) / 3600)
         if item_time.hour >= _cutoff:
             self.date_group = item_time.strftime('%Y-%m-%d')
         else:
