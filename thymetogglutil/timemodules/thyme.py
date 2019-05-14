@@ -24,8 +24,7 @@ class Parser(AbstractEntryParser):
 
     def get_entries(self) -> List[Entry]:
         snapshot_entries = self._read_files()
-        self.sessions = self._generate_sessions(snapshot_entries)
-        return self.sessions
+        return self._generate_sessions(snapshot_entries)
 
     def _read_files(self):
         snapshot_entries = []

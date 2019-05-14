@@ -9,6 +9,12 @@ class Project:
     title: str
     id: str
 
+    def to_dict(self):
+        return {
+            "title": self.title,
+            "id": self.id
+        }
+
 
 @dataclass
 class Entry:
@@ -33,7 +39,22 @@ class Entry:
 
     @property
     def duration(self) -> int:
+        if not self.end_time:
+            return 0
         return int((self.end_time - self.start_time).total_seconds())
+
+    def to_dict(self):
+        return {
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "date_group": self.date_group,
+            "issue": self.issue,
+            "project": self.project,
+            "title": self.title,
+            "text": self.text,
+            "extra_data": self.extra_data,
+            "duration": self.duration
+        }
 
 
 class AbstractEntryParser(object):
@@ -43,12 +64,24 @@ class AbstractEntryParser(object):
     def __init__(self, start_date: datetime, end_date: datetime) -> None:
         self.start_date = start_date
         self.end_date = end_date
-        self.entries = []
+        self.entries: List[Entry] = []
+        self.projects: List[Project] = []
 
     def parse(self):
-        self.entries = self.get_entries()
+        try:
+            self.entries = self.get_entries()
+        except NotImplementedError:
+            pass
+
+        try:
+            self.projects = self.get_projects()
+        except NotImplementedError:
+            pass
 
     def get_entries(self) -> List[Entry]:
+        raise NotImplementedError()
+
+    def get_projects(self) -> List[Project]:
         raise NotImplementedError()
 
 
