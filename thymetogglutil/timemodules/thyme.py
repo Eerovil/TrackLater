@@ -85,7 +85,7 @@ class Parser(AbstractEntryParser):
                 for window in extra['windows']
             ]
             session.text = [
-                "{} - {}".format(data['name'], data['name'])
+                "{}s - {}".format(int(data['time']), data['name'])
                 for data in sorted(extra['windows'], key=lambda x: x["time"], reverse=True)
             ]
             if extra['category']['work'] >= extra['category']['leisure']:
