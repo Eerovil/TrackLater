@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from thymetogglutil import timemodules
+
+import importlib
+
 from thymetogglutil.mixins.toggl import TogglMixin
 from thymetogglutil.mixins.jira import JiraMixin
 from thymetogglutil.utils import DateGroupMixin
@@ -56,18 +58,9 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         for issue in self.sorted_issues()[:100]:
             self.latest_issues[issue['key']] = issue
 
-    def parse_thyme(self):
-        self.sessions = [
-            s.__dict__ for s in thyme.Parser(self.start_date, self.end_date).get_entries()
-        ]
-
-    def parse_git(self):
-        self.log = [
-            c.__dict__ for c in gitmodule.Parser(self.start_date, self.end_date).get_entries()
-        ]
-
     def parse(self):
-        for module in settings.ENABLED_MODULES:
-            parser = getattr(timemodules, module).Parser(self.start_date, self.end_date)
-            parser.parse(self.data)
+        for module_name in settings.ENABLED_MODULES:
+            module = importlib.import_module('thymetogglutil.timemodules.{}'.format(module_name))
+            parser = module.Parser(self.start_date, self.end_date)
+            self.data[module_name] = parser.parse()  # Pass data variable as
             parser = None
