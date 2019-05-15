@@ -24,7 +24,6 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         self.latest_issues = {}
         self.time_entries = []
         self.sessions = []
-        self.api_key = settings.API_KEY
         self.projects = (self.request("/me?with_related_data=true", method='GET')
                          .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
