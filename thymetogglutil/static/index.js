@@ -10,13 +10,6 @@ $(document).ready(function() {
             }
         }
     });
-    $('#actions .btn_split').on('click', () => {
-        if (global_selected) {
-            if (global_selected.type == 'entry') {
-                splitEntry(global_selected.item.id, global_selected.item.date_group);
-            }
-        }
-    });
     $('#actions input.description').on('change', () => {
         // Update project field to match the one specified on the issue
         issue = issues.filter((issue) => {
@@ -37,59 +30,44 @@ var log = [];
 var projects = [];
 var issues = [];
 
+var entries = {};
+var issues = {};
+var projects = {};
+
 var chartItems = {};
 var global_selected = null;
 var global_selected_last = null;
 
 function getSessions() {
-    $.ajax('sessions', {
+    $.ajax('fetchdata', {
         contentType: 'application/json',
         dataType: 'json'
     })
     .done((data) => {
-        sessions = [];
-        timeEntries = [];
-        log = [];
-        slack_messages = [];
-        projects = [];
-        chartItems = {};
         console.log(data)
-        _sessions = data.sessions;
-        for (let i=0; i<_sessions.length; i++){
-            let session = parseSession(_sessions[i]);
-            session.idcounter = idCounter++;
-            sessions.push(session);
+        for (module_name in data) {
+            if (data[module_name].entries != undefined) {
+                // timemodules
+                projects[module_name] = data[module_name].projects;
+                projects[module_name].forEach(project => {
+                    $('#project').append(`<option value="${project.id}">${project.title}</option>`)
+                });
+                entries[module_name] = []
+                for (let i=0; i<data[module_name].entries.length; i++) {
+                    let entry = data[module_name].entries[i];
+                    entry.start_time = parseTime(entry.start_time);
+                    entry.end_time = parseTime(entry.end_time);
+                    entry.idcounter = idCounter++;
+                    entries[module_name].push(entry);
+                }
+            } else {
+                // issuemodules
+                issues[module_name] = data[module_name].issues;
+                issues[module_name].forEach(issue => {
+                    $('#issues').append(`<option value="${issue.key}">${issue.key} ${issue.title}"></option>`)
+                });
+            }
         }
-        _timeEntries = data.time_entries;
-        for (let i=0; i<_timeEntries.length; i++){
-            let time_entry = parseTimeEntry(_timeEntries[i]);
-            time_entry.idcounter = idCounter++;
-            timeEntries.push(time_entry);
-        }
-        _log = data.log;
-        for (let i=0; i<_log.length; i++){
-            let commit = parseCommit(_log[i]);
-            commit.idcounter = idCounter++;
-            log.push(commit);
-        }
-        _slack_messages = data.slack_messages;
-        for (let i=0; i<_slack_messages.length; i++){
-            let message = parseSlack(_slack_messages[i]);
-            message.idcounter = idCounter++;
-            slack_messages.push(message);
-        }
-        _projects = data.projects;
-        for (let i=0; i<_projects.length; i++){
-            let project = _projects[i];
-            projects.push(project);
-        }
-        data.projects.forEach(project => {
-            $('#project').append(`<option value="${project.id}">${project.client.name} - ${project.name}</option>`)
-        });
-        data.issues.forEach(issue => {
-            issues.push(issue);
-            $('#issues').append(`<option value="${issue.key} ${issue.summary}"></option>`)
-        });
         updateTable();
     })
     .fail((err) => {
@@ -156,20 +134,6 @@ function deleteEntry(entryId) {
     }, 'json')
 }
 
-function splitEntry(entryId, date_str) {
-    $.post('split', {
-        'id': entryId,
-        'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
-        'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
-        'split_time': new Date(date_str + " " + $('#actions .split_time').val()).getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
-    }, function(data) {
-        refreshEntry(data.entry1);
-        createEntry({date_group: date_str}, data.entry2);
-    }, 'json')
-}
-
 function parseTimeEntry(timeEntry) {
     timeEntry.start_time = parseTime(timeEntry.start_time);
     timeEntry.end_time = parseTime(timeEntry.end_time);
@@ -194,6 +158,9 @@ function parseSlack(message) {
 }
 
 function parseTime(time_str) {
+    if (time_str == null) {
+        return time_str;
+    }
     return new Date(time_str);
 }
 
@@ -235,104 +202,50 @@ function wcmp(a, b) {
     return 0;
 }
 
-function makeRow(obj, type) {
-    switch (type) {
-        case 'session':
-        return {
-                id: obj.idcounter,
-                content: '',
-                start: obj.start_time,
-                end: obj.end_time,
-                group: 'session',
-                className: 'session-' + obj.extra_data.category,
-                title: obj.extra_data.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
-                editable: false,
-        }
-        case 'entry':
-        return {
-                id: obj.idcounter,
-                content: obj.description,
-                start: obj.start_time,
-                end: obj.end_time,
-                group: 'entry',
-                className: 'entry',
-                title: obj.description,
-                editable: {
-                    updateTime: true,  // drag items horizontally
-                    remove: true,       // delete an item by tapping the delete button top right
-                    overrideItems: true  // allow these options to override item.editable
-                },
-        }
-        case 'commit':
-        return {
-                id: obj.idcounter,
-                content: '',
-                start: obj.start_time,
-                group: 'commit',
-                className: 'commit',
-                title: obj.extra_data.message + (obj.extra_data.issue ? "<br />" + obj.extra_data.issue.key + " " + obj.extra_data.issue.summary : ''),
-                type: 'point',
-                editable: false,
-        }
-        case 'slack':
-        return {
-                id: obj.idcounter,
-                content: '',
-                start: obj.time,
-                group: 'slack',
-                className: 'slack',
-                title: obj.info + "<br />" + obj.text,
-                type: 'point',
-                editable: false,
-        }
-    }
-}
-
 function updateTable() {
 
     let dateGroups = new Set();
-    sessions.forEach(session => {
-        dateGroups.add(session.date_group);
-    });
-    log.forEach(commit => {
-        dateGroups.add(commit.date_group);
-    });
-    slack_messages.forEach(message => {
-        dateGroups.add(message.date_group);
-    });
-    timeEntries.forEach(entry => {
-        dateGroups.add(entry.date_group);
-    });
-    Array.from(dateGroups).sort().forEach(dateGroup => {
-        drawDayChart(
-            sessions.filter(s => s.date_group == dateGroup),
-            timeEntries.filter(s => s.date_group == dateGroup),
-            log.filter(s => s.date_group == dateGroup),
-            slack_messages.filter(s => s.date_group == dateGroup),
-        )
+    for (module_name in entries) {
+        entries[module_name].forEach(entry => {
+            dateGroups.add(entry.date_group)
+        })
+    }
+    Array.from(dateGroups).sort().forEach(date_group => {
+        let filteredEntries = {};
+        for (module_name in entries) {
+            filteredEntries[module_name] = entries[module_name].filter(s => s.date_group == date_group)
+        }
+        drawDayChart(date_group, filteredEntries);
     })
 
-
-    function drawDayChart(day_sessions, day_entries, day_log, day_slack) {
+    function drawDayChart(date_group, filteredEntries) {
         var container = document.getElementById('timeline');
         var day_container = container.appendChild(document.createElement('div'));
 
         let rows = [];
-        day_sessions.forEach(session => {
-            rows.push(makeRow(session, 'session'));
-        })
-        day_entries.forEach(entry => {
-            rows.push(makeRow(entry, 'entry'));
-        })
-        day_log.forEach(commit => {
-            rows.push(makeRow(commit, 'commit'));
-        })
-        day_slack.forEach(slack => {
-            rows.push(makeRow(slack, 'slack'));
-        })
+
+        for (module_name in filteredEntries) {
+            for (let i=0; i<filteredEntries[module_name].length; i++) {
+                const entry = filteredEntries[module_name][i];
+                let rowData = {
+                    id: entry.idcounter,
+                    start: entry.start_time,
+                    group: module_name,
+                    className: module_name,
+                    content: entry.title,
+                    title: entry.text.join("<br />"),
+                    editable: false,
+                };
+                if (entry.end_time != undefined) {
+                    rowData.end = entry.end_time;
+                } else {
+                    rowData.type = 'point'
+                }
+                rows.push(rowData);
+            }
+        }
         var items = new vis.DataSet(rows);
-        let firstDateGroup = (day_sessions.concat(day_entries, day_log, day_slack))[0].date_group;
-        chartItems[firstDateGroup] = items;
+        chartItems[date_group] = items;
 
         // Configuration for the Timeline
         var options = {
@@ -346,54 +259,40 @@ function updateTable() {
             multiselectPerGroup: true,
             snap: null,
 
-            onMove: function(item, callback) {
-                if (item.group == 'entry') {
-                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+            // onMove: function(item, callback) {
+            //     if (item.group == ) {
+            //         let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
                     
-                    $.post('export', {
-                        'id': entry.id,
-                        'start_time': item.start.getTime(),
-                        'end_time': item.end.getTime(),
-                        'name': $('#actions input.description').val(),
-                    }, function(data) {
-                        refreshEntry(data);
-                    }, 'json')
-                }
-                return callback(item);
-            },
+            //         $.post('export', {
+            //             'id': entry.id,
+            //             'start_time': item.start.getTime(),
+            //             'end_time': item.end.getTime(),
+            //             'name': $('#actions input.description').val(),
+            //         }, function(data) {
+            //             refreshEntry(data);
+            //         }, 'json')
+            //     }
+            //     return callback(item);
+            // },
 
-            onRemove: function(item, callback) {
-                if (item.group == 'entry') {
-                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+            // onRemove: function(item, callback) {
+            //     if (item.group == 'entry') {
+            //         let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
                     
-                    deleteEntry(entry.id);
-                }
-                return callback(item);
-            }
+            //         deleteEntry(entry.id);
+            //     }
+            //     return callback(item);
+            // }
         };
 
-        var groups = [
-            {
-                id: 'entry',
-                content: 'entry',
-                className: 'entry-group',
-            },
-            {
-                id: 'session',
-                content: 'session',
-                className: 'session-group',
-            },
-            {
-                id: 'commit',
-                content: 'commit',
-                className: 'commit-group',
-            },
-            {
-                id: 'slack',
-                content: 'slack',
-                className: 'slack-group',
-            }
-        ]
+        var groups = []
+        for (module_name in filteredEntries) {
+            groups.push({
+                id: module_name,
+                content: module_name,
+                className: module_name + '-group',
+            })
+        }
     
         // Create a Timeline
         var timeline = new vis.Timeline(day_container, items, options, groups);
@@ -426,7 +325,6 @@ function updateTable() {
                 $('#project').val(entry.project);
                 $('div#actions .toggl_actions input.start_time').val(dateToTimestr(entry.start_time));
                 $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
-                $('div#actions .toggl_actions input.split_time').val(dateToTimestr(entry.start_time));
             }
         });
     }
