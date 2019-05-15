@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(JiraMixin, TogglMixin, DateGroupMixin):
+class Parser(JiraMixin, DateGroupMixin):
     def __init__(self, start_date, end_date, jira_credentials=None):
         self.start_date = start_date
         self.end_date = end_date
@@ -24,8 +24,6 @@ class Parser(JiraMixin, TogglMixin, DateGroupMixin):
         self.latest_issues = {}
         self.time_entries = []
         self.sessions = []
-        self.projects = (self.request("/me?with_related_data=true", method='GET')
-                         .json()['data']['projects'])
         self.cutoff_hour = 3  # Used to group dates
         self.slack_messages = []
         self.modules = {}

@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class Parser(AbstractEntryParser):
-    def __init__(self, api_key):
+    def __init__(self, *args, **kwargs):
+        super(Parser, self).__init__(*args, **kwargs)
         self.api_key = settings.TOGGL_API_KEY
         response = requests.get('https://www.toggl.com/api/v8/me?with_related_data=true',
                                 auth=(self.api_key, 'api_token'))
@@ -39,15 +40,14 @@ class Parser(AbstractEntryParser):
         data = response.json()
         time_entries = []
         for entry in data:
-            a += 1
             time_entries.append(Entry(
                 start_time=parse_time(entry['start']),
                 end_time=parse_time(entry['stop']),
-
+                title=entry['description'],
+                project=entry.get('pid', None)
             ))
 
         return time_entries
-        
 
     def get_projects(self) -> List[Project]:
         clients = self.request('clients', method='GET').json()
@@ -58,11 +58,11 @@ class Parser(AbstractEntryParser):
             resp = self.request('clients/{}/projects'.format(client['id']),
                                 method='GET')
             for project in resp.json():
-                if project['name'] not in settings.CLIENTS[client]['projects']:
+                if project['name'] not in settings.CLIENTS[client['name']]['projects']:
                     continue
                 projects.append(Project(
                     id=project['id'],
-                    title=project['name']
+                    title="{} - {}".format(client['name'], project['name'])
                 ))
         return projects
 
