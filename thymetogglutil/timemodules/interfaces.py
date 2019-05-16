@@ -17,6 +17,20 @@ class Project:
 
 
 @dataclass
+class Issue:
+    key: str
+    title: str
+    project: str
+
+    def to_dict(self):
+        return {
+            "title": self.title,
+            "key": self.key,
+            "project": self.project
+        }
+
+
+@dataclass
 class Entry:
     start_time: datetime
     end_time: Union[datetime, None] = None
@@ -57,31 +71,45 @@ class Entry:
         }
 
 
-class AbstractEntryParser(object):
-    """
-    Implement some (or all) of these mixins.
-    """
-    def __init__(self, start_date: datetime, end_date: datetime) -> None:
-        self.start_date = start_date
-        self.end_date = end_date
-        self.entries: List[Entry] = []
-        self.projects: List[Project] = []
-
+class EntryMixin(object):
     def parse(self):
-        try:
-            self.entries = self.get_entries()
-        except NotImplementedError:
-            pass
+        self.entries = self.get_entries()
+        super(EntryMixin, self).parse()
 
-        try:
-            self.projects = self.get_projects()
-        except NotImplementedError:
-            pass
+    @property
+    def capabilities(self):
+        _ret = super(EntryMixin, self).capabilities
+        return _ret + ['entries']
 
     def get_entries(self) -> List[Entry]:
         raise NotImplementedError()
 
+
+class ProjectMixin(object):
+    def parse(self):
+        self.projects = self.get_projects()
+        super(ProjectMixin, self).parse()
+
+    @property
+    def capabilities(self):
+        _ret = super(ProjectMixin, self).capabilities
+        return _ret + ['projects']
+
     def get_projects(self) -> List[Project]:
+        raise NotImplementedError()
+
+
+class IssueMixin(object):
+    def parse(self):
+        self.issues = self.get_issues()
+        super(IssueMixin, self).parse()
+
+    @property
+    def capabilities(self):
+        _ret = super(IssueMixin, self).capabilities
+        return _ret + ['issues']
+
+    def get_issues(self) -> List[Issue]:
         raise NotImplementedError()
 
 
@@ -98,3 +126,25 @@ class DeleteEntryMixin(object):
 class UpdateEntryMixin(object):
     def update_entry(self, entry_id: str, entry_data: Entry) -> bool:
         raise NotImplementedError()
+
+
+class AbstractParser(object):
+    def __init__(self, start_date: datetime, end_date: datetime) -> None:
+        self.start_date = start_date
+        self.end_date = end_date
+        self.entries: List[Entry] = []
+        self.projects: List[Project] = []
+        self.issues: List[Issue] = []
+
+    @property
+    def capabilities(self):
+        return []
+
+    def parse(self):
+        pass
+
+
+# Helper classes with mixins
+
+class FullEntryParser(EntryMixin, AddEntryMixin, DeleteEntryMixin, UpdateEntryMixin, AbstractParser):
+    pass

@@ -3,7 +3,7 @@ import json
 import os
 from datetime import timedelta
 from thymetogglutil.utils import parse_time
-from thymetogglutil.timemodules.interfaces import AbstractEntryParser, Entry
+from thymetogglutil.timemodules.interfaces import EntryMixin, AbstractParser, Entry
 from typing import List
 
 import logging
@@ -17,7 +17,7 @@ def get_window(entry, id):
     return None
 
 
-class Parser(AbstractEntryParser):
+class Parser(EntryMixin, AbstractParser):
     """
     Only implements "get".
     """

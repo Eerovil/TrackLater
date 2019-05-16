@@ -5,13 +5,13 @@ import pytz
 
 from datetime import datetime
 from thymetogglutil.utils import FixedOffset
-from thymetogglutil.timemodules.interfaces import AbstractEntryParser, Entry
+from thymetogglutil.timemodules.interfaces import EntryMixin, AbstractParser, Entry
 
 
 HEL = pytz.timezone('Europe/Helsinki')
 
 
-class Parser(AbstractEntryParser):
+class Parser(EntryMixin, AbstractParser):
     def get_entries(self) -> List[Entry]:
         start_date = self.start_date.replace(tzinfo=HEL)
         end_date = self.end_date.replace(tzinfo=HEL)

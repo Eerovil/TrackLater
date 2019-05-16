@@ -1,7 +1,7 @@
 import requests
 from thymetogglutil import settings
 
-from thymetogglutil.issuemodules.interfaces import AbstractIssueParser, Issue
+from thymetogglutil.timemodules.interfaces import IssueMixin, AbstractParser, Issue
 
 import logging
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ ISSUE_URL = 'https://api.taiga.io/api/v1/userstories'
 PROJECT_URL = 'https://api.taiga.io/api/v1/projects/by_slug?slug={}'
 
 
-class Parser(AbstractIssueParser):
+class Parser(IssueMixin, AbstractParser):
     def get_issues(self):
         self.taiga_login()
         issues = []

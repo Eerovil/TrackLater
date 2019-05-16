@@ -73,16 +73,9 @@ class Parser(JiraMixin, DateGroupMixin):
             self.latest_issues[issue['key']] = issue
 
     def parse(self):
-        for module_name in settings.ENABLED_TIMEMODULES:
+        for module_name in settings.ENABLED_MODULES:
             module = importlib.import_module('thymetogglutil.timemodules.{}'.format(module_name))
             parser = module.Parser(self.start_date, self.end_date)
-            parser.parse()
-            self.modules[module_name] = parser
-            parser = None
-
-        for module_name in settings.ENABLED_ISSUEMODULES:
-            module = importlib.import_module('thymetogglutil.issuemodules.{}'.format(module_name))
-            parser = module.Parser()
             parser.parse()
             self.modules[module_name] = parser
             parser = None

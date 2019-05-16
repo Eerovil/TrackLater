@@ -23,7 +23,7 @@ def hello():
 @app.route('/listmodules', methods=['GET'])
 def listmodules():
     if request.method == 'GET':
-        data = settings.ENABLED_TIMEMODULES + settings.ENABLED_ISSUEMODULES
+        data = settings.ENABLED_MODULES
         return json.dumps(data, default=str)
 
 
@@ -45,16 +45,13 @@ def fetchdata():
         parser = Parser(from_date, to_date)
         parser.parse()
         data = {}
-        for key in settings.ENABLED_TIMEMODULES:
+        for key in settings.ENABLED_MODULES:
             if keys == "all" or key in keys:
                 data[key] = {}
                 data[key]['entries'] = [entry.to_dict()
                                         for entry in parser.modules[key].entries]
                 data[key]['projects'] = [project.to_dict()
                                          for project in parser.modules[key].projects]
-        for key in settings.ENABLED_ISSUEMODULES:
-            if keys == "all" or key in keys:
-                data[key] = {}
                 data[key]['issues'] = [issue.to_dict()
                                        for issue in parser.modules[key].issues]
         return json.dumps(data, default=str)
@@ -66,10 +63,9 @@ def parseTimestamp(stamp):
     return date
 
 
-@app.route('/export', methods=['POST'])
+@app.route('/updateentry', methods=['POST'])
 def export():
     if request.method == 'POST':
-        parser = Parser(None, None)
         entry = parser.push_session({
             'start_time': parseTimestamp(request.form['start_time']),
             'end_time': parseTimestamp(request.form['end_time']),
