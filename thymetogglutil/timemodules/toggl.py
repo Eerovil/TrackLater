@@ -13,10 +13,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_setting(key, default=None, group='global'):
+    return settings.helper('TOGGL', key, group=group, default=default)
+
+
 class Parser(EntryMixin, ProjectMixin, AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
-        self.api_key = settings.TOGGL_API_KEY
+        self.api_key = get_setting('API_KEY')
         response = requests.get('https://www.toggl.com/api/v8/me?with_related_data=true',
                                 auth=(self.api_key, 'api_token'))
         data = response.json()['data']
@@ -55,16 +59,21 @@ class Parser(EntryMixin, ProjectMixin, AbstractParser):
         clients = self.request('clients', method='GET').json()
         projects = []
         for client in clients:
-            if client['name'] not in settings.CLIENTS.keys():
+            group = None
+            for project, data in settings.TOGGL.items():
+                if data.get('NAME', None) == client['name']:
+                    group = project
+            if not group:
                 continue
             resp = self.request('clients/{}/projects'.format(client['id']),
                                 method='GET')
             for project in resp.json():
-                if project['name'] not in settings.CLIENTS[client['name']]['projects']:
+                if project['name'] not in settings.TOGGL[group]['PROJECTS']:
                     continue
                 projects.append(Project(
                     id=project['id'],
-                    title="{} - {}".format(client['name'], project['name'])
+                    title="{} - {}".format(client['name'], project['name']),
+                    group=group
                 ))
         return projects
 
