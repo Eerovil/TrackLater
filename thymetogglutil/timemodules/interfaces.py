@@ -146,9 +146,3 @@ class AbstractParser(object):
 
     def parse(self):
         pass
-
-
-# Helper classes with mixins
-
-class FullEntryParser(EntryMixin, AddEntryMixin, DeleteEntryMixin, UpdateEntryMixin, AbstractParser):
-    pass
