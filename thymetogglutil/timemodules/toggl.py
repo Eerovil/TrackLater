@@ -27,8 +27,6 @@ class Parser(EntryMixin, ProjectMixin, AbstractParser):
         self.email = data['email']
         self.default_wid = data['default_wid']
         self.id = data['id']
-        self.start_date = None
-        self.end_date = None
         self.time_entries = []
         self.projects = data['projects']
 
