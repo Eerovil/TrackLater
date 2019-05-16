@@ -3,7 +3,9 @@ import json
 
 from thymetogglutil.utils import parse_time
 from thymetogglutil import settings
-from thymetogglutil.timemodules.interfaces import AbstractEntryParser, Entry, Project
+from thymetogglutil.timemodules.interfaces import (
+    EntryMixin, ProjectMixin, AbstractParser, Entry, Project
+)
 
 from typing import List
 
@@ -11,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(AbstractEntryParser):
+class Parser(EntryMixin, ProjectMixin, AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
         self.api_key = settings.TOGGL_API_KEY

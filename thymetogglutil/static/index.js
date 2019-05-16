@@ -46,27 +46,22 @@ function getSessions() {
     .done((data) => {
         console.log(data)
         for (module_name in data) {
-            if (data[module_name].entries != undefined) {
-                // timemodules
-                projects[module_name] = data[module_name].projects;
-                projects[module_name].forEach(project => {
-                    $('#project').append(`<option value="${project.id}">${project.title}</option>`)
-                });
-                entries[module_name] = []
-                for (let i=0; i<data[module_name].entries.length; i++) {
-                    let entry = data[module_name].entries[i];
-                    entry.start_time = parseTime(entry.start_time);
-                    entry.end_time = parseTime(entry.end_time);
-                    entry.idcounter = idCounter++;
-                    entries[module_name].push(entry);
-                }
-            } else {
-                // issuemodules
-                issues[module_name] = data[module_name].issues;
-                issues[module_name].forEach(issue => {
-                    $('#issues').append(`<option value="${issue.key}">${issue.key} ${issue.title}"></option>`)
-                });
+            projects[module_name] = data[module_name].projects;
+            projects[module_name].forEach(project => {
+                $('#project').append(`<option value="${project.id}">${project.title}</option>`)
+            });
+            entries[module_name] = []
+            for (let i=0; i<data[module_name].entries.length; i++) {
+                let entry = data[module_name].entries[i];
+                entry.start_time = parseTime(entry.start_time);
+                entry.end_time = parseTime(entry.end_time);
+                entry.idcounter = idCounter++;
+                entries[module_name].push(entry);
             }
+            issues[module_name] = data[module_name].issues;
+            issues[module_name].forEach(issue => {
+                $('#issues').append(`<option value="${issue.key}">${issue.key} ${issue.title}"></option>`)
+            });
         }
         updateTable();
     })
