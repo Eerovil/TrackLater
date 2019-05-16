@@ -2,7 +2,6 @@ from flask import Flask, request, render_template
 from thymetogglutil.main import Parser
 from thymetogglutil import settings
 from datetime import datetime, timedelta
-from dataclasses import asdict
 import json
 import pytz
 

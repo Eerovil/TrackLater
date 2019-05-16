@@ -1,6 +1,5 @@
 import requests
 from thymetogglutil import settings
-import codecs
 import os
 import pickle
 
