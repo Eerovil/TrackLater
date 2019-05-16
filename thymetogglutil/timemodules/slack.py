@@ -1,19 +1,21 @@
 
-from slackclient import SlackClient
+from slack import WebClient
 from thymetogglutil import settings
 from datetime import datetime
 from thymetogglutil.utils import FixedOffset
+from thymetogglutil.timemodules.interfaces import Entry, EntryMixin, AbstractParser
 
 
-class SlackMixin(object):
+class Parser(EntryMixin, AbstractParser):
 
-    def parse_slack(self):
-        for workspace in settings.SLACK_WORKSPACES:
+    def get_entries(self):
+        entries = []
+        for group, group_data in settings.SLACK.items():
 
-            slack_token = workspace['API_KEY']
-            user_id = workspace['USER_ID']
+            slack_token = group_data['API_KEY']
+            user_id = group_data['USER_ID']
 
-            sc = SlackClient(slack_token)
+            sc = WebClient(slack_token)
 
             users_list = sc.api_call("users.list")
             users = {}
@@ -22,13 +24,17 @@ class SlackMixin(object):
                     user['profile'].get('first_name', 'NULL') + ' ' +
                     user['profile'].get('last_name', 'NULL')
                 )
-
-            for channel in sc.api_call("conversations.list",
-                                       types='public_channel,private_channel,mpim,im')['channels']:
+            channels = sc.api_call(
+                "conversations.list", data={'types': 'public_channel,private_channel,mpim,im'}
+            )['channels']
+            for channel in channels:
                 history = sc.api_call(
-                    "conversations.history", channel=channel['id'],
-                    oldest=(self.start_date - datetime(1970, 1, 1)).total_seconds(),
-                    latest=(self.end_date - datetime(1970, 1, 1)).total_seconds()
+                    "conversations.history",
+                    data={
+                        'channel': channel['id'],
+                        'oldest': (self.start_date - datetime(1970, 1, 1)).total_seconds(),
+                        'latest': (self.end_date - datetime(1970, 1, 1)).total_seconds()
+                    }
                 )
 
                 # Get either Istant Message recipient or channel name
@@ -39,9 +45,7 @@ class SlackMixin(object):
 
                 for message in history['messages']:
                     if message.get('user', '') == user_id:
-                        message['info'] = u'{} - {}'.format(workspace['NAME'],
-                                                            channel_info)
-                        message['time'] = datetime.fromtimestamp(
+                        start_time = datetime.fromtimestamp(
                             float(message['ts']), tz=FixedOffset(0, 'Helsinki')
                         )
                         # Replace @User id with the name
@@ -50,5 +54,9 @@ class SlackMixin(object):
                                 message['text'] = message['text'].replace(
                                     _user_id, users[_user_id]
                                 )
-                        self.slack_messages.append(message)
-                        print(message)
+                        entries.append(Entry(
+                            start_time=start_time,
+                            title='',
+                            text=['{} - {}'.format(group, channel_info), message['text']]
+                        ))
+        return entries
