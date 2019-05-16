@@ -8,11 +8,13 @@ from thymetogglutil import settings
 class Project:
     title: str
     id: str
+    group: str
 
     def to_dict(self):
         return {
             "title": self.title,
-            "id": self.id
+            "id": self.id,
+            "group": self.group,
         }
 
 
@@ -20,13 +22,15 @@ class Project:
 class Issue:
     key: str
     title: str
-    project: str
+    group: str
+    extra_data: Dict = field(default_factory=dict)
 
     def to_dict(self):
         return {
             "title": self.title,
             "key": self.key,
-            "project": self.project
+            "group": self.group,
+            "extra_data": self.extra_data
         }
 
 

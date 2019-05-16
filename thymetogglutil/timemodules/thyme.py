@@ -10,6 +10,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def get_setting(key, default=None, group='global'):
+    return settings.helper('THYME', key, group=group, default=default)
+
+
+DEFAULTS = {
+    'IDLE': 300,
+    'CUTOFF': 900,
+}
+
+
 def get_window(entry, id):
     for w in entry['Windows']:
         if w['ID'] == id:
@@ -31,7 +41,7 @@ class Parser(EntryMixin, AbstractParser):
         filenames = []
         date = self.start_date
         while date <= self.end_date:
-            filenames.append('{}/{}.json'.format(settings.THYME_DIR, date.strftime('%Y-%m-%d')))
+            filenames.append('{}/{}.json'.format(get_setting('DIR'), date.strftime('%Y-%m-%d')))
             date = date + timedelta(days=1)
 
         for filename in filenames:
@@ -55,17 +65,8 @@ class Parser(EntryMixin, AbstractParser):
         return {
             'active_window': active_window,
             'time': parse_time(entry['Time']),
-            'category': self._guess_category(active_window),
+            'category': 'work',
         }
-
-    def _guess_category(self, window):
-        for l in settings.LEISURE:
-            if l in window['Name']:
-                return 'leisure'
-        for l in settings.WORK:
-            if l in window['Name']:
-                return 'work'
-        return 'unknown'
 
     def _generate_sessions(self, entries):
         def _init_session(entry):
@@ -121,7 +122,10 @@ class Parser(EntryMixin, AbstractParser):
             _add_window(sessions[-1], prev_entry['active_window'], diff)
             _update_category(sessions[-1], prev_entry['category'], diff)
 
-            if diff >= settings.IDLE or session_length >= settings.CUTOFF:
+            _idle = get_setting('IDLE', DEFAULTS['IDLE'])
+            _cutoff = get_setting('CUTOFF', DEFAULTS['CUTOFF'])
+
+            if (diff >= _idle or session_length >= _cutoff):
                 _end_session(sessions[-1], prev_entry)
                 sessions.append(_init_session(entry))
 

@@ -22,12 +22,12 @@ class Parser(IssueMixin, AbstractParser):
             issues.append(Issue(
                 key="#{}".format(issue['ref']),
                 title=issue['subject'],
-                project=taiga_project['slug']
+                group=taiga_project['group']
             ))
         return issues
 
     def taiga_login(self):
-        credentials = settings.TAIGA_CREDENTIALS
+        credentials = settings.TAIGA['global']['CREDENTIALS']
         response = requests.post(
             AUTH_URL, data={
                 'type': 'normal',
@@ -43,8 +43,8 @@ class Parser(IssueMixin, AbstractParser):
         self.taiga_projects = []
         # Get taiga project id for all clients
         # "No client" not supported yet
-        for client, data in settings.CLIENTS.items():
-            if data['from'] != 'taiga':
+        for group, data in settings.TAIGA.items():
+            if 'project_slug' not in data:
                 continue
             response = requests.get(
                 PROJECT_URL.format(data['project_slug']),
@@ -52,8 +52,7 @@ class Parser(IssueMixin, AbstractParser):
             )
             self.taiga_projects.append({
                 'id': response.json()['id'],
-                'slug': data['project_slug'],
-                'client': client
+                'group': group
             })
 
     def taiga_fetch_issues(self, start_from=None):

@@ -4,9 +4,6 @@
 
 import importlib
 
-from thymetogglutil.mixins.toggl import TogglMixin
-from thymetogglutil.mixins.jira import JiraMixin
-from thymetogglutil.utils import DateGroupMixin
 from thymetogglutil import settings
 import re
 
@@ -14,18 +11,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Parser(JiraMixin, DateGroupMixin):
-    def __init__(self, start_date, end_date, jira_credentials=None):
+class Parser(object):
+    def __init__(self, start_date, end_date):
         self.start_date = start_date
         self.end_date = end_date
-        self.credentials = jira_credentials or settings.JIRA_CREDENTIALS
-        self.log = []
-        self.issues = []
-        self.latest_issues = {}
-        self.time_entries = []
-        self.sessions = []
-        self.cutoff_hour = 3  # Used to group dates
-        self.slack_messages = []
         self.modules = {}
 
     def parse_toggl(self):

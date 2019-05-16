@@ -2,6 +2,9 @@
 from datetime import timedelta, tzinfo
 from dateutil import parser as dateparser
 
+import dataclasses
+import json
+
 
 def parse_time(timestr):
     return dateparser.parse(timestr)
