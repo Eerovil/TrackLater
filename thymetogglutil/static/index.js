@@ -20,12 +20,7 @@ $(document).ready(function() {
 });
 
 
-var sessions = [];
-var timeEntries = [];
 var idCounter = 0;
-var log = [];
-var projects = [];
-var issues = [];
 
 var modules = [];
 var entries = {};
@@ -35,7 +30,6 @@ var capabilities = {};
 
 var chartItems = {};
 var global_selected = null;
-var global_selected_last = null;
 
 function listModules() {
     $.ajax('listmodules', {
@@ -79,7 +73,7 @@ function getSessions() {
             if (capabilities[module_name].includes('issues')) {
                 issues[module_name] = data[module_name].issues;
                 issues[module_name].forEach(issue => {
-                    $('#issues').append(`<option value="${issue.uuid}">${issue.key} ${issue.title}</option>`)
+                    $('#issues').append(`<option value="${issue.key} ${issue.title}"></option>`)
                 });
             }
         }
@@ -150,29 +144,6 @@ function deleteEntry(entryId) {
     }, function(data) {
         alert("deleted entry " + entryId + ": " + data);
     }, 'json')
-}
-
-function parseTimeEntry(timeEntry) {
-    timeEntry.start_time = parseTime(timeEntry.start_time);
-    timeEntry.end_time = parseTime(timeEntry.end_time);
-    timeEntry.at = parseTime(timeEntry.at);
-    return timeEntry;
-}
-
-function parseSession(session) {
-    session.start_time = parseTime(session.start_time);
-    session.end_time = parseTime(session.end_time);
-    return session;
-}
-
-function parseCommit(commit) {
-    commit.time = parseTime(commit.time);
-    return commit;
-}
-
-function parseSlack(message) {
-    message.time = parseTime(message.time);
-    return message;
 }
 
 function parseTime(time_str) {
