@@ -15,8 +15,8 @@ def get_setting(key, default=None, group='global'):
 
 
 DEFAULTS = {
-    'IDLE': 300,
-    'CUTOFF': 900,
+    'IDLE': 900,
+    'CUTOFF': 300,
 }
 
 
