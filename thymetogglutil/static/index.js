@@ -35,6 +35,13 @@ $(document).ready(function() {
 });
 
 
+function _handleFailure(jqXHR, textStatus, errorThrown) {
+    document.open();
+    document.write(jqXHR.responseText);
+    document.close();
+}
+
+
 var idCounter = 0;
 
 var modules = [];
@@ -51,6 +58,7 @@ function listModules() {
         contentType: 'application/json',
         dataType: 'json'
     })
+    .fail(_handleFailure)
     .done((data) => {
         console.log(data);
         modules = data;
@@ -65,6 +73,7 @@ function getSessions() {
         contentType: 'application/json',
         dataType: 'json'
     })
+    .fail(_handleFailure)
     .done((data) => {
         console.log(data)
         for (module_name in data) {
@@ -100,10 +109,10 @@ function getSessions() {
 }
 
 
-function refreshEntry(newEntry) {
+function refreshEntry(module_name, newEntry) {
     console.log(newEntry)
-    for (i in timeEntries) {
-        let entry = timeEntries[i];
+    for (i in entries[module_name]) {
+        let entry = entries[module_name][i];
         if (entry.id == newEntry.id) {
             entry.start_time = parseTime(newEntry.start_time)
             entry.end_time = parseTime(newEntry.end_time)
@@ -115,6 +124,7 @@ function refreshEntry(newEntry) {
                 start: entry.start_time,
                 end: entry.end_time,
             })
+            break;
         }
     }
 }
@@ -140,26 +150,7 @@ function createEntry() {
         let c = chartItems[entry.date_group];
         c.add(makeRow(module_name, entry));
     }, 'json')
-}
-
-function updateEntry(entryId, date_str) {
-    $.post('export', {
-        'id': entryId,
-        'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
-        'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project').val(),
-    }, function(data) {
-        refreshEntry(data);
-    }, 'json')
-}
-
-function deleteEntry(entryId) {
-    $.post('delete', {
-        'id': entryId
-    }, function(data) {
-        alert("deleted entry " + entryId + ": " + data);
-    }, 'json')
+    .fail(_handleFailure)
 }
 
 function parseTime(time_str) {
@@ -215,7 +206,7 @@ function makeRow(module_name, entry) {
         className: module_name,
         content: entry.title,
         title: entry.text.join("<br />"),
-        editable: false,
+        editable: capabilities[module_name].includes('updateentry'),
     };
     if (entry.end_time != undefined) {
         rowData.end = entry.end_time;
@@ -268,30 +259,42 @@ function updateTable() {
             multiselectPerGroup: true,
             snap: null,
 
-            // onMove: function(item, callback) {
-            //     if (item.group == ) {
-            //         let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+            onMove: function(item, callback) {
+                if (capabilities[item.group].includes('updateentry')) {
+                    let entry = entries[item.group].filter((entry) => entry.idcounter == item.id)[0];
                     
-            //         $.post('export', {
-            //             'id': entry.id,
-            //             'start_time': item.start.getTime(),
-            //             'end_time': item.end.getTime(),
-            //             'name': $('#actions input.description').val(),
-            //         }, function(data) {
-            //             refreshEntry(data);
-            //         }, 'json')
-            //     }
-            //     return callback(item);
-            // },
+                    $.post('updateentry', {
+                        'module': item.group,
+                        'entry_id': entry.id,
+                        'start_time': item.start.getTime(),
+                        'end_time': item.end.getTime(),
+                        'title': $('#actions input.description').val(),
+                        'issue_id': entry.issue,
+                        'project_id': entry.project,
+                        'extra_data': entry.extra_data,
+                        'text': entry.text,
+                    }, function(data) {
+                        refreshEntry(data);
+                    }, 'json')
+                    .fail(_handleFailure)
+                }
+                return callback(item);
+            },
 
-            // onRemove: function(item, callback) {
-            //     if (item.group == 'entry') {
-            //         let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
-                    
-            //         deleteEntry(entry.id);
-            //     }
-            //     return callback(item);
-            // }
+            onRemove: function(item, callback) {
+                if (capabilities[item.group].includes('deleteentry')) {
+                    let entry = entries[item.group].filter((entry) => entry.idcounter == item.id)[0];
+
+                    $.post('deleteentry', {
+                        'module': item.group,
+                        'entry_id': entry.id
+                    }, function(data) {
+                        console.log("deleted entry " + entry.id + ": " + data);
+                    }, 'json')
+                    .fail(_handleFailure)
+                }
+                return callback(item);
+            }
         };
 
         var groups = []

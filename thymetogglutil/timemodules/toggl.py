@@ -4,7 +4,7 @@ import json
 from thymetogglutil.utils import parse_time
 from thymetogglutil import settings
 from thymetogglutil.timemodules.interfaces import (
-    EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
+    EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
 )
 
 from typing import List
@@ -17,7 +17,7 @@ def get_setting(key, default=None, group='global'):
     return settings.helper('TOGGL', key, group=group, default=default)
 
 
-class Parser(EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser):
+class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
         self.api_key = get_setting('API_KEY')
@@ -48,7 +48,7 @@ class Parser(EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser):
                 id=entry['id'],
                 start_time=parse_time(entry['start']),
                 end_time=parse_time(entry['stop']),
-                title=entry['description'],
+                title=entry.get('description', ''),
                 project=entry.get('pid', None),
             ))
 
@@ -94,6 +94,29 @@ class Parser(EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser):
         ))
         return entry['id']
 
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> bool:
+        updated_entry = self.push_session(
+            session={
+                'start_time': new_entry.start_time,
+                'end_time': new_entry.end_time,
+            },
+            entry_id=entry_id,
+            name=new_entry.title,
+            project_id=new_entry.project
+        )
+
+        for i, entry in enumerate(self.entries):
+            if entry.id == str(updated_entry['id']):
+                entry.start_time = parse_time(updated_entry['start'])
+                entry.end_time = parse_time(updated_entry['stop'])
+                entry.title = updated_entry.get('description', '')
+                entry.project = updated_entry.get('pid')
+                self.entries[i] = entry
+                break
+
+    def delete_entry(self, entry_id: str) -> bool:
+        return self.delete_time_entry(entry_id)
+
     def request(self, endpoint: str, **kwargs) -> requests.Response:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
         kwargs['headers'] = kwargs.get('headers', {
@@ -138,7 +161,6 @@ class Parser(EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser):
         entry = response.json()['data']
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
-        self.parse_toggl()
         return entry
 
     def delete_time_entry(self, entry_id):
