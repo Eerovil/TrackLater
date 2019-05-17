@@ -35,7 +35,8 @@ class Issue:
             "title": self.title,
             "key": self.key,
             "group": self.group,
-            "extra_data": self.extra_data
+            "extra_data": self.extra_data,
+            "uuid": self.uuid
         }
 
 

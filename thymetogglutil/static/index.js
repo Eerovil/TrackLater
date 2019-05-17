@@ -1,13 +1,10 @@
 $(document).ready(function() {
     $('div#actions').hide();
+    listModules();
     getSessions();
     $('#actions .btn_export').on('click', () => {
         if (global_selected) {
-            if (global_selected.type == 'session') {
-                exportSession(global_selected.item, global_selected_last.item.end_time);
-            } else if (global_selected.type == 'entry') {
-                updateEntry(global_selected.item.id, global_selected.item.date_group);
-            }
+            createEntry();
         }
     });
     $('#actions input.description').on('change', () => {
@@ -30,13 +27,29 @@ var log = [];
 var projects = [];
 var issues = [];
 
+var modules = [];
 var entries = {};
 var issues = {};
 var projects = {};
+var capabilities = {};
 
 var chartItems = {};
 var global_selected = null;
 var global_selected_last = null;
+
+function listModules() {
+    $.ajax('listmodules', {
+        contentType: 'application/json',
+        dataType: 'json'
+    })
+    .done((data) => {
+        console.log(data);
+        modules = data;
+        modules.forEach(module => {
+            $('#modules').append(`<option value="${module}">${module}</option>`)
+        });
+    });
+}
 
 function getSessions() {
     $.ajax('fetchdata', {
@@ -46,13 +59,14 @@ function getSessions() {
     .done((data) => {
         console.log(data)
         for (module_name in data) {
-            if (data[module_name].capabilities.includes('projects')) {
+            capabilities[module_name] = data[module_name].capabilities;
+            if (capabilities[module_name].includes('projects')) {
                 projects[module_name] = data[module_name].projects;
                 projects[module_name].forEach(project => {
                     $('#project').append(`<option value="${project.id}">${project.title}</option>`)
                 });
             }
-            if (data[module_name].capabilities.includes('entries')) {
+            if (capabilities[module_name].includes('entries')) {
                 entries[module_name] = []
                 for (let i=0; i<data[module_name].entries.length; i++) {
                     let entry = data[module_name].entries[i];
@@ -62,10 +76,10 @@ function getSessions() {
                     entries[module_name].push(entry);
                 }
             }
-            if (data[module_name].capabilities.includes('issues')) {
+            if (capabilities[module_name].includes('issues')) {
                 issues[module_name] = data[module_name].issues;
                 issues[module_name].forEach(issue => {
-                    $('#issues').append(`<option value="${issue.key}">${issue.key} ${issue.title}"></option>`)
+                    $('#issues').append(`<option value="${issue.uuid}">${issue.key} ${issue.title}</option>`)
                 });
             }
         }
@@ -95,23 +109,24 @@ function refreshEntry(newEntry) {
     }
 }
 
-function createEntry(session, entry) {
-    entry = parseTimeEntry(entry);
-    entry.date_group = session.date_group;
-    entry.idcounter = idCounter++;
-    timeEntries.push(entry);
-    let c = chartItems[entry.date_group];
-    c.add(makeRow(entry, 'entry'));
-}
-
-function exportSession(session, end_time) {
-    $.post('export', {
-        'start_time': session.start_time.getTime(),
-        'end_time': end_time.getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project').val(),
+function createEntry() {
+    const first_entry = global_selected.first_entry;
+    const last_entry = global_selected.last_entry;
+    const module_name = $('#modules').val();
+    $.post('updateentry', {
+        'module': module_name,
+        'start_time': first_entry.start_time.getTime(),
+        'end_time': last_entry.end_time.getTime(),
+        'title': $('#actions input.description').val(),
+        'project_id': $('#project').val(),
     }, function(data) {
-        createEntry(session, data);
+        console.log(data);
+        // entry = parseTimeEntry(entry);
+        // entry.date_group = session.date_group;
+        // entry.idcounter = idCounter++;
+        // timeEntries.push(entry);
+        // let c = chartItems[entry.date_group];
+        // c.add(makeRow(entry, 'entry'));
     }, 'json')
 }
 
@@ -303,30 +318,14 @@ function updateTable() {
             $('div#actions input.description').val('');
             let selection = items.get(properties.items[0]);
             let selectionLast = items.get(properties.items[properties.items.length - 1]);
-            let category = selection.group;
-            if (category == 'session') {
-                let session = sessions.filter((session) => session.idcounter == selection.id)[0]
-                let sessionLast = sessions.filter((session) => session.idcounter == selectionLast.id)[0]
-                global_selected = {type: 'session', item: session};
-                global_selected_last = {type: 'session', item: sessionLast};
-                $('div#actions').show();
-                if (session.exported){
-                    let timeEntry = timeEntries.filter(e => e.id == session.exported)[0];
-                    $('div#actions input.description').val(timeEntry.description);
-                    $('#project').val(timeEntry.project);
-                }
-            }
-            if (category == 'entry') {
-                let entry = timeEntries.filter((entry) => entry.idcounter == selection.id)[0];
-                global_selected = {type: 'entry', item: entry};
-                $('div#actions').show();
-                $('div#actions .toggl_actions').show();
-                $('div#actions input.btn_export').attr('disabled', false);
-                $('div#actions input.description').val(entry.description);
-                $('#project').val(entry.project);
-                $('div#actions .toggl_actions input.start_time').val(dateToTimestr(entry.start_time));
-                $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
-            }
+
+            let module_name = selection.group;
+            let first_entry = entries[module_name].filter((entry) => entry.idcounter == selection.id)[0]
+            let last_entry = entries[module_name].filter((entry) => entry.idcounter == selectionLast.id)[0]
+
+            global_selected = {module_name, first_entry, last_entry};
+
+            $('div#actions').show();
         });
     }
 

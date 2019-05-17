@@ -9,9 +9,11 @@ from thymetogglutil.timemodules.interfaces import Entry, AddEntryMixin, UpdateEn
 
 app = Flask(__name__)
 
-parser = None
-
 logger = app.logger
+
+
+class State(object):
+    parser = None
 
 
 @app.route("/")
@@ -45,6 +47,7 @@ def fetchdata():
 
         parser = Parser(from_date, to_date)
         parser.parse()
+        State.parser = parser
         data = {}
         for key in settings.ENABLED_MODULES:
             if keys == "all" or key in keys:
@@ -85,47 +88,47 @@ def updateentry():
         issue = None
         if new_entry.issue:
             for module in settings.ENABLED_MODULES:
-                _tmp = parser.modules[module].find_issue(new_entry.issue)
+                _tmp = State.parser.modules[module].find_issue(new_entry.issue)
                 if _tmp:
                     issue = _tmp
                     break
 
         if not entry_id:
             # Check that create is allowed
-            assert isinstance(parser.modules[module], AddEntryMixin)
-            parser.modules[module].create_entry(
+            assert isinstance(State.parser.modules[module], AddEntryMixin)
+            State.parser.modules[module].create_entry(
                 new_entry=new_entry,
                 issue=issue
             )
         else:
             # Check that update is allowed
-            assert isinstance(parser.modules[module], UpdateEntryMixin)
-            parser.modules[module].update_entry(
+            assert isinstance(State.parser.modules[module], UpdateEntryMixin)
+            State.parser.modules[module].update_entry(
                 entry_id=new_entry.id,
                 new_entry=new_entry,
                 issue=issue
             )
 
         data = {}
-        data[module]['entries'] = [entry.to_dict() for entry in parser.modules[module].entries]
+        data[module]['entries'] = [entry.to_dict() for entry in State.parser.modules[module].entries]
         return json.dumps(data, default=str)
 
 
 @app.route('/deleteentry', methods=['POST'])
 def deleteentry():
     if request.method == 'POST':
-        ret = parser.delete_time_entry(request.form.get('id'))
+        ret = State.parser.delete_time_entry(request.form.get('id'))
         module = request.values.get('module')
         entry_id = request.values.get('entry_id', None)
 
         # Check that delete is allowed
-        assert isinstance(parser.modules[module], AddEntryMixin)
-        parser.modules[module].delete_entry(
+        assert isinstance(State.parser.modules[module], AddEntryMixin)
+        State.parser.modules[module].delete_entry(
             entry_id=entry_id
         )
 
         data = {}
-        data[module]['entries'] = [entry.to_dict() for entry in parser.modules[module].entries]
+        data[module]['entries'] = [entry.to_dict() for entry in State.parser.modules[module].entries]
         return json.dumps(data, default=str)
 
         return json.dumps(ret, default=str)
