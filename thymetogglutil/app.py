@@ -55,6 +55,7 @@ def fetchdata():
                                          for project in parser.modules[key].projects]
                 data[key]['issues'] = [issue.to_dict()
                                        for issue in parser.modules[key].issues]
+                data[key]['capabilities'] = parser.modules[key].capabilities
         return json.dumps(data, default=str)
 
 
