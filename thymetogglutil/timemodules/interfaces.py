@@ -21,10 +21,10 @@ class Project:
 
 @dataclass
 class Issue:
-    uuid: str = None
     key: str
     title: str
     group: str
+    uuid: str = None
     extra_data: Dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -88,6 +88,11 @@ class EntryMixin(object):
         self.entries = self.get_entries()
         super(EntryMixin, self).parse()
 
+    @property
+    def capabilities(self):
+        _ret = super(EntryMixin, self).capabilities
+        return _ret + ['entries']
+
     def get_entries(self) -> List[Entry]:
         raise NotImplementedError()
 
@@ -96,6 +101,11 @@ class ProjectMixin(object):
     def parse(self):
         self.projects = self.get_projects()
         super(ProjectMixin, self).parse()
+
+    @property
+    def capabilities(self):
+        _ret = super(ProjectMixin, self).capabilities
+        return _ret + ['projects']
 
     def get_projects(self) -> List[Project]:
         raise NotImplementedError()
@@ -106,6 +116,11 @@ class IssueMixin(object):
         self.issues = self.get_issues()
         super(IssueMixin, self).parse()
 
+    @property
+    def capabilities(self):
+        _ret = super(IssueMixin, self).capabilities
+        return _ret + ['issues']
+
     def get_issues(self) -> List[Issue]:
         raise NotImplementedError()
 
@@ -115,19 +130,35 @@ class IssueMixin(object):
                 return issue
         return None
 
+
 class AddEntryMixin(object):
     def add_entry(self, entry: Entry) -> bool:
         raise NotImplementedError()
+
+    @property
+    def capabilities(self):
+        _ret = super(AddEntryMixin, self).capabilities
+        return _ret + ['addentry']
 
 
 class DeleteEntryMixin(object):
     def delete_entry(self, entry_id: str) -> bool:
         raise NotImplementedError()
 
+    @property
+    def capabilities(self):
+        _ret = super(DeleteEntryMixin, self).capabilities
+        return _ret + ['deleteentry']
+
 
 class UpdateEntryMixin(object):
     def update_entry(self, entry_id: str, entry_data: Entry) -> bool:
         raise NotImplementedError()
+
+    @property
+    def capabilities(self):
+        _ret = super(UpdateEntryMixin, self).capabilities
+        return _ret + ['updateentry']
 
 
 class AbstractParser(object):
