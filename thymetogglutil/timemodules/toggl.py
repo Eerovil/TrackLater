@@ -4,7 +4,7 @@ import json
 from thymetogglutil.utils import parse_time
 from thymetogglutil import settings
 from thymetogglutil.timemodules.interfaces import (
-    EntryMixin, ProjectMixin, AbstractParser, Entry, Project
+    EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
 )
 
 from typing import List
@@ -17,7 +17,7 @@ def get_setting(key, default=None, group='global'):
     return settings.helper('TOGGL', key, group=group, default=default)
 
 
-class Parser(EntryMixin, ProjectMixin, AbstractParser):
+class Parser(EntryMixin, AddEntryMixin, ProjectMixin, AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
         self.api_key = get_setting('API_KEY')
@@ -75,6 +75,24 @@ class Parser(EntryMixin, ProjectMixin, AbstractParser):
                     group=group
                 ))
         return projects
+
+    def create_entry(self, new_entry: Entry, issue: Issue) -> bool:
+        entry = self.push_session(
+            session={
+                'start_time': new_entry.start_time,
+                'end_time': new_entry.end_time,
+            },
+            name=new_entry.title,
+            project_id=new_entry.project
+        )
+        self.entries.append(Entry(
+            id=entry['id'],
+            start_time=parse_time(entry['start']),
+            end_time=parse_time(entry['stop']),
+            title=entry['description'],
+            project=entry.get('pid', None),
+        ))
+        return entry['id']
 
     def request(self, endpoint: str, **kwargs) -> requests.Response:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)

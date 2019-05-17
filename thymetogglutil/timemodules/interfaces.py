@@ -133,7 +133,7 @@ class IssueMixin(object):
 
 
 class AddEntryMixin(object):
-    def add_entry(self, entry: Entry) -> bool:
+    def create_entry(self, new_entry: Entry, issue: Issue) -> bool:
         raise NotImplementedError()
 
     @property
