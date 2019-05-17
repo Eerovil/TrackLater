@@ -9,11 +9,26 @@ $(document).ready(function() {
     });
     $('#actions input.description').on('change', () => {
         // Update project field to match the one specified on the issue
-        issue = issues.filter((issue) => {
-            return ($('#actions input.description').val().indexOf(issue.key) > -1);
-        });
-        if (issues.length > 0 && issue[0] !== undefined && issue[0].project) {
-            $('#project').val(issue[0].project);
+        let issue;
+        const title = $('#actions input.description').val();
+        for (module_name in issues) {
+            for (let i=0; i<issues[module_name].length; i++) {
+                if (title.indexOf(issues[module_name][i].title) > -1 &&
+                        title.indexOf(issues[module_name][i].key) > -1 ) {
+                    issue = issues[module_name][i];
+                    break;
+                }
+            }
+        }
+        if (issue != undefined && issue.group) {
+            for (module_name in projects) {
+                for (let i=0; i<projects[module_name].length; i++) {
+                    if (projects[module_name][i].group == issue.group) {
+                        $('#project').val(projects[module_name][i].id);
+                        break;
+                    }
+                }
+            }
         }
     });
     console.log('hello2');
@@ -83,6 +98,7 @@ function getSessions() {
         console.log(err)
     })
 }
+
 
 function refreshEntry(newEntry) {
     console.log(newEntry)
