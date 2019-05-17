@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import json
 import pytz
 
+from thymetogglutil.timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
+
 app = Flask(__name__)
 
 parser = None
@@ -57,48 +59,72 @@ def fetchdata():
 
 
 def parseTimestamp(stamp):
+    if not stamp:
+        return None
     tz = pytz.timezone('Europe/Helsinki')
     date = datetime.fromtimestamp(int(stamp) / 1e3, tz)
     return date
 
 
 @app.route('/updateentry', methods=['POST'])
-def export():
+def updateentry():
     if request.method == 'POST':
-        entry = parser.push_session({
-            'start_time': parseTimestamp(request.form['start_time']),
-            'end_time': parseTimestamp(request.form['end_time']),
-        }, request.form['name'], request.form.get('id', None), request.form.get('project', None))
-        return json.dumps(entry, default=str)
-
-
-@app.route('/delete', methods=['POST'])
-def delete():
-    if request.method == 'POST':
-        parser = Parser(None, None)
-        ret = parser.delete_time_entry(request.form.get('id'))
-        return json.dumps(ret, default=str)
-
-
-@app.route('/split', methods=['POST'])
-def split():
-    if request.method == 'POST':
-        parser = Parser(None, None)
-        (entry1, entry2) = parser.split_time_entry(
-            request.form.get('id'),
-            parseTimestamp(request.form['start_time']),
-            parseTimestamp(request.form['split_time']),
-            parseTimestamp(request.form['end_time']),
-            request.form.get('name')
+        module = request.values.get('module')
+        entry_id = request.values.get('entry_id', None)
+        new_entry = Entry(
+            start_time=parseTimestamp(request.values['start_time']),
+            end_time=parseTimestamp(request.values.get('end_time', None)),
+            id=entry_id,
+            issue=request.values.get('issue_id', None),
+            project=request.values['project_id'],
+            title=request.values.get('title', ''),
+            text=request.values.get('text', []),
+            extra_data=request.values.get('extra_data', {})
         )
-        return json.dumps({'entry1': entry1, 'entry2': entry2}, default=str)
+        issue = None
+        if new_entry.issue:
+            for module in settings.ENABLED_MODULES:
+                _tmp = parser.modules[module].find_issue(new_entry.issue)
+                if _tmp:
+                    issue = _tmp
+                    break
+
+        if not entry_id:
+            # Check that create is allowed
+            assert isinstance(parser.modules[module], AddEntryMixin)
+            parser.modules[module].create_entry(
+                new_entry=new_entry,
+                issue=issue
+            )
+        else:
+            # Check that update is allowed
+            assert isinstance(parser.modules[module], UpdateEntryMixin)
+            parser.modules[module].update_entry(
+                entry_id=new_entry.id,
+                new_entry=new_entry,
+                issue=issue
+            )
+
+        data = {}
+        data[module]['entries'] = [entry.to_dict() for entry in parser.modules[module].entries]
+        return json.dumps(data, default=str)
 
 
-@app.route('/log', methods=['GET'])
-def log():
-    if request.method == 'GET':
-        now = datetime.now()
-        parser = Parser(now - timedelta(days=10), now)
-        parser.parse_git()
-        parser.parse_jira()
-        return json.dumps(parser.log, default=str)
+@app.route('/deleteentry', methods=['POST'])
+def deleteentry():
+    if request.method == 'POST':
+        ret = parser.delete_time_entry(request.form.get('id'))
+        module = request.values.get('module')
+        entry_id = request.values.get('entry_id', None)
+
+        # Check that delete is allowed
+        assert isinstance(parser.modules[module], AddEntryMixin)
+        parser.modules[module].delete_entry(
+            entry_id=entry_id
+        )
+
+        data = {}
+        data[module]['entries'] = [entry.to_dict() for entry in parser.modules[module].entries]
+        return json.dumps(data, default=str)
+
+        return json.dumps(ret, default=str)
