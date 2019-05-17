@@ -100,6 +100,9 @@ function getSessions() {
                     $('#issues').append(`<option value="${issue.key} ${issue.title}"></option>`)
                 });
             }
+            if (capabilities[module_name].includes('addentry')) {
+                $('#modules').val(module_name);
+            }
         }
         updateTable();
     })
