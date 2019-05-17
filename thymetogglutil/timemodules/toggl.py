@@ -45,10 +45,11 @@ class Parser(EntryMixin, ProjectMixin, AbstractParser):
         time_entries = []
         for entry in data:
             time_entries.append(Entry(
+                id=entry['id'],
                 start_time=parse_time(entry['start']),
                 end_time=parse_time(entry['stop']),
                 title=entry['description'],
-                project=entry.get('pid', None)
+                project=entry.get('pid', None),
             ))
 
         return time_entries

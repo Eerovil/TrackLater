@@ -3,6 +3,7 @@ from typing import List, Union, Dict
 from datetime import datetime, timedelta
 from thymetogglutil import settings
 
+import uuid
 
 @dataclass
 class Project:
@@ -20,10 +21,14 @@ class Project:
 
 @dataclass
 class Issue:
+    uuid: str = None
     key: str
     title: str
     group: str
     extra_data: Dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.uuid = str(uuid.uuid4())
 
     def to_dict(self):
         return {
@@ -37,9 +42,11 @@ class Issue:
 @dataclass
 class Entry:
     start_time: datetime
+    id: str = None
     end_time: Union[datetime, None] = None
     date_group: str = None
     issue: str = None  # Issue id
+    group: str = None
     project: str = None  # Project id
     title: str = ""  # Title to show in timeline
     text: List[str] = field(default_factory=list)  # Text to show in timeline hover
@@ -65,6 +72,7 @@ class Entry:
         return {
             "start_time": self.start_time,
             "end_time": self.end_time,
+            "id": self.id,
             "date_group": self.date_group,
             "issue": self.issue,
             "project": self.project,
@@ -80,11 +88,6 @@ class EntryMixin(object):
         self.entries = self.get_entries()
         super(EntryMixin, self).parse()
 
-    @property
-    def capabilities(self):
-        _ret = super(EntryMixin, self).capabilities
-        return _ret + ['entries']
-
     def get_entries(self) -> List[Entry]:
         raise NotImplementedError()
 
@@ -93,11 +96,6 @@ class ProjectMixin(object):
     def parse(self):
         self.projects = self.get_projects()
         super(ProjectMixin, self).parse()
-
-    @property
-    def capabilities(self):
-        _ret = super(ProjectMixin, self).capabilities
-        return _ret + ['projects']
 
     def get_projects(self) -> List[Project]:
         raise NotImplementedError()
@@ -108,14 +106,14 @@ class IssueMixin(object):
         self.issues = self.get_issues()
         super(IssueMixin, self).parse()
 
-    @property
-    def capabilities(self):
-        _ret = super(IssueMixin, self).capabilities
-        return _ret + ['issues']
-
     def get_issues(self) -> List[Issue]:
         raise NotImplementedError()
 
+    def find_issue(self, uuid):
+        for issue in self.issues:
+            if issue.uuid == uuid:
+                return issue
+        return None
 
 class AddEntryMixin(object):
     def add_entry(self, entry: Entry) -> bool:
