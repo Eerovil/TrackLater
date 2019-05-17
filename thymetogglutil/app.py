@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import json
 import pytz
 
+import traceback
+
 from thymetogglutil.timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
 
 app = Flask(__name__)
@@ -86,8 +88,10 @@ def updateentry():
         )
         issue = None
         if new_entry.issue:
-            for module in settings.ENABLED_MODULES:
-                _tmp = State.parser.modules[module].find_issue(new_entry.issue)
+            for _module in settings.ENABLED_MODULES:
+                if 'issues' not in State.parser.modules[_module].capabilities:
+                    continue
+                _tmp = State.parser.modules[_module].find_issue(new_entry.issue)
                 if _tmp:
                     issue = _tmp
                     break
@@ -119,17 +123,13 @@ def updateentry():
 @app.route('/deleteentry', methods=['POST'])
 def deleteentry():
     if request.method == 'POST':
-        ret = State.parser.delete_time_entry(request.form.get('id'))
         module = request.values.get('module')
-        entry_id = request.values.get('entry_id', None)
+        entry_id = request.values.get('entry_id')
 
         # Check that delete is allowed
         assert isinstance(State.parser.modules[module], AddEntryMixin)
-        State.parser.modules[module].delete_entry(
+        ret = State.parser.modules[module].delete_entry(
             entry_id=entry_id
         )
 
-        data = {module: {}}
-        data[module]['entries'] = [entry.to_dict()
-                                   for entry in State.parser.modules[module].entries]
-        return json.dumps(data, default=str)
+        return json.dumps(ret, default=str)

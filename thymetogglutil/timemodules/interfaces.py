@@ -5,11 +5,16 @@ from thymetogglutil import settings
 
 import uuid
 
+
 @dataclass
 class Project:
     title: str
     id: str
     group: str
+
+    def __post_init__(self) -> None:
+        # ensure ids are str
+        self.id = str(self.id) if self.id else self.id
 
     def to_dict(self):
         return {
@@ -54,6 +59,11 @@ class Entry:
     extra_data: Dict = field(default_factory=dict)  # For custom js
 
     def __post_init__(self) -> None:
+        # ensure ids are str
+        self.id = str(self.id) if self.id else self.id
+        self.project = str(self.project) if self.project else self.project
+        self.issue = str(self.issue) if self.issue else self.issue
+
         # Calculate date_group immediately
         item_time = self.start_time
         offset = item_time.tzinfo.utcoffset(None)
@@ -153,7 +163,7 @@ class DeleteEntryMixin(object):
 
 
 class UpdateEntryMixin(object):
-    def update_entry(self, entry_id: str, entry_data: Entry) -> bool:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> bool:
         raise NotImplementedError()
 
     @property
