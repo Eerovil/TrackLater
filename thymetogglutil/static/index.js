@@ -113,6 +113,7 @@ function createEntry() {
     const first_entry = global_selected.first_entry;
     const last_entry = global_selected.last_entry;
     const module_name = $('#modules').val();
+    const entry_module = global_selected.module_name;
     $.post('updateentry', {
         'module': module_name,
         'start_time': first_entry.start_time.getTime(),
@@ -121,12 +122,13 @@ function createEntry() {
         'project_id': $('#project').val(),
     }, function(data) {
         console.log(data);
-        // entry = parseTimeEntry(entry);
-        // entry.date_group = session.date_group;
-        // entry.idcounter = idCounter++;
-        // timeEntries.push(entry);
-        // let c = chartItems[entry.date_group];
-        // c.add(makeRow(entry, 'entry'));
+        let entry = data;
+        entry.start_time = parseTime(entry.start_time);
+        entry.end_time = parseTime(entry.end_time);
+        entry.idcounter = idCounter++;
+        entries[entry_module].push(entry);
+        let c = chartItems[entry.date_group];
+        c.add(makeRow(module_name, entry));
     }, 'json')
 }
 
@@ -218,6 +220,24 @@ function wcmp(a, b) {
     return 0;
 }
 
+function makeRow(module_name, entry) {
+    let rowData = {
+        id: entry.idcounter,
+        start: entry.start_time,
+        group: module_name,
+        className: module_name,
+        content: entry.title,
+        title: entry.text.join("<br />"),
+        editable: false,
+    };
+    if (entry.end_time != undefined) {
+        rowData.end = entry.end_time;
+    } else {
+        rowData.type = 'point'
+    }
+    return rowData;
+}
+
 function updateTable() {
 
     let dateGroups = new Set();
@@ -243,21 +263,7 @@ function updateTable() {
         for (module_name in filteredEntries) {
             for (let i=0; i<filteredEntries[module_name].length; i++) {
                 const entry = filteredEntries[module_name][i];
-                let rowData = {
-                    id: entry.idcounter,
-                    start: entry.start_time,
-                    group: module_name,
-                    className: module_name,
-                    content: entry.title,
-                    title: entry.text.join("<br />"),
-                    editable: false,
-                };
-                if (entry.end_time != undefined) {
-                    rowData.end = entry.end_time;
-                } else {
-                    rowData.type = 'point'
-                }
-                rows.push(rowData);
+                rows.push(makeRow(module_name, entry));
             }
         }
         var items = new vis.DataSet(rows);

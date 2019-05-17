@@ -15,7 +15,6 @@ logger = app.logger
 class State(object):
     parser = None
 
-
 @app.route("/")
 def hello():
     return render_template(
@@ -96,7 +95,7 @@ def updateentry():
         if not entry_id:
             # Check that create is allowed
             assert isinstance(State.parser.modules[module], AddEntryMixin)
-            State.parser.modules[module].create_entry(
+            entry_id = State.parser.modules[module].create_entry(
                 new_entry=new_entry,
                 issue=issue
             )
@@ -109,8 +108,11 @@ def updateentry():
                 issue=issue
             )
 
-        data = {}
-        data[module]['entries'] = [entry.to_dict() for entry in State.parser.modules[module].entries]
+        data = [
+            entry.to_dict()
+            for entry in State.parser.modules[module].entries
+            if entry.id == entry_id
+        ][0]
         return json.dumps(data, default=str)
 
 
@@ -127,8 +129,7 @@ def deleteentry():
             entry_id=entry_id
         )
 
-        data = {}
-        data[module]['entries'] = [entry.to_dict() for entry in State.parser.modules[module].entries]
+        data = {module: {}}
+        data[module]['entries'] = [entry.to_dict()
+                                   for entry in State.parser.modules[module].entries]
         return json.dumps(data, default=str)
-
-        return json.dumps(ret, default=str)
