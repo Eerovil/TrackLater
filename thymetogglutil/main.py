@@ -3,8 +3,10 @@
 
 
 import importlib
+from concurrent.futures import ThreadPoolExecutor
 
 from thymetogglutil import settings
+from time import sleep
 
 import logging
 logger = logging.getLogger(__name__)
@@ -17,9 +19,25 @@ class Parser(object):
         self.modules = {}
 
     def parse(self):
-        for module_name in settings.ENABLED_MODULES:
-            module = importlib.import_module('thymetogglutil.timemodules.{}'.format(module_name))
-            parser = module.Parser(self.start_date, self.end_date)
-            parser.parse()
-            self.modules[module_name] = parser
-            parser = None
+        with ThreadPoolExecutor() as executor:
+            running_tasks = []
+
+            for module_name in settings.ENABLED_MODULES:
+                module = importlib.import_module(
+                    'thymetogglutil.timemodules.{}'.format(module_name)
+                )
+                parser = module.Parser(self.start_date, self.end_date)
+                self.modules[module_name] = parser
+                running_tasks.append((module_name, executor.submit(parser.parse)))
+                logger.warning("Parsing %s", module_name)
+                parser = None
+            running = True
+            while running:
+                running = False
+                for i, (module_name, running_task) in enumerate(running_tasks):
+                    if running_task and not running_task.running():
+                        logger.warning("Task done %s", module_name)
+                        running_tasks[i] = (module_name, None)
+                    elif running_task:
+                        running = True
+                sleep(0.1)
