@@ -1,7 +1,7 @@
 import requests
 import json
 
-from thymetogglutil.utils import parse_time
+from thymetogglutil.utils import parse_time, _str
 from thymetogglutil import settings
 from thymetogglutil.timemodules.interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
@@ -92,7 +92,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             title=entry['description'],
             project=entry.get('pid', None),
         ))
-        return entry['id']
+        return _str(entry['id'])
 
     def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> bool:
         updated_entry = self.push_session(

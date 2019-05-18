@@ -4,7 +4,17 @@ $(document).ready(function() {
     getSessions();
     $('#actions .btn_export').on('click', () => {
         if (global_selected) {
-            createEntry();
+            if (global_selected.module_name == $('#modules').val()) {
+                updateEntry(
+                    global_selected.module_name,
+                    global_selected.first_entry,
+                    global_selected.first_entry.start_time,
+                    global_selected.first_entry.end_time,
+                    global_selected.first_entry.project
+                )
+            } else {
+                createEntry();
+            }
         }
     });
     $('#actions input.description').on('change', () => {
@@ -119,14 +129,9 @@ function refreshEntry(module_name, newEntry) {
         if (entry.id == newEntry.id) {
             entry.start_time = parseTime(newEntry.start_time)
             entry.end_time = parseTime(newEntry.end_time)
-            entry.description = newEntry.description
+            entry.title = newEntry.title
             let c = chartItems[entry.date_group]
-            c.update({id: entry.idcounter,
-                title: entry.description,
-                content: entry.description,
-                start: entry.start_time,
-                end: entry.end_time,
-            })
+            c.update(makeRow(module_name, entry))
             break;
         }
     }
@@ -149,9 +154,26 @@ function createEntry() {
         entry.start_time = parseTime(entry.start_time);
         entry.end_time = parseTime(entry.end_time);
         entry.idcounter = idCounter++;
-        entries[entry_module].push(entry);
+        entries[module_name].push(entry);
         let c = chartItems[entry.date_group];
         c.add(makeRow(module_name, entry));
+    }, 'json')
+    .fail(_handleFailure)
+}
+
+function updateEntry(module_name, entry, start_time, end_time, project_id) {
+    $.post('updateentry', {
+        'module': module_name,
+        'entry_id': entry.id,
+        'start_time': start_time.getTime(),
+        'end_time': end_time.getTime(),
+        'title': $('#actions input.description').val(),
+        'issue_id': entry.issue,
+        'project_id': project_id,
+        'extra_data': entry.extra_data,
+        'text': entry.text,
+    }, function(data) {
+        refreshEntry(module_name, data);
     }, 'json')
     .fail(_handleFailure)
 }
@@ -266,20 +288,9 @@ function updateTable() {
                 if (capabilities[item.group].includes('updateentry')) {
                     let entry = entries[item.group].filter((entry) => entry.idcounter == item.id)[0];
                     
-                    $.post('updateentry', {
-                        'module': item.group,
-                        'entry_id': entry.id,
-                        'start_time': item.start.getTime(),
-                        'end_time': item.end.getTime(),
-                        'title': $('#actions input.description').val(),
-                        'issue_id': entry.issue,
-                        'project_id': entry.project,
-                        'extra_data': entry.extra_data,
-                        'text': entry.text,
-                    }, function(data) {
-                        refreshEntry(data);
-                    }, 'json')
-                    .fail(_handleFailure)
+                    updateEntry(
+                        item.group, entry, item.start, item.end, entry.project
+                    );
                 }
                 return callback(item);
             },
@@ -314,7 +325,6 @@ function updateTable() {
         timeline.on('select', (properties) => {
             $('div#actions').hide();
             $('div#actions .toggl_actions').hide();
-            $('div#actions input.description').val('');
             let selection = items.get(properties.items[0]);
             let selectionLast = items.get(properties.items[properties.items.length - 1]);
 
@@ -324,6 +334,8 @@ function updateTable() {
 
             global_selected = {module_name, first_entry, last_entry};
 
+            $('div#actions input.description').val(global_selected.first_entry.title);
+            $('#project').val(global_selected.first_entry.project);
             $('div#actions').show();
         });
     }
