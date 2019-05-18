@@ -5,10 +5,12 @@ from datetime import datetime
 from utils import FixedOffset
 from timemodules.interfaces import Entry, EntryMixin, AbstractParser
 
+from typing import List
+
 
 class Parser(EntryMixin, AbstractParser):
 
-    def get_entries(self):
+    def get_entries(self) -> List[Entry]:
         entries = []
         for group, group_data in settings.SLACK.items():
 

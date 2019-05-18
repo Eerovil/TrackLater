@@ -1,23 +1,32 @@
 import requests
+from requests.models import Response
 import json
 
 from utils import parse_time, _str
 import settings
 from timemodules.interfaces import (
-    EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
+    EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser,
+    Entry, Project, Issue
 )
 
-from typing import List
+from typing import List, Dict, Any
 
 import logging
 logger = logging.getLogger(__name__)
+
+toggl_settings: Dict = settings.TOGGL
 
 
 def get_setting(key, default=None, group='global'):
     return settings.helper('TOGGL', key, group=group, default=default)
 
 
-class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser):
+def response_json(resp: Response) -> List[Dict[str, Any]]:
+    return resp.json()
+
+
+class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin,
+             AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
         self.api_key = get_setting('API_KEY')
@@ -59,15 +68,15 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         projects = []
         for client in clients:
             group = None
-            for project, data in settings.TOGGL.items():
+            for project, data in toggl_settings.items():
                 if data.get('NAME', None) == client['name']:
                     group = project
             if not group:
                 continue
             resp = self.request('clients/{}/projects'.format(client['id']),
                                 method='GET')
-            for project in resp.json():
-                if project['name'] not in settings.TOGGL[group]['PROJECTS']:
+            for project in response_json(resp):
+                if project['name'] not in toggl_settings[group]['PROJECTS']:
                     continue
                 projects.append(Project(
                     id=project['id'],
@@ -76,7 +85,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 ))
         return projects
 
-    def create_entry(self, new_entry: Entry, issue: Issue) -> bool:
+    def create_entry(self, new_entry: Entry, issue: Issue) -> str:
         entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -92,9 +101,9 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             title=entry['description'],
             project=entry.get('pid', None),
         ))
-        return _str(entry['id'])
+        return _str(entry['id']) or entry['id']
 
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> bool:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> None:
         updated_entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -114,8 +123,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 self.entries[i] = entry
                 break
 
-    def delete_entry(self, entry_id: str) -> bool:
-        return self.delete_time_entry(entry_id)
+    def delete_entry(self, entry_id: str) -> None:
+        self.delete_time_entry(entry_id)
 
     def request(self, endpoint: str, **kwargs) -> requests.Response:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
