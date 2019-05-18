@@ -5,27 +5,29 @@ import pickle
 
 from .interfaces import IssueMixin, AbstractParser, Issue
 
+from typing import Any, List
+
 import logging
 logger = logging.getLogger(__name__)
 
 
-def get_setting(key, default=None, group='global'):
+def get_setting(key, default=None, group='global') -> Any:
     return settings.helper('JIRA', key, group=group, default=default)
 
 
 class Parser(IssueMixin, AbstractParser):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(Parser, self).__init__(*args, **kwargs)
 
-    def get_issues(self):
-        issues = []
+    def get_issues(self) -> List[Issue]:
+        issues: List[Issue] = []
         for group, group_settings in settings.JIRA.items():
             self.credentials = get_setting('CREDENTIALS', group=group)
             issues += self.get_group_issues(group, group_settings)
         return issues
 
-    def get_group_issues(self, group, group_settings):
-        issues = []
+    def get_group_issues(self, group, group_settings) -> List[Issue]:
+        issues: List[Issue] = []
         filename = '{}.jira-cache'.format(group)
         if os.path.exists(filename):
             try:
@@ -60,7 +62,7 @@ class Parser(IssueMixin, AbstractParser):
                 pickle.dump(issues, f)
         return issues
 
-    def fetch_issues(self, url, project_key, start_from=None):
+    def fetch_issues(self, url, project_key, start_from=None) -> dict:
         start_str = '&startAt={}'.format(start_from) if (start_from and start_from > 0) else ''
         response = requests.get(
             '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary,issuetype'
@@ -69,11 +71,3 @@ class Parser(IssueMixin, AbstractParser):
             ), auth=self.credentials
         )
         return response.json()
-
-    def get_issue(self, key):
-        for issue in self.issues:
-            if issue['key'] == key:
-                return issue
-
-    def sorted_issues(self):
-        return sorted(self.issues, key=lambda x: int(x['key'][4:]), reverse=True)

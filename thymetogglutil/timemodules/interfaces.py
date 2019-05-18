@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 import settings
+from abc import ABCMeta, abstractmethod
 
 from utils import _str
 
@@ -98,7 +99,7 @@ class Entry:
         }
 
 
-class AbstractParser(object):
+class AbstractParser(metaclass=ABCMeta):
     def __init__(self, start_date: datetime, end_date: datetime) -> None:
         self.start_date: datetime = start_date
         self.end_date: datetime = end_date
@@ -110,6 +111,7 @@ class AbstractParser(object):
     def capabilities(self) -> List[str]:
         return []
 
+    @abstractmethod
     def parse(self) -> None:
         pass
 
@@ -124,6 +126,7 @@ class EntryMixin(AbstractParser):
         _ret = super(EntryMixin, self).capabilities
         return _ret + ['entries']
 
+    @abstractmethod
     def get_entries(self) -> List[Entry]:
         raise NotImplementedError()
 
@@ -138,6 +141,7 @@ class ProjectMixin(AbstractParser):
         _ret = super(ProjectMixin, self).capabilities
         return _ret + ['projects']
 
+    @abstractmethod
     def get_projects(self) -> List[Project]:
         raise NotImplementedError()
 
@@ -152,6 +156,7 @@ class IssueMixin(AbstractParser):
         _ret = super(IssueMixin, self).capabilities
         return _ret + ['issues']
 
+    @abstractmethod
     def get_issues(self) -> List[Issue]:
         raise NotImplementedError()
 
@@ -163,6 +168,7 @@ class IssueMixin(AbstractParser):
 
 
 class AddEntryMixin(AbstractParser):
+    @abstractmethod
     def create_entry(self, new_entry: Entry, issue: Issue) -> str:
         raise NotImplementedError()
 
@@ -173,6 +179,7 @@ class AddEntryMixin(AbstractParser):
 
 
 class DeleteEntryMixin(AbstractParser):
+    @abstractmethod
     def delete_entry(self, entry_id: str) -> bool:
         raise NotImplementedError()
 
@@ -183,6 +190,7 @@ class DeleteEntryMixin(AbstractParser):
 
 
 class UpdateEntryMixin(AbstractParser):
+    @abstractmethod
     def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> bool:
         raise NotImplementedError()
 
