@@ -7,6 +7,10 @@ def parse_time(timestr):
     return dateparser.parse(timestr)
 
 
+def _str(obj):
+    return str(obj) if obj else obj
+
+
 class FixedOffset(tzinfo):
     """Fixed offset in minutes west from UTC."""
 

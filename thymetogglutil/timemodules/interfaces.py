@@ -3,6 +3,8 @@ from typing import List, Union, Dict
 from datetime import datetime, timedelta
 from thymetogglutil import settings
 
+from thymetogglutil.utils import _str
+
 import uuid
 
 
@@ -14,7 +16,7 @@ class Project:
 
     def __post_init__(self) -> None:
         # ensure ids are str
-        self.id = str(self.id) if self.id else self.id
+        self.id = _str(self.id)
 
     def to_dict(self):
         return {
@@ -33,7 +35,7 @@ class Issue:
     extra_data: Dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self.uuid = str(uuid.uuid4())
+        self.uuid = _str(uuid.uuid4())
 
     def to_dict(self):
         return {
@@ -60,9 +62,9 @@ class Entry:
 
     def __post_init__(self) -> None:
         # ensure ids are str
-        self.id = str(self.id) if self.id else self.id
-        self.project = str(self.project) if self.project else self.project
-        self.issue = str(self.issue) if self.issue else self.issue
+        self.id = _str(self.id)
+        self.project = _str(self.project)
+        self.issue = _str(self.issue)
 
         # Calculate date_group immediately
         item_time = self.start_time
@@ -143,7 +145,7 @@ class IssueMixin(object):
 
 
 class AddEntryMixin(object):
-    def create_entry(self, new_entry: Entry, issue: Issue) -> bool:
+    def create_entry(self, new_entry: Entry, issue: Issue) -> str:
         raise NotImplementedError()
 
     @property

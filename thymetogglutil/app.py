@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template
 from thymetogglutil.main import Parser
 from thymetogglutil import settings
+from thymetogglutil.utils import _str
 from datetime import datetime, timedelta
 import json
 import pytz
@@ -75,7 +76,7 @@ def parseTimestamp(stamp):
 def updateentry():
     if request.method == 'POST':
         module = request.values.get('module')
-        entry_id = request.values.get('entry_id', None)
+        entry_id = _str(request.values.get('entry_id', None))
         new_entry = Entry(
             start_time=parseTimestamp(request.values['start_time']),
             end_time=parseTimestamp(request.values.get('end_time', None)),
