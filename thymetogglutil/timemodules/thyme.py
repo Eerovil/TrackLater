@@ -4,13 +4,13 @@ import os
 from datetime import timedelta
 from utils import parse_time
 from timemodules.interfaces import EntryMixin, AbstractParser, Entry
-from typing import List
+from typing import List, Any, Optional
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-def get_setting(key, default=None, group='global'):
+def get_setting(key, default=None, group='global') -> Any:
     return settings.helper('THYME', key, group=group, default=default)
 
 
@@ -20,7 +20,7 @@ DEFAULTS = {
 }
 
 
-def get_window(entry, id):
+def get_window(entry, id) -> Optional[dict]:
     for w in entry['Windows']:
         if w['ID'] == id:
             return w
@@ -33,7 +33,7 @@ class Parser(EntryMixin, AbstractParser):
     """
 
     def get_entries(self) -> List[Entry]:
-        snapshot_entries = self._read_files()
+        snapshot_entries: List[Entry] = self._read_files()
         return self._generate_sessions(snapshot_entries)
 
     def _read_files(self):
