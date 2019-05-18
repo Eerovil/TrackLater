@@ -1,5 +1,5 @@
 import requests
-from thymetogglutil import settings
+import settings
 import os
 import pickle
 

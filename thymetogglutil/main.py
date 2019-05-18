@@ -5,7 +5,7 @@
 import importlib
 from concurrent.futures import ThreadPoolExecutor
 
-from thymetogglutil import settings
+import settings
 from time import sleep
 
 import logging

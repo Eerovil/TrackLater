@@ -1,11 +1,11 @@
 from typing import List
-from thymetogglutil import settings
+import settings
 import git
 import pytz
 
 from datetime import datetime
-from thymetogglutil.utils import FixedOffset
-from thymetogglutil.timemodules.interfaces import EntryMixin, AbstractParser, Entry
+from utils import FixedOffset
+from timemodules.interfaces import EntryMixin, AbstractParser, Entry
 
 
 def get_setting(key, default=None, group='global'):
