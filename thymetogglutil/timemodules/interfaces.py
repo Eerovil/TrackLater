@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from typing import List, Union, Dict
 from datetime import datetime, timedelta
-from thymetogglutil import settings
+import settings
 
-from thymetogglutil.utils import _str
+from utils import _str
 
 import uuid
 

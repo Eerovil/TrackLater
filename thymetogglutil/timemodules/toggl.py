@@ -1,9 +1,9 @@
 import requests
 import json
 
-from thymetogglutil.utils import parse_time, _str
-from thymetogglutil import settings
-from thymetogglutil.timemodules.interfaces import (
+from utils import parse_time, _str
+import settings
+from timemodules.interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser, Entry, Project, Issue
 )
 

@@ -1,9 +1,9 @@
 
 from slack import WebClient
-from thymetogglutil import settings
+import settings
 from datetime import datetime
-from thymetogglutil.utils import FixedOffset
-from thymetogglutil.timemodules.interfaces import Entry, EntryMixin, AbstractParser
+from utils import FixedOffset
+from timemodules.interfaces import Entry, EntryMixin, AbstractParser
 
 
 class Parser(EntryMixin, AbstractParser):

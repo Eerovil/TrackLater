@@ -1,14 +1,12 @@
 from flask import Flask, request, render_template
-from thymetogglutil.main import Parser
-from thymetogglutil import settings
-from thymetogglutil.utils import _str
+from main import Parser
+import settings
+from utils import _str
 from datetime import datetime, timedelta
 import json
 import pytz
 
-import traceback
-
-from thymetogglutil.timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
+from timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
 
 app = Flask(__name__)
 

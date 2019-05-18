@@ -1,9 +1,9 @@
-from thymetogglutil import settings
+import settings
 import json
 import os
 from datetime import timedelta
-from thymetogglutil.utils import parse_time
-from thymetogglutil.timemodules.interfaces import EntryMixin, AbstractParser, Entry
+from utils import parse_time
+from timemodules.interfaces import EntryMixin, AbstractParser, Entry
 from typing import List
 
 import logging

@@ -1,7 +1,7 @@
 import requests
-from thymetogglutil import settings
+import settings
 
-from thymetogglutil.timemodules.interfaces import IssueMixin, AbstractParser, Issue
+from timemodules.interfaces import IssueMixin, AbstractParser, Issue
 
 import logging
 logger = logging.getLogger(__name__)
