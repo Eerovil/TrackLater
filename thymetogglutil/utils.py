@@ -2,13 +2,15 @@
 from datetime import timedelta, tzinfo
 from dateutil import parser as dateparser
 
+from typing import Any, Optional
 
-def parse_time(timestr):
+
+def parse_time(timestr: str):
     return dateparser.parse(timestr)
 
 
-def _str(obj):
-    return str(obj) if obj else obj
+def _str(obj: Any) -> Optional[str]:
+    return str(obj) if obj else None
 
 
 class FixedOffset(tzinfo):
