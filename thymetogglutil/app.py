@@ -6,6 +6,10 @@ from datetime import datetime, timedelta
 import json
 import pytz
 
+from typing import Optional, Dict
+
+from requests.models import Response
+
 from timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
 
 app = Flask(__name__)
@@ -14,25 +18,26 @@ logger = app.logger
 
 
 class State(object):
-    parser = None
+    parser: Optional[Parser] = None
 
 
 @app.route("/")
-def hello():
+def hello() -> Response:
     return render_template(
         'index.html'
     )
 
 
 @app.route('/listmodules', methods=['GET'])
-def listmodules():
+def listmodules() -> Optional[str]:
     if request.method == 'GET':
         data = settings.ENABLED_MODULES
         return json.dumps(data, default=str)
+    return None
 
 
 @app.route('/fetchdata', methods=['GET'])
-def fetchdata():
+def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.get('keys[]', 'all')
         now = datetime.now()
@@ -49,7 +54,7 @@ def fetchdata():
         parser = Parser(from_date, to_date)
         parser.parse()
         State.parser = parser
-        data = {}
+        data: Dict[str, Dict] = {}
         for key in settings.ENABLED_MODULES:
             if keys == "all" or key in keys:
                 data[key] = {}
@@ -61,6 +66,7 @@ def fetchdata():
                                        for issue in parser.modules[key].issues]
                 data[key]['capabilities'] = parser.modules[key].capabilities
         return json.dumps(data, default=str)
+    return None
 
 
 def parseTimestamp(stamp):
@@ -72,7 +78,9 @@ def parseTimestamp(stamp):
 
 
 @app.route('/updateentry', methods=['POST'])
-def updateentry():
+def updateentry() -> Optional[str]:
+    if State.parser is None:
+        return "Run fetchdata first"
     if request.method == 'POST':
         module = request.values.get('module')
         entry_id = _str(request.values.get('entry_id', None))
@@ -91,7 +99,7 @@ def updateentry():
             for _module in settings.ENABLED_MODULES:
                 if 'issues' not in State.parser.modules[_module].capabilities:
                     continue
-                _tmp = State.parser.modules[_module].find_issue(new_entry.issue)
+                _tmp = State.parser.modules[_module].find_issue(new_entry.issue)  # type: ignore
                 if _tmp:
                     issue = _tmp
                     break
@@ -99,14 +107,14 @@ def updateentry():
         if not entry_id:
             # Check that create is allowed
             assert isinstance(State.parser.modules[module], AddEntryMixin)
-            entry_id = State.parser.modules[module].create_entry(
+            entry_id = State.parser.modules[module].create_entry(  # type: ignore
                 new_entry=new_entry,
                 issue=issue
             )
         else:
             # Check that update is allowed
             assert isinstance(State.parser.modules[module], UpdateEntryMixin)
-            State.parser.modules[module].update_entry(
+            State.parser.modules[module].update_entry(  # type: ignore
                 entry_id=new_entry.id,
                 new_entry=new_entry,
                 issue=issue
@@ -118,18 +126,22 @@ def updateentry():
             if entry.id == entry_id
         ][0]
         return json.dumps(data, default=str)
+    return None
 
 
 @app.route('/deleteentry', methods=['POST'])
-def deleteentry():
+def deleteentry() -> Optional[str]:
+    if State.parser is None:
+        return "Run fetchdata first"
     if request.method == 'POST':
         module = request.values.get('module')
         entry_id = request.values.get('entry_id')
 
         # Check that delete is allowed
         assert isinstance(State.parser.modules[module], AddEntryMixin)
-        ret = State.parser.modules[module].delete_entry(
+        ret = State.parser.modules[module].delete_entry(  # type: ignore
             entry_id=entry_id
         )
 
         return json.dumps(ret, default=str)
+    return None

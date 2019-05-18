@@ -3,8 +3,12 @@ import settings
 
 from timemodules.interfaces import IssueMixin, AbstractParser, Issue
 
+from typing import List, Dict, Any
+
 import logging
 logger = logging.getLogger(__name__)
+
+taiga_settings: Dict[str, Any] = settings.TAIGA
 
 AUTH_URL = 'https://api.taiga.io/api/v1/auth'
 ISSUE_URL = 'https://api.taiga.io/api/v1/userstories'
@@ -12,7 +16,7 @@ PROJECT_URL = 'https://api.taiga.io/api/v1/projects/by_slug?slug={}'
 
 
 class Parser(IssueMixin, AbstractParser):
-    def get_issues(self):
+    def get_issues(self) -> List[Issue]:
         self.taiga_login()
         issues = []
 
@@ -26,8 +30,8 @@ class Parser(IssueMixin, AbstractParser):
             ))
         return issues
 
-    def taiga_login(self):
-        credentials = settings.TAIGA['global']['CREDENTIALS']
+    def taiga_login(self) -> None:
+        credentials = taiga_settings['global']['CREDENTIALS']
         response = requests.post(
             AUTH_URL, data={
                 'type': 'normal',
@@ -40,10 +44,10 @@ class Parser(IssueMixin, AbstractParser):
             "Authorization": "Bearer {}".format(token), 'x-disable-pagination': 'True'
         }
         self.issues = []
-        self.taiga_projects = []
+        self.taiga_projects: List[dict] = []
         # Get taiga project id for all clients
         # "No client" not supported yet
-        for group, data in settings.TAIGA.items():
+        for group, data in taiga_settings.items():
             if 'project_slug' not in data:
                 continue
             response = requests.get(
@@ -56,7 +60,7 @@ class Parser(IssueMixin, AbstractParser):
             })
 
     def taiga_fetch_issues(self, start_from=None):
-        issues = []
+        issues: List[dict] = []
         for taiga_project in self.taiga_projects:
             response = requests.get(
                 '{ISSUE_URL}?project={id}'.format(
