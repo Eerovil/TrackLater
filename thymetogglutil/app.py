@@ -16,6 +16,7 @@ logger = app.logger
 class State(object):
     parser = None
 
+
 @app.route("/")
 def hello():
     return render_template(
