@@ -3,14 +3,17 @@
 Forgot to track your time for work? TrackLater helps you track time after-the-fact by combining clues and showing your day on a simple timeline view.
 
 
-Implementation notes
+# Implementation notes
 
-Every module will separate their issues, time-entries and projects by 'group'. This will make inter-module communication simple: e.g. commits made in the git repository for group x will be attributed to the corresponding Toggl project for group x.
+Every module separates their issues, time-entries and projects by 'group'. This makes inter-module communication simple: e.g. commits made in the git repository for group x will be attributed to the corresponding Toggl project for group x.
 
-Groups are arbitary, and decided by the user when creating their settings file. A good way to choose your amount of groups
-would either be to create a group for each client/work project.
+Groups are arbitrary and decided by the user when creating their settings file. A good way to choose your amount of groups
+is to create a group for each client/work project.
 
-Settings guide
+An important backbone for TimeLater is https://github.com/sourcegraph/thyme.
+The thyme module assumes an implementation where every day is stored in a file named YYYY-MM-DD.json. It's recommended to set up an automatic thyme tracking script for this.
+
+# Settings guide
 
 Each module has their own settings dict, containing a settings dict for each group. There is also
 a 'global' key for non-group specific settings.
