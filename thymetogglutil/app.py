@@ -1,82 +1,147 @@
 from flask import Flask, request, render_template
-from thymetogglutil.main import Parser
+from main import Parser
+import settings
+from utils import _str
 from datetime import datetime, timedelta
 import json
 import pytz
 
-app = Flask(__name__)
+from typing import Optional, Dict
 
-parser = None
+from requests.models import Response
+
+from timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
+
+app = Flask(__name__)
 
 logger = app.logger
 
 
+class State(object):
+    parser: Optional[Parser] = None
+
+
 @app.route("/")
-def hello():
+def hello() -> Response:
     return render_template(
         'index.html'
     )
 
 
-@app.route('/sessions', methods=['GET'])
-def sessions():
+@app.route('/listmodules', methods=['GET'])
+def listmodules() -> Optional[str]:
     if request.method == 'GET':
+        data = settings.ENABLED_MODULES
+        return json.dumps(data, default=str)
+    return None
+
+
+@app.route('/fetchdata', methods=['GET'])
+def fetchdata() -> Optional[str]:
+    if request.method == 'GET':
+        keys = request.values.get('keys[]', 'all')
         now = datetime.now()
-        parser = Parser(now - timedelta(days=10), now - timedelta(days=0))
+        if 'from' in request.values:
+            from_date = parseTimestamp(request.values['from'])
+        else:
+            from_date = now - timedelta(days=14)
+
+        if 'to' in request.values:
+            to_date = parseTimestamp(request.values['to'])
+        else:
+            to_date = now
+
+        parser = Parser(from_date, to_date)
         parser.parse()
-        return json.dumps({
-            'sessions': parser.sessions,
-            'time_entries': parser.time_entries,
-            'log': parser.log,
-            'issues': [value for key, value in parser.latest_issues.iteritems()],
-            'projects': parser.projects,
-        }, default=str)
+        State.parser = parser
+        data: Dict[str, Dict] = {}
+        for key in settings.ENABLED_MODULES:
+            if keys == "all" or key in keys:
+                data[key] = {}
+                data[key]['entries'] = [entry.to_dict()
+                                        for entry in parser.modules[key].entries]
+                data[key]['projects'] = [project.to_dict()
+                                         for project in parser.modules[key].projects]
+                data[key]['issues'] = [issue.to_dict()
+                                       for issue in parser.modules[key].issues]
+                data[key]['capabilities'] = parser.modules[key].capabilities
+        return json.dumps(data, default=str)
+    return None
 
 
 def parseTimestamp(stamp):
+    if not stamp:
+        return None
     tz = pytz.timezone('Europe/Helsinki')
     date = datetime.fromtimestamp(int(stamp) / 1e3, tz)
     return date
 
 
-@app.route('/export', methods=['POST'])
-def export():
+@app.route('/updateentry', methods=['POST'])
+def updateentry() -> Optional[str]:
+    if State.parser is None:
+        return "Run fetchdata first"
     if request.method == 'POST':
-        parser = Parser(None, None)
-        entry = parser.push_session({
-            'start_time': parseTimestamp(request.form['start_time']),
-            'end_time': parseTimestamp(request.form['end_time']),
-        }, request.form['name'], request.form.get('id', None))
-        return json.dumps(entry, default=str)
-
-
-@app.route('/delete', methods=['POST'])
-def delete():
-    if request.method == 'POST':
-        parser = Parser(None, None)
-        ret = parser.delete_time_entry(request.form.get('id'))
-        return json.dumps(ret, default=str)
-
-
-@app.route('/split', methods=['POST'])
-def split():
-    if request.method == 'POST':
-        parser = Parser(None, None)
-        (entry1, entry2) = parser.split_time_entry(
-            request.form.get('id'),
-            parseTimestamp(request.form['start_time']),
-            parseTimestamp(request.form['split_time']),
-            parseTimestamp(request.form['end_time']),
-            request.form.get('name')
+        module = request.values.get('module')
+        entry_id = _str(request.values.get('entry_id', None))
+        new_entry = Entry(
+            start_time=parseTimestamp(request.values['start_time']),
+            end_time=parseTimestamp(request.values.get('end_time', None)),
+            id=entry_id,
+            issue=request.values.get('issue_id', None),
+            project=request.values['project_id'],
+            title=request.values.get('title', ''),
+            text=request.values.get('text', []),
+            extra_data=request.values.get('extra_data', {})
         )
-        return json.dumps({'entry1': entry1, 'entry2': entry2}, default=str)
+        issue = None
+        if new_entry.issue:
+            for _module in settings.ENABLED_MODULES:
+                if 'issues' not in State.parser.modules[_module].capabilities:
+                    continue
+                _tmp = State.parser.modules[_module].find_issue(new_entry.issue)  # type: ignore
+                if _tmp:
+                    issue = _tmp
+                    break
+
+        if not entry_id:
+            # Check that create is allowed
+            assert isinstance(State.parser.modules[module], AddEntryMixin)
+            entry_id = State.parser.modules[module].create_entry(  # type: ignore
+                new_entry=new_entry,
+                issue=issue
+            )
+        else:
+            # Check that update is allowed
+            assert isinstance(State.parser.modules[module], UpdateEntryMixin)
+            State.parser.modules[module].update_entry(  # type: ignore
+                entry_id=new_entry.id,
+                new_entry=new_entry,
+                issue=issue
+            )
+
+        data = [
+            entry.to_dict()
+            for entry in State.parser.modules[module].entries
+            if entry.id == entry_id
+        ][0]
+        return json.dumps(data, default=str)
+    return None
 
 
-@app.route('/log', methods=['GET'])
-def log():
-    if request.method == 'GET':
-        now = datetime.now()
-        parser = Parser(now - timedelta(days=10), now)
-        parser.parse_git()
-        parser.parse_jira()
-        return json.dumps(parser.log, default=str)
+@app.route('/deleteentry', methods=['POST'])
+def deleteentry() -> Optional[str]:
+    if State.parser is None:
+        return "Run fetchdata first"
+    if request.method == 'POST':
+        module = request.values.get('module')
+        entry_id = request.values.get('entry_id')
+
+        # Check that delete is allowed
+        assert isinstance(State.parser.modules[module], AddEntryMixin)
+        ret = State.parser.modules[module].delete_entry(  # type: ignore
+            entry_id=entry_id
+        )
+
+        return json.dumps(ret, default=str)
+    return None

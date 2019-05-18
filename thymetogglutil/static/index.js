@@ -1,88 +1,119 @@
 $(document).ready(function() {
     $('div#actions').hide();
+    listModules();
     getSessions();
     $('#actions .btn_export').on('click', () => {
         if (global_selected) {
-            if (global_selected.type == 'session') {
-                exportSession(global_selected.item, global_selected_last.item.end_time);
-            } else if (global_selected.type == 'entry') {
-                updateEntry(global_selected.item.id, global_selected.item.date_group);
-            }
-        }
-    });
-    $('#actions .btn_split').on('click', () => {
-        if (global_selected) {
-            if (global_selected.type == 'entry') {
-                splitEntry(global_selected.item.id, global_selected.item.date_group);
+            if (global_selected.module_name == $('#modules').val()) {
+                updateEntry(
+                    global_selected.module_name,
+                    global_selected.first_entry,
+                    global_selected.first_entry.start_time,
+                    global_selected.first_entry.end_time,
+                    global_selected.first_entry.project
+                )
+            } else {
+                createEntry();
             }
         }
     });
     $('#actions input.description').on('change', () => {
         // Update project field to match the one specified on the issue
-        issue = issues.filter((issue) => {
-            return ($('#actions input.description').val().indexOf(issue.key) > -1);
-        });
-        if (issues.length > 0 && issue[0].project) {
-            $('#project').val(issue[0].project);
+        let issue;
+        const title = $('#actions input.description').val();
+        for (module_name in issues) {
+            for (let i=0; i<issues[module_name].length; i++) {
+                if (title.indexOf(issues[module_name][i].title) > -1 &&
+                        title.indexOf(issues[module_name][i].key) > -1 ) {
+                    issue = issues[module_name][i];
+                    break;
+                }
+            }
+        }
+        if (issue != undefined && issue.group) {
+            for (module_name in projects) {
+                for (let i=0; i<projects[module_name].length; i++) {
+                    if (projects[module_name][i].group == issue.group) {
+                        $('#project').val(projects[module_name][i].id);
+                        break;
+                    }
+                }
+            }
         }
     });
     console.log('hello2');
 });
 
 
-var sessions = [];
-var timeEntries = [];
+function _handleFailure(jqXHR, textStatus, errorThrown) {
+    document.open();
+    document.write(jqXHR.responseText);
+    document.close();
+}
+
+
 var idCounter = 0;
-var log = [];
-var projects = [];
-var issues = [];
+
+var modules = [];
+var entries = {};
+var issues = {};
+var projects = {};
+var capabilities = {};
 
 var chartItems = {};
 var global_selected = null;
-var global_selected_last = null;
 
-function getSessions() {
-    $.ajax('sessions', {
+function listModules() {
+    $.ajax('listmodules', {
         contentType: 'application/json',
         dataType: 'json'
     })
+    .fail(_handleFailure)
     .done((data) => {
-        sessions = [];
-        timeEntries = [];
-        log = [];
-        projects = [];
-        chartItems = {};
+        console.log(data);
+        modules = data;
+        modules.forEach(module => {
+            $('#modules').append(`<option value="${module}">${module}</option>`)
+        });
+    });
+}
+
+function getSessions() {
+    $.ajax('fetchdata', {
+        contentType: 'application/json',
+        dataType: 'json'
+    })
+    .fail(_handleFailure)
+    .done((data) => {
         console.log(data)
-        _sessions = data.sessions;
-        for (let i=0; i<_sessions.length; i++){
-            let session = parseSession(_sessions[i]);
-            session.idcounter = idCounter++;
-            sessions.push(session);
+        for (module_name in data) {
+            capabilities[module_name] = data[module_name].capabilities;
+            if (capabilities[module_name].includes('projects')) {
+                projects[module_name] = data[module_name].projects;
+                projects[module_name].forEach(project => {
+                    $('#project').append(`<option value="${project.id}">${project.title}</option>`)
+                });
+            }
+            if (capabilities[module_name].includes('entries')) {
+                entries[module_name] = []
+                for (let i=0; i<data[module_name].entries.length; i++) {
+                    let entry = data[module_name].entries[i];
+                    entry.start_time = parseTime(entry.start_time);
+                    entry.end_time = parseTime(entry.end_time);
+                    entry.idcounter = idCounter++;
+                    entries[module_name].push(entry);
+                }
+            }
+            if (capabilities[module_name].includes('issues')) {
+                issues[module_name] = data[module_name].issues;
+                issues[module_name].forEach(issue => {
+                    $('#issues').append(`<option value="${issue.key} ${issue.title}"></option>`)
+                });
+            }
+            if (capabilities[module_name].includes('addentry')) {
+                $('#modules').val(module_name);
+            }
         }
-        _timeEntries = data.time_entries;
-        for (let i=0; i<_timeEntries.length; i++){
-            let time_entry = parseTimeEntry(_timeEntries[i]);
-            time_entry.idcounter = idCounter++;
-            timeEntries.push(time_entry);
-        }
-        _log = data.log;
-        for (let i=0; i<_log.length; i++){
-            let commit = parseCommit(_log[i]);
-            commit.idcounter = idCounter++;
-            log.push(commit);
-        }
-        _projects = data.projects;
-        for (let i=0; i<_projects.length; i++){
-            let project = _projects[i];
-            projects.push(project);
-        }
-        data.projects.forEach(project => {
-            $('#project').append(`<option value="${project.id}">${project.client.name} - ${project.name}</option>`)
-        });
-        data.issues.forEach(issue => {
-            issues.push(issue);
-            $('#issues').append(`<option value="${issue.key} ${issue.summary}"></option>`)
-        });
         updateTable();
     })
     .fail((err) => {
@@ -90,98 +121,67 @@ function getSessions() {
     })
 }
 
-function refreshEntry(newEntry) {
+
+function refreshEntry(module_name, newEntry) {
     console.log(newEntry)
-    for (i in timeEntries) {
-        let entry = timeEntries[i];
+    for (i in entries[module_name]) {
+        let entry = entries[module_name][i];
         if (entry.id == newEntry.id) {
             entry.start_time = parseTime(newEntry.start_time)
             entry.end_time = parseTime(newEntry.end_time)
-            entry.description = newEntry.description
+            entry.title = newEntry.title
             let c = chartItems[entry.date_group]
-            c.update({id: entry.idcounter,
-                title: entry.description,
-                content: entry.description,
-                start: entry.start_time,
-                end: entry.end_time,
-            })
+            c.update(makeRow(module_name, entry))
+            break;
         }
     }
 }
 
-function createEntry(session, entry) {
-    entry = parseTimeEntry(entry);
-    entry.date_group = session.date_group;
-    entry.idcounter = idCounter++;
-    timeEntries.push(entry);
-    let c = chartItems[entry.date_group];
-    c.add(makeRow(entry, 'entry'));
+function createEntry() {
+    const first_entry = global_selected.first_entry;
+    const last_entry = global_selected.last_entry;
+    const module_name = $('#modules').val();
+    const entry_module = global_selected.module_name;
+    $.post('updateentry', {
+        'module': module_name,
+        'start_time': first_entry.start_time.getTime(),
+        'end_time': last_entry.end_time.getTime(),
+        'title': $('#actions input.description').val(),
+        'project_id': $('#project').val(),
+    }, function(data) {
+        console.log(data);
+        let entry = data;
+        entry.start_time = parseTime(entry.start_time);
+        entry.end_time = parseTime(entry.end_time);
+        entry.idcounter = idCounter++;
+        entries[module_name].push(entry);
+        let c = chartItems[entry.date_group];
+        c.add(makeRow(module_name, entry));
+    }, 'json')
+    .fail(_handleFailure)
 }
 
-function exportSession(session, end_time) {
-    $.post('export', {
-        'start_time': session.start_time.getTime(),
+function updateEntry(module_name, entry, start_time, end_time, project_id) {
+    $.post('updateentry', {
+        'module': module_name,
+        'entry_id': entry.id,
+        'start_time': start_time.getTime(),
         'end_time': end_time.getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
+        'title': $('#actions input.description').val(),
+        'issue_id': entry.issue,
+        'project_id': project_id,
+        'extra_data': entry.extra_data,
+        'text': entry.text,
     }, function(data) {
-        createEntry(session, data);
+        refreshEntry(module_name, data);
     }, 'json')
-}
-
-function updateEntry(entryId, date_str) {
-    $.post('export', {
-        'id': entryId,
-        'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
-        'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
-    }, function(data) {
-        refreshEntry(data);
-    }, 'json')
-}
-
-function deleteEntry(entryId) {
-    $.post('delete', {
-        'id': entryId
-    }, function(data) {
-        alert("deleted entry " + entryId + ": " + data);
-    }, 'json')
-}
-
-function splitEntry(entryId, date_str) {
-    $.post('split', {
-        'id': entryId,
-        'start_time': new Date(date_str + " " + $('#actions .start_time').val()).getTime(),
-        'end_time': new Date(date_str + " " + $('#actions .end_time').val()).getTime(),
-        'split_time': new Date(date_str + " " + $('#actions .split_time').val()).getTime(),
-        'name': $('#actions input.description').val(),
-        'project': $('#project > option:selected').val(),
-    }, function(data) {
-        refreshEntry(data.entry1);
-        createEntry({date_group: date_str}, data.entry2);
-    }, 'json')
-}
-
-function parseTimeEntry(timeEntry) {
-    timeEntry.start_time = parseTime(timeEntry.start_time);
-    timeEntry.end_time = parseTime(timeEntry.end_time);
-    timeEntry.at = parseTime(timeEntry.at);
-    return timeEntry;
-}
-
-function parseSession(session) {
-    session.start_time = parseTime(session.start_time);
-    session.end_time = parseTime(session.end_time);
-    return session;
-}
-
-function parseCommit(commit) {
-    commit.time = parseTime(commit.time);
-    return commit;
+    .fail(_handleFailure)
 }
 
 function parseTime(time_str) {
+    if (time_str == null) {
+        return time_str;
+    }
     return new Date(time_str);
 }
 
@@ -223,79 +223,54 @@ function wcmp(a, b) {
     return 0;
 }
 
-function makeRow(obj, type) {
-    switch (type) {
-        case 'session':
-        return {
-                id: obj.idcounter,
-                content: '',
-                start: obj.start_time,
-                end: obj.end_time,
-                group: 'session',
-                className: 'session-' + obj.category,
-                title: obj.windows.sort(wcmp).slice(0, 10).map((w) => w['time'] + "s - " + w['name']).join("<br />"),
-                editable: false,
-        }
-        case 'entry':
-        return {
-                id: obj.idcounter,
-                content: obj.description,
-                start: obj.start_time,
-                end: obj.end_time,
-                group: 'entry',
-                className: 'entry',
-                title: obj.description,
-                editable: {
-                    updateTime: true,  // drag items horizontally
-                    remove: true,       // delete an item by tapping the delete button top right
-                    overrideItems: true  // allow these options to override item.editable
-                },
-        }
-        case 'commit':
-        return {
-                id: obj.idcounter,
-                content: '',
-                start: obj.time,
-                group: 'commit',
-                className: 'commit',
-                title: obj.message + (obj.issue ? "<br />" + obj.issue.key + " " + obj.issue.summary : ''),
-                type: 'point',
-                editable: false,
-        }
+function makeRow(module_name, entry) {
+    let rowData = {
+        id: entry.idcounter,
+        start: entry.start_time,
+        group: module_name,
+        className: module_name,
+        content: entry.title,
+        title: entry.text.join("<br />"),
+        editable: capabilities[module_name].includes('updateentry'),
+    };
+    if (entry.end_time != undefined) {
+        rowData.end = entry.end_time;
+    } else {
+        rowData.type = 'point'
     }
+    return rowData;
 }
 
 function updateTable() {
 
     let dateGroups = new Set();
-    sessions.forEach(session => {
-        dateGroups.add(session.date_group);
-    })
-    dateGroups.forEach(dateGroup => {
-        drawDayChart(
-            sessions.filter(s => s.date_group == dateGroup),
-            timeEntries.filter(s => s.date_group == dateGroup),
-            log.filter(s => s.date_group == dateGroup),
-        )
+    for (module_name in entries) {
+        entries[module_name].forEach(entry => {
+            dateGroups.add(entry.date_group)
+        })
+    }
+    Array.from(dateGroups).sort().forEach(date_group => {
+        let filteredEntries = {};
+        for (module_name in entries) {
+            filteredEntries[module_name] = entries[module_name].filter(s => s.date_group == date_group)
+        }
+        drawDayChart(date_group, filteredEntries);
     })
 
-
-    function drawDayChart(day_sessions, day_entries, day_log) {
+    function drawDayChart(date_group, filteredEntries) {
         var container = document.getElementById('timeline');
         var day_container = container.appendChild(document.createElement('div'));
 
         let rows = [];
-        day_sessions.forEach(session => {
-            rows.push(makeRow(session, 'session'));
-        })
-        day_entries.forEach(entry => {
-            rows.push(makeRow(entry, 'entry'));
-        })
-        day_log.forEach(commit => {
-            rows.push(makeRow(commit, 'commit'));
-        })
+
+        for (module_name in filteredEntries) {
+            for (let i=0; i<filteredEntries[module_name].length; i++) {
+                const entry = filteredEntries[module_name][i];
+                rows.push(makeRow(module_name, entry));
+            }
+        }
         var items = new vis.DataSet(rows);
-        chartItems[day_sessions[0].date_group] = items;
+        chartItems[date_group] = items;
 
         // Configuration for the Timeline
         var options = {
@@ -310,82 +285,58 @@ function updateTable() {
             snap: null,
 
             onMove: function(item, callback) {
-                if (item.group == 'entry') {
-                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
+                if (capabilities[item.group].includes('updateentry')) {
+                    let entry = entries[item.group].filter((entry) => entry.idcounter == item.id)[0];
                     
-                    $.post('export', {
-                        'id': entry.id,
-                        'start_time': item.start.getTime(),
-                        'end_time': item.end.getTime(),
-                        'name': $('#actions input.description').val(),
-                    }, function(data) {
-                        refreshEntry(data);
-                    }, 'json')
+                    updateEntry(
+                        item.group, entry, item.start, item.end, entry.project
+                    );
                 }
                 return callback(item);
             },
 
             onRemove: function(item, callback) {
-                if (item.group == 'entry') {
-                    let entry = timeEntries.filter((entry) => entry.idcounter == item.id)[0];
-                    
-                    deleteEntry(entry.id);
+                if (capabilities[item.group].includes('deleteentry')) {
+                    let entry = entries[item.group].filter((entry) => entry.idcounter == item.id)[0];
+
+                    $.post('deleteentry', {
+                        'module': item.group,
+                        'entry_id': entry.id
+                    }, function(data) {
+                        console.log("deleted entry " + entry.id + ": " + data);
+                    }, 'json')
+                    .fail(_handleFailure)
                 }
                 return callback(item);
             }
         };
 
-        var groups = [
-            {
-                id: 'entry',
-                content: 'entry',
-                className: 'entry-group',
-            },
-            {
-                id: 'session',
-                content: 'session',
-                className: 'session-group',
-            },
-            {
-                id: 'commit',
-                content: 'commit',
-                className: 'commit-group',
-            }
-        ]
+        var groups = []
+        for (module_name in filteredEntries) {
+            groups.push({
+                id: module_name,
+                content: module_name,
+                className: module_name + '-group',
+            })
+        }
     
         // Create a Timeline
         var timeline = new vis.Timeline(day_container, items, options, groups);
         timeline.on('select', (properties) => {
             $('div#actions').hide();
             $('div#actions .toggl_actions').hide();
-            $('div#actions input.description').val('');
             let selection = items.get(properties.items[0]);
             let selectionLast = items.get(properties.items[properties.items.length - 1]);
-            let category = selection.group;
-            if (category == 'session') {
-                let session = sessions.filter((session) => session.idcounter == selection.id)[0]
-                let sessionLast = sessions.filter((session) => session.idcounter == selectionLast.id)[0]
-                global_selected = {type: 'session', item: session};
-                global_selected_last = {type: 'session', item: sessionLast};
-                $('div#actions').show();
-                if (session.exported){
-                    let timeEntry = timeEntries.filter(e => e.id == session.exported)[0];
-                    $('div#actions input.description').val(timeEntry.description);
-                    $('#project').val(timeEntry.project);
-                }
-            }
-            if (category == 'entry') {
-                let entry = timeEntries.filter((entry) => entry.idcounter == selection.id)[0];
-                global_selected = {type: 'entry', item: entry};
-                $('div#actions').show();
-                $('div#actions .toggl_actions').show();
-                $('div#actions input.btn_export').attr('disabled', false);
-                $('div#actions input.description').val(entry.description);
-                $('#project').val(entry.project);
-                $('div#actions .toggl_actions input.start_time').val(dateToTimestr(entry.start_time));
-                $('div#actions .toggl_actions input.end_time').val(dateToTimestr(entry.end_time));
-                $('div#actions .toggl_actions input.split_time').val(dateToTimestr(entry.start_time));
-            }
+
+            let module_name = selection.group;
+            let first_entry = entries[module_name].filter((entry) => entry.idcounter == selection.id)[0]
+            let last_entry = entries[module_name].filter((entry) => entry.idcounter == selectionLast.id)[0]
+
+            global_selected = {module_name, first_entry, last_entry};
+
+            $('div#actions input.description').val(global_selected.first_entry.title);
+            $('#project').val(global_selected.first_entry.project);
+            $('div#actions').show();
         });
     }
 
