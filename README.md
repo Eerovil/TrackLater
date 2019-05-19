@@ -2,16 +2,39 @@
 
 Forgot to track your time for work? TrackLater helps you track time after-the-fact by combining clues and showing your day on a simple timeline view.
 
+The initial version supports fetching clues from
+* [Thyme](https://github.com/sourcegraph/thyme)
+* Git
+* Slack
+
+Time entries can be exported to
+* Toggl
+
+Issues and projects/clients can be fetched from
+* Jira
+* Taiga
+* Toggl (projects/clients)
+
 
 # Implementation notes
 
-Every module separates their issues, time-entries and projects by 'group'. This makes inter-module communication simple: e.g. commits made in the git repository for group x will be attributed to the corresponding Toggl project for group x.
+Every module separates their issues, time-entries and projects by *group*. This makes inter-module communication simple: e.g. commits made in the git repository for *group* x will be attributed to the corresponding Toggl project for *group* x.
 
-Groups are arbitrary and decided by the user when creating their settings file. A good way to choose your amount of groups
-is to create a group for each client/work project.
+*Groups* are arbitrary and decided by the user when creating their settings file. A good way to choose your amount of *group*s
+is to create a *group* for each client/work project.
 
-An important backbone for TimeLater is https://github.com/sourcegraph/thyme.
+While all modules are optional, an important backbone for TimeLater is [thyme](https://github.com/sourcegraph/thyme).
 The thyme module assumes an implementation where every day is stored in a file named `YYYY-MM-DD.json`. It's recommended to set up an automatic thyme tracking script for this.
+
+I'm using a basic script to run thyme. It has evolved a bit after about a year of tracking: Sometimes thyme fails tracking and corrupts the whole file,
+so I definitely recommend using this script. https://gist.github.com/Eerovil/36d109d531659d24bfafea7111b12e90
+
+To run thyme automatically every 20 seconds you can add this to your crontab. Windows users can probably use services (don't quote me on this).
+```
+* * * * * DISPLAY=:0 /home/eero/Documents/thyme/track-thyme-log.sh
+* * * * * ( sleep 20; DISPLAY=:0 /home/eero/Documents/thyme/track-thyme-log.sh )
+* * * * * ( sleep 40; DISPLAY=:0 /home/eero/Documents/thyme/track-thyme-log.sh )
+```
 
 # Running
 
