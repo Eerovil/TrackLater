@@ -56,6 +56,13 @@ class Parser(IssueMixin, AbstractParser):
                 start_from=(latest_issues['total'] - len(issues) - ISSUES_PER_PAGE)
             )['issues']
             for issue in new_issues:
+                exists = False
+                for existing_issue in issues:
+                    if existing_issue.key == issue['key']:
+                        exists = True
+                        break
+                if exists:
+                    continue
                 issues.append(Issue(
                     key=issue['key'],
                     title=issue['fields']['summary'],
