@@ -17,6 +17,18 @@ Issues and projects/clients can be fetched from
 * Taiga
 * Toggl (projects/clients)
 
+# Background
+
+Everyone who uses time-tracking for their work knows that it can be a real pain, especially if you're a forgetful person like me. I pretty much never remember to start my timers, and when I do, I for sure will not remember to turn them off.
+
+When working with multiple clients, it can be crucial (billing-wise) to track your time correctly and to be able to differentiate all tasks by client. For people that work 9-5 in-office for the same client and without need to track each task separately this app is probably overkill.
+
+With this in mind, I build a basic app to use Thyme for passive time-tracking, and Toggl-api for exporting. I quickly found that my workflow was substantially improved by only having to think about time-tracking 1-2 times per week. I've now used this app for about a year, building a new timemodule every now and then.
+
+TrackLater offers a basic set of features to help all time-trackers get their timesheets in order:
+* A timeline overview, which is usually missing from tracking software
+* Easily add time entries, with automatically detected projects and responsive UI
+* Get all your breadcrumbs, tracks, clues, footsteps in one place
 
 # Implementation notes
 
