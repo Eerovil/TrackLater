@@ -11,12 +11,19 @@ Groups are arbitrary and decided by the user when creating their settings file. 
 is to create a group for each client/work project.
 
 An important backbone for TimeLater is https://github.com/sourcegraph/thyme.
-The thyme module assumes an implementation where every day is stored in a file named YYYY-MM-DD.json. It's recommended to set up an automatic thyme tracking script for this.
+The thyme module assumes an implementation where every day is stored in a file named `YYYY-MM-DD.json`. It's recommended to set up an automatic thyme tracking script for this.
+
+# Running
+
+Example command to start the server. Must be run in the `tracklater` directory (containing `app.py`)
+```
+FLASK_APP=app.py FLASK_ENV=development WERKZEUG_DEBUG_PIN=off python -m flask run
+```
 
 # Settings guide
 
 Each module has their own settings dict, containing a settings dict for each group. There is also
-a 'global' key for non-group specific settings.
+a `global` key for non-group specific settings.
 
 This example settings file contains two groups: 'group1' and 'group2'. In the example workers workflow,
 group1's issues are fetched from Jira while group2's issues are from Taiga.io. Time tracking (for billing) is done through
