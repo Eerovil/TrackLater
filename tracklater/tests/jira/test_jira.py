@@ -12,14 +12,7 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.fixture(autouse=True)
-def mock_jira_settings(monkeypatch):
-    monkeypatch.setattr('settings.JIRA', {
-        'group1': {
-            'CREDENTIALS': ('', ''),
-            'URL': 'mock://jira.test',
-            'PROJECT_KEY': 'TEST',
-        }
-    })
+def mock_jira(monkeypatch):
     monkeypatch.setattr('timemodules.jira.ISSUES_PER_PAGE', 3)
     monkeypatch.setattr('timemodules.jira.CACHE_LOCATION', DIRECTORY)
 
