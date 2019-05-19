@@ -1,5 +1,0 @@
-requests
-colorama
-python-dateutil
-gitpython
-ipdb
