@@ -1,5 +1,7 @@
 # TrackLater
 
+![](https://i.imgur.com/cFPdBhN.png)
+
 Forgot to track your time for work? TrackLater helps you track time after-the-fact by combining clues and showing your day on a simple timeline view.
 
 The initial version supports fetching clues from
