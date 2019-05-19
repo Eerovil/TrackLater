@@ -54,7 +54,7 @@ function _handleFailure(jqXHR, textStatus, errorThrown) {
 
 var idCounter = 0;
 
-var modules = [];
+var modules = {};
 var entries = {};
 var issues = {};
 var projects = {};
@@ -72,9 +72,9 @@ function listModules() {
     .done((data) => {
         console.log(data);
         modules = data;
-        modules.forEach(module => {
-            $('#modules').append(`<option value="${module}">${module}</option>`)
-        });
+        for (module_name in modules) {
+            $('#modules').append(`<option value="${module_name}">${module_name}</option>`)
+        }
     });
 }
 
@@ -235,6 +235,9 @@ function makeRow(module_name, entry) {
     };
     if (entry.end_time != undefined) {
         rowData.end = entry.end_time;
+        if (modules[module_name].color != null) {
+            rowData.style = `background-color: ${modules[module_name].color}`
+        }
     } else {
         rowData.type = 'point'
     }
@@ -272,8 +275,14 @@ function updateTable() {
         var items = new vis.DataSet(rows);
         chartItems[date_group] = items;
 
+        let firstDate = new Date(rows.sort((a, b) => {a.start < b.start ? -1 : 1})[0].start.getTime());
+        const day_start = firstDate.setHours(6, 0, 0, 0);
+        const day_end = firstDate.setHours(26, 0, 0, 0);
+
         // Configuration for the Timeline
         var options = {
+            start: day_start,
+            end: day_end,
             editable: true,
             zoomable: false,
             horizontalScroll: true,
