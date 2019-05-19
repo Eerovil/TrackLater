@@ -112,5 +112,5 @@ settings.py
 jira-cache
 
 #virtualenv
-thymetogglutil/thyme
-thymetogglutil/*.jira-cache
+tracklater/thyme
+tracklater/*.jira-cache
