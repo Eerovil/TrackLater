@@ -17,7 +17,7 @@ UI_SETTINGS = {
     'thyme': {
         'global': '#1aef65'
     },
-    'git': {
+    'gitmodule': {
         'global': '#F44D27'
     },
     'slack': {

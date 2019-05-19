@@ -31,7 +31,11 @@ def hello() -> Response:
 @app.route('/listmodules', methods=['GET'])
 def listmodules() -> Optional[str]:
     if request.method == 'GET':
-        data = settings.ENABLED_MODULES
+        data = {}
+        for module_name in settings.ENABLED_MODULES:
+            data[module_name] = {
+                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None)
+            }
         return json.dumps(data, default=str)
     return None
 
