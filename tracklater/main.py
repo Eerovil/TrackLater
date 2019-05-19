@@ -28,7 +28,7 @@ class Parser(object):
 
             for module_name in settings.ENABLED_MODULES:
                 module: ModuleType = importlib.import_module(
-                    'thymetogglutil.timemodules.{}'.format(module_name)
+                    'tracklater.timemodules.{}'.format(module_name)
                 )
                 if getattr(module, 'Parser', None) is None:
                     logger.warning('Module %s has no Parser class', module_name)
