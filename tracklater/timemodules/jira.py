@@ -11,6 +11,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+ISSUES_PER_PAGE = 100
+CACHE_LOCATION = os.path.dirname(os.path.realpath(__file__))
+
+
 def get_setting(key, default=None, group='global') -> Any:
     return settings.helper('JIRA', key, group=group, default=default)
 
@@ -28,7 +32,7 @@ class Parser(IssueMixin, AbstractParser):
 
     def get_group_issues(self, group, group_settings) -> List[Issue]:
         issues: List[Issue] = []
-        filename = '{}.jira-cache'.format(group)
+        filename = '{}/{}.jira-cache'.format(CACHE_LOCATION, group)
         if os.path.exists(filename):
             try:
                 with open(filename, 'rb') as f:
@@ -45,11 +49,11 @@ class Parser(IssueMixin, AbstractParser):
         run_once = False
         while latest_issues['total'] - len(issues) > 0 or not run_once:
             run_once = True
-            logging.info('Fetching issues %s to %s', len(issues), len(issues) + 100)
+            logging.info('Fetching issues %s to %s', len(issues), len(issues) + ISSUES_PER_PAGE)
             new_issues = self.fetch_issues(
                 url=group_settings['URL'],
                 project_key=group_settings['PROJECT_KEY'],
-                start_from=(latest_issues['total'] - len(issues) - 100)
+                start_from=(latest_issues['total'] - len(issues) - ISSUES_PER_PAGE)
             )['issues']
             for issue in new_issues:
                 issues.append(Issue(
@@ -66,8 +70,9 @@ class Parser(IssueMixin, AbstractParser):
         start_str = '&startAt={}'.format(start_from) if (start_from and start_from > 0) else ''
         response = requests.get(
             '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary,issuetype'
-            '&maxResults=100{start_str}'.format(
-                JIRA_URL=url, JIRA_KEY=project_key, start_str=start_str
+            '&maxResults={ISSUES_PER_PAGE}{start_str}'.format(
+                JIRA_URL=url, JIRA_KEY=project_key, start_str=start_str,
+                ISSUES_PER_PAGE=ISSUES_PER_PAGE
             ), auth=self.credentials
         )
         return response.json()
