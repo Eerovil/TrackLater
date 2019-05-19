@@ -45,6 +45,16 @@ Example command to start the server. Must be run in the `tracklater` directory (
 FLASK_APP=app.py FLASK_ENV=development WERKZEUG_DEBUG_PIN=off python -m flask run
 ```
 
+# Contributing
+
+Building and running the project is easy, as you can simply clone the repo and start making PRs.
+
+If your workflow is not exactly like mine and you need additional functionality, please create an issue and we can start working on supporting your required modules.
+
+Ideas for future support:
+* Jira time tracking
+* Maybe a Chrome page history parser?
+
 # Settings guide
 
 Each module has their own settings dict, containing a settings dict for each group. There is also
