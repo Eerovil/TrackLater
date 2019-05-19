@@ -48,9 +48,12 @@ FLASK_APP=app.py FLASK_ENV=development WERKZEUG_DEBUG_PIN=off python -m flask ru
 Each module has their own settings dict, containing a settings dict for each group. There is also
 a `global` key for non-group specific settings.
 
-This example settings file contains two groups: 'group1' and 'group2'. In the example workers workflow,
-group1's issues are fetched from Jira while group2's issues are from Taiga.io. Time tracking (for billing) is done through
-Toggl. Also, both groups happen to have their own workspaces on slack, and obviously their own git repositories.
+This example settings file contains two groups: `group1` and `group2`.
+
+In the example workers workflow, `group1`'s issues are fetched from Jira while `group2`'s issues are from Taiga.io,
+so you will find that the JIRA settings have no `group2` key and TAIGA settings has no `group1` key.
+
+Time tracking (for billing) is done through Toggl. Also, both groups happen to have their own workspaces on slack, and obviously their own git repositories.
 
 ```
 ENABLED_MODULES = [
