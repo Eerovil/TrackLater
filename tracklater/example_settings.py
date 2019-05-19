@@ -1,5 +1,5 @@
 
-# Rename to `settings.py` and edit to your liking.
+# Rename to `user_settings.py` and edit to your liking.
 
 ENABLED_MODULES = [
     'thyme',
@@ -9,6 +9,21 @@ ENABLED_MODULES = [
     'jira',
     'slack'
 ]
+
+UI_SETTINGS = {
+    'toggl': {
+        'global': '#E01A22'
+    },
+    'thyme': {
+        'global': '#1aef65'
+    },
+    'git': {
+        'global': '#F44D27'
+    },
+    'slack': {
+        'global': '#4A154B'
+    }
+}
 
 # Toggl module supports a single login using an api key.
 

@@ -108,9 +108,11 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
-settings.py
+
+
 jira-cache
 
 #virtualenv
 tracklater/thyme
 tracklater/*.jira-cache
+tracklater/user_settings.py
