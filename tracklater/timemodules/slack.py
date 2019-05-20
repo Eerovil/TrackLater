@@ -40,7 +40,7 @@ class Parser(EntryMixin, AbstractParser):
                 )
 
                 # Get either Istant Message recipient or channel name
-                if channel['is_im'] and channel.get('user', ''):
+                if channel.get('is_im', False) and channel.get('user', ''):
                     channel_info = users.get(channel.get('user', ''), None)
                 else:
                     channel_info = channel.get('name_normalized', 'Unknown')

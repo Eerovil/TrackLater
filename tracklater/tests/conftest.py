@@ -40,6 +40,14 @@ def mock_settings(monkeypatch):
         },
     })
 
+    # Test settings for Slack
+    monkeypatch.setattr('settings.SLACK', {
+        'global': {
+            'API_KEY': '',
+            'USER_ID': '1',
+        }
+    })
+
 
 @pytest.fixture
 def obj_from_dict():
