@@ -1,0 +1,93 @@
+{
+  "Repo(path1)": {
+    "branches": [
+      {
+        "log()": [
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 1 Branch 1 First commit message",
+            "time": null
+          },
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 1 Branch 1 Second commit message",
+            "time": null
+          }
+        ]
+      },
+      {
+        "log()": [
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 1 Branch 2 First commit message",
+            "time": null
+          },
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 1 Branch 2 Second commit message",
+            "time": null
+          },
+          {
+            "actor": {
+              "email": "other.guy@email.com"
+            },
+            "message": "commit: Repo 1 Branch 2 commit by someone else",
+            "time": null
+          }
+        ]
+      }
+    ]
+  },
+  "Repo(path2)": {
+    "branches": [
+      {
+        "log()": [
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 2 Branch 1 First commit message",
+            "time": null
+          },
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 2 Branch 1 Second commit message",
+            "time": null
+          }
+        ]
+      }
+    ]
+  },
+  "Repo(path3)": {
+    "branches": [
+      {
+        "log()": [
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 3 Branch 1 First commit message",
+            "time": null
+          },
+          {
+            "actor": {
+              "email": "test.person@email.com"
+            },
+            "message": "commit: Repo 3 Branch 1 Second commit message",
+            "time": null
+          }
+        ]
+      }
+    ]
+  }
+}
