@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 @pytest.fixture(autouse=True)
 def mock_main(monkeypatch):
     monkeypatch.setattr('settings.ENABLED_MODULES', [
-        'jira'
+        'jira',
+        'gitmodule',
     ])
 
 

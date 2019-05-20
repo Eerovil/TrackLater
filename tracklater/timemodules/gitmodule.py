@@ -15,6 +15,12 @@ def get_setting(key, default=None, group='global'):
 HEL = pytz.timezone('Europe/Helsinki')
 
 
+def timestamp_to_datetime(timestamp: List):
+    return datetime.fromtimestamp(
+        timestamp[0], tz=FixedOffset(timestamp[1], 'Helsinki')
+    )
+
+
 class Parser(EntryMixin, AbstractParser):
     def get_entries(self) -> List[Entry]:
         start_date = self.start_date.replace(tzinfo=HEL)
@@ -34,9 +40,7 @@ class Parser(EntryMixin, AbstractParser):
                         if not log_entry.message.startswith('commit'):
                             continue
                         message = ''.join(log_entry.message.split(':')[1:])
-                        time = datetime.fromtimestamp(
-                            log_entry.time[0], tz=FixedOffset(log_entry.time[1], 'Helsinki')
-                        )
+                        time = timestamp_to_datetime(log_entry.time)
                         if time < start_date or time > end_date:
                             continue
 

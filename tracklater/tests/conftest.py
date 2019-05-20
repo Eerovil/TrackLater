@@ -2,6 +2,7 @@
 import pytest
 import settings
 import example_settings
+import re
 
 
 @pytest.fixture(autouse=True)
@@ -24,6 +25,19 @@ def mock_settings(monkeypatch):
             'URL': 'mock://jira.test',
             'PROJECT_KEY': 'TEST',
         }
+    })
+
+    # Test settings for Git
+    monkeypatch.setattr('settings.GIT', {
+        'global': {
+            'EMAILS': ['test.person@email.com'],
+        },
+        'group1': {
+            'REPOS': ['path1', 'path2']
+        },
+        'group2': {
+            'REPOS': ['path3']
+        },
     })
 
 
