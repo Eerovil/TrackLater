@@ -10,6 +10,7 @@ def mock_main(monkeypatch):
     monkeypatch.setattr('settings.ENABLED_MODULES', [
         'jira',
         'gitmodule',
+        'slack',
     ])
 
 
