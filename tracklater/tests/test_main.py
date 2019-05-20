@@ -20,3 +20,28 @@ def parser():
 
 def test_parse(parser):
     parser.parse()
+
+
+def test_obj_from_dict(obj_from_dict):
+    _dict = {
+        'test(arg1,arg2)': {
+            'foo': {
+                'bar': 'The Crazy End'
+            }
+        },
+        'test(arg1)': {
+            'foo': {
+                'bar': 'The Good End'
+            }
+        },
+        'test()': {
+            'foo': {
+                'bar': 'The Best End'
+            }
+        }
+    }
+    obj = obj_from_dict(_dict)
+
+    assert obj.test('arg1', 'arg2').foo.bar == 'The Crazy End'
+    assert obj.test('arg1').foo.bar == 'The Good End'
+    assert obj.test().foo.bar == 'The Best End'
