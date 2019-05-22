@@ -102,10 +102,17 @@ class Entry:
 def testing_decorator(func):
     def _func(*args, **kwargs):
         self = args[0]
-        if getattr(settings, 'TESTING', False) and hasattr(self, "test_{}".format(func.__name__)):
-            return getattr(self, "test_{}".format(func.__name__))(*args, **kwargs)
-        else:
+
+        if not getattr(settings, 'TESTING', False):
             return func(*args, **kwargs)
+
+        if func.__name__.startswith("test_") or func.__name__.startswith("__"):
+            return func(*args, **kwargs)
+
+        if not hasattr(self, "test_{}".format(func.__name__)):
+            raise NotImplementedError("No test method for {}.{}".format(self, func.__name__))
+
+        return getattr(self, "test_{}".format(func.__name__))(*args[1:], **kwargs)
 
     return _func
 
@@ -133,7 +140,6 @@ class AbstractParser(metaclass=ABCMeta):
         self.entries: List[Entry] = []
         self.projects: List[Project] = []
         self.issues: List[Issue] = []
-        self.provider: Optional[AbstractProvider] = None
 
     @property
     def capabilities(self) -> List[str]:

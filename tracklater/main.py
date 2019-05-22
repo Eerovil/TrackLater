@@ -3,13 +3,13 @@
 
 
 import importlib
+import settings
 from concurrent.futures import ThreadPoolExecutor, Future
 
 from timemodules.interfaces import AbstractParser
 from typing import Dict, Tuple, Optional, List, Any
 from types import ModuleType
 
-import settings
 from time import sleep
 
 import logging
