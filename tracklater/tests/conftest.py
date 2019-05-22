@@ -18,6 +18,8 @@ def mock_settings(monkeypatch):
             getattr(example_settings, module_setting)
         )
 
+    monkeypatch.setattr('settings.TESTING', True)
+
     # Test settings for Jira
     monkeypatch.setattr('settings.JIRA', {
         'group1': {

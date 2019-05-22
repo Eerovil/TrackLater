@@ -2,6 +2,8 @@ from main import Parser
 
 import pytest
 
+from timemodules.interfaces import AbstractProvider
+
 from datetime import datetime, timedelta
 
 
@@ -47,3 +49,24 @@ def test_obj_from_dict(obj_from_dict):
     assert obj.test('arg1', 'arg2').foo.bar == 'The Crazy End'
     assert obj.test('arg1').foo.bar == 'The Good End'
     assert obj.test().foo.bar == 'The Best End'
+
+
+class TestProvider(AbstractProvider):
+    def normal_method(self, arg1=None):
+        return "normal"
+
+    def test_normal_method(self, arg1=None):
+        return "test"
+
+
+def test_provider_normal(monkeypatch):
+    monkeypatch.setattr('settings.TESTING', False)
+    provider = TestProvider()
+
+    assert provider.normal_method() == "normal"
+
+
+def test_provider_testing(monkeypatch):
+    provider = TestProvider()
+
+    assert provider.normal_method() == "test"
