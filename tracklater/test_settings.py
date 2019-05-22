@@ -1,7 +1,7 @@
 
 TESTING = True
 
-ENABLED_MODULES = ['jira', 'gitmodule', 'slack']
+ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga']
 
 # Test settings for Jira
 JIRA = {
@@ -30,5 +30,15 @@ SLACK = {
     'global': {
         'API_KEY': '',
         'USER_ID': '1',
+    }
+}
+
+# Test settings for Slack
+TAIGA = {
+    'global': {
+        'CREDENTIALS': 'test'
+    },
+    'group2': {
+        'project_slug': 'test'
     }
 }
