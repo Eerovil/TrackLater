@@ -13,11 +13,7 @@ HEL = pytz.timezone('Europe/Helsinki')
 
 
 @pytest.fixture(autouse=True)
-def mock_git(monkeypatch, obj_from_dict):
-    with open(DIRECTORY + '/git_test_data.json', 'r') as f:
-        monkeypatch.setattr('timemodules.gitmodule.git',
-                            obj_from_dict(json.load(f)))
-
+def mock_git(monkeypatch):
     monkeypatch.setattr('timemodules.gitmodule.timestamp_to_datetime',
                         lambda x: datetime.now(HEL) - timedelta(days=4))
 

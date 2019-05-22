@@ -13,7 +13,7 @@ HEL = pytz.timezone('Europe/Helsinki')
 
 
 @pytest.fixture(autouse=True)
-def mock_slack(monkeypatch, obj_from_dict):
+def mock_slack(monkeypatch):
     def _api_call(*args, **kwargs):
         if args[0] == "users.list":
             return {

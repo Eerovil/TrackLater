@@ -6,6 +6,8 @@ from timemodules.interfaces import AbstractProvider
 
 from datetime import datetime, timedelta
 
+from utils import obj_from_dict
+
 
 @pytest.fixture(autouse=True)
 def mock_main(monkeypatch):
@@ -26,7 +28,7 @@ def test_parse(parser):
     parser.parse()
 
 
-def test_obj_from_dict(obj_from_dict):
+def test_obj_from_dict():
     _dict = {
         'test(arg1,arg2)': {
             'foo': {
