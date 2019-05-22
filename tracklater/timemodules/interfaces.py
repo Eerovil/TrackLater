@@ -99,6 +99,33 @@ class Entry:
         }
 
 
+def testing_decorator(func):
+    def _func(*args, **kwargs):
+        self = args[0]
+        if getattr(settings, 'TESTING', False) and hasattr(self, "test_{}".format(func.__name__)):
+            return getattr(self, "test_{}".format(func.__name__))(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+
+    return _func
+
+
+class ProviderMetaclass(type):
+    def __new__(cls, name, bases, local):
+        for attr in local:
+            value = local[attr]
+            if callable(value):
+                local[attr] = testing_decorator(value)
+        return type.__new__(cls, name, bases, local)
+
+
+class AbstractProvider(metaclass=ProviderMetaclass):
+    """
+    Will run methods prefixed "test_" when TESTING == True
+    """
+    pass
+
+
 class AbstractParser(metaclass=ABCMeta):
     def __init__(self, start_date: datetime, end_date: datetime) -> None:
         self.start_date: datetime = start_date
@@ -106,6 +133,7 @@ class AbstractParser(metaclass=ABCMeta):
         self.entries: List[Entry] = []
         self.projects: List[Project] = []
         self.issues: List[Issue] = []
+        self.provider: Optional[AbstractProvider] = None
 
     @property
     def capabilities(self) -> List[str]:
