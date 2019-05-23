@@ -1,0 +1,3 @@
+ignore:
+  - "tracklater/tests"
+  - "tracklater/*_settings.py"
