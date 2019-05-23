@@ -3,6 +3,9 @@ language: python
 python:
  - "3.7"
 
+env:
+  - CODECOV_TOKEN="9a7b0691-eff9-49e2-89d8-15c51a8df636"
+
 cache: pip
 
 before_install:

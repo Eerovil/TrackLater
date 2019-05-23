@@ -4,3 +4,4 @@ pytest
 requests_mock
 pdbpp
 pytest-cov
+codecov
