@@ -1,4 +1,12 @@
-from user_settings import *  # noqa
+import logging
+logger = logging.getLogger(__name__)
+
+
+try:
+    from user_settings import *  # noqa
+except ImportError:
+    from test_settings import *  # noqa
+    logger.error("No user settings file! Create one called user_settings.py")
 
 
 def helper(module, key, group='global', default=None):
