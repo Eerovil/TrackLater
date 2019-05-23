@@ -1,15 +1,14 @@
 import requests
-from requests.models import Response
 import json
 
 from utils import parse_time, _str
 import settings
 from timemodules.interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser,
-    Entry, Project, Issue
+    Entry, Project, Issue, AbstractProvider
 )
 
-from typing import List, Dict, Any
+from typing import List, Dict
 
 import logging
 logger = logging.getLogger(__name__)
@@ -21,23 +20,11 @@ def get_setting(key, default=None, group='global'):
     return settings.helper('TOGGL', key, group=group, default=default)
 
 
-def response_json(resp: Response) -> List[Dict[str, Any]]:
-    return resp.json()
-
-
 class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin,
              AbstractParser):
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
-        self.api_key = get_setting('API_KEY')
-        response = requests.get('https://www.toggl.com/api/v8/me?with_related_data=true',
-                                auth=(self.api_key, 'api_token'))
-        data = response.json()['data']
-        self.email = data['email']
-        self.default_wid = data['default_wid']
-        self.id = data['id']
-        self.time_entries = []
-        self.projects = data['projects']
+        self.provider = Provider(get_setting('API_KEY'))
 
     def get_entries(self) -> List[Entry]:
         if self.start_date:
@@ -45,12 +32,9 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                       'end_date': self.end_date.isoformat() + "+03:00"}
         else:
             params = {}
-        headers = {
-            "Content-Type": "application/json"
-        }
-        response = requests.get('https://www.toggl.com/api/v8/time_entries', headers=headers,
-                                params=params, auth=(self.api_key, 'api_token'))
-        data = response.json()
+        data = self.provider.request(
+            'time_entries', params=params, method='GET'
+        )
         time_entries = []
         for entry in data:
             time_entries.append(Entry(
@@ -64,7 +48,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         return time_entries
 
     def get_projects(self) -> List[Project]:
-        clients = self.request('clients', method='GET').json()
+        clients = self.provider.request('clients', method='GET')
         projects = []
         for client in clients:
             group = None
@@ -73,9 +57,10 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                     group = project
             if not group:
                 continue
-            resp = self.request('clients/{}/projects'.format(client['id']),
-                                method='GET')
-            for project in response_json(resp):
+            resp = self.provider.request(
+                'clients/{}/projects'.format(client['id']), method='GET'
+            )
+            for project in resp:
                 if project['name'] not in toggl_settings[group]['PROJECTS']:
                     continue
                 projects.append(Project(
@@ -126,17 +111,6 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def delete_entry(self, entry_id: str) -> None:
         self.delete_time_entry(entry_id)
 
-    def request(self, endpoint: str, **kwargs) -> requests.Response:
-        url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
-        kwargs['headers'] = kwargs.get('headers', {
-            "Content-Type": "application/json"
-        })
-        kwargs['auth'] = kwargs.get('auth', (self.api_key, 'api_token'))
-
-        method = kwargs.get('method', 'POST').lower()
-        del kwargs['method']
-        return getattr(requests, method)(url, **kwargs)
-
     def push_session(self, session: dict, name: str, entry_id: str = '', project_id: str = None):
         headers = {
             "Content-Type": "application/json"
@@ -154,45 +128,100 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         if entry_id:
             return self.update_time_entry(entry_id, data)
 
-        response = requests.post(
-            'https://www.toggl.com/api/v8/time_entries',
-            data=json.dumps(data), headers=headers, auth=(self.api_key, 'api_token'))
-        print(u'Pushed session to toggl: {}'.format(response.text))
-        entry = response.json()['data']
+        response = self.provider.request(
+            'time_entries', data=json.dumps(data), headers=headers,
+        )
+        print(u'Pushed session to toggl: {}'.format(response))
+        entry = response['data']
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
         return entry
 
     def update_time_entry(self, entry_id: str, data: dict):
-        response = requests.put('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
-                                data=json.dumps(data), auth=(self.api_key, 'api_token'))
-        print(u'Updated session to toggl: {}'.format(response.text))
-        entry = response.json()['data']
+        response = self.provider.request(
+            'time_entries/{}'.format(entry_id), data=json.dumps(data), method='PUT'
+        )
+        print(u'Updated session to toggl: {}'.format(response))
+        entry = response['data']
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
         return entry
 
     def delete_time_entry(self, entry_id):
         logger.info('deleting %s', entry_id)
-        response = requests.delete('https://www.toggl.com/api/v8/time_entries/{}'.format(entry_id),
-                                   auth=(self.api_key, 'api_token'))
-        return response.text
+        response = self.provider.request(
+            'time_entries/{}'.format(entry_id), method='DELETE'
+        )
+        return response
 
-    def get_entry(self, entry_id):
-        for entry in self.time_entries:
-            if entry['id'] == entry_id:
-                return entry
 
-    def check_session_exists(self, session):
-        for entry in self.time_entries:
-            start = (entry['start_time'])
-            stop = (entry['end_time'])
-            if start <= session['start_time'] <= stop:
-                return entry['id']
-            if start <= session['end_time'] <= stop:
-                return entry['id']
-            if session['start_time'] <= start and stop <= session['end_time']:
-                return entry['id']
-            if start <= session['start_time'] and session['end_time'] <= stop:
-                return entry['id']
-        return None
+class Provider(AbstractProvider):
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def request(self, endpoint: str, **kwargs) -> dict:
+        url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
+        kwargs['headers'] = kwargs.get('headers', {
+            "Content-Type": "application/json"
+        })
+        kwargs['auth'] = kwargs.get('auth', (self.api_key, 'api_token'))
+
+        method = kwargs.get('method', 'POST').lower()
+        del kwargs['method']
+        return getattr(requests, method)(url, **kwargs).json()
+
+    def test_request(self, endpoint: str, **kwargs) -> dict:
+        method = kwargs.get('method', 'POST').lower()
+        if endpoint == "time_entries" and method == 'get':
+            return [
+                {
+                    "id": 1,
+                    "pid": 10,
+                    "start": "2019-05-09T08:00:00+00:00",
+                    "stop": "2019-05-09T09:00:00+00:00",
+                    "description": "Toggl entry 1",
+                },
+                {
+                    "id": 2,
+                    "pid": 11,
+                    "start": "2019-05-13T07:42:55+00:00",
+                    "stop": "2019-05-13T08:34:52+00:00",
+                    "description": "Toggl entry 2",
+                },
+                {
+                    "id": 3,
+                    "pid": 20,
+                    "start": "2019-05-13T09:35:11+00:00",
+                    "stop": "2019-05-13T10:34:02+00:00",
+                    "description": "Toggl entry 3",
+                }
+            ]
+        elif endpoint == "clients" and method == 'get':
+            return [
+                {
+                    "id": 1,
+                    "name": "First Client",
+                },
+                {
+                    "id": 2,
+                    "name": "Second Client",
+                },
+            ]
+        elif endpoint.startswith("clients") and method == 'get':
+            _clid = endpoint[8]
+            return [
+                {
+                    "id": int(_clid) * 10,
+                    "name": "Development"
+                },
+                {
+                    "id": int(_clid) * 10 + 1,
+                    "name": "Bug fixing"
+                },
+            ]
+        elif endpoint == "time_entries" and method == 'post':
+            return json.loads(kwargs['data'])
+        elif endpoint.startswith("time_entries") and method == 'put':
+            return json.loads(kwargs['data'])
+        elif endpoint.startswith("time_entries") and method == 'delete':
+            return endpoint[12:]

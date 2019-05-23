@@ -1,0 +1,62 @@
+{
+    "expand": "schema,names",
+    "startAt": 4,
+    "maxResults": 100,
+    "total": 6,
+    "issues": [
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+            "id": "4",
+            "self": "mock://jira.test/rest/api/2/issue/4",
+            "key": "TEST-4",
+            "fields": {
+                "summary": "Example feature 3",
+                "issuetype": {
+                    "self": "mock://jira.test/rest/api/2/issuetype/1",
+                    "id": "1",
+                    "description": "Feature that adds extra functionality",
+                    "iconUrl": "mock://jira.test/secure/viewavatar?size=xsmall&avatarId1&avatarType=issuetype",
+                    "name": "Feature",
+                    "subtask": false,
+                    "avatarId": 1
+                }
+            }
+        },
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+            "id": "5",
+            "self": "mock://jira.test/rest/api/2/issue/5",
+            "key": "TEST-5",
+            "fields": {
+                "summary":"Example feature 4",
+                "issuetype": {
+                    "self": "mock://jira.test/rest/api/2/issuetype/1",
+                    "id": "1",
+                    "description": "Feature that adds extra functionality",
+                    "iconUrl": "mock://jira.test/secure/viewavatar?size=xsmall&avatarId=1&avatarType=issuetype",
+                    "name": "Feature",
+                    "subtask": false,
+                    "avatarId": 1
+                }
+            }
+        },
+        {
+            "expand": "operations,versionedRepresentations,editmeta,changelog,renderedFields",
+            "id": "6",
+            "self": "mock://jira.test/rest/api/2/issue/6",
+            "key": "TEST-6",
+            "fields": {
+                "summary": "Example bug 2",
+                "issuetype": {
+                    "self": "mock://jira.test/rest/api/2/issuetype/2",
+                    "id": "2",
+                    "description": "Bug that breaks stuff",
+                    "iconUrl": "mock://jira.test/secure/viewavatar?size=xsmall&avatarId=2&avatarType=issuetype",
+                    "name": "Bug",
+                    "subtask": false,
+                    "avatarId": 2
+                }
+            }
+        }
+    ]
+}

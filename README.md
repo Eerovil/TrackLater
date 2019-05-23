@@ -57,6 +57,10 @@ Example command to start the server. Must be run in the `tracklater` directory (
 FLASK_APP=app.py FLASK_ENV=development WERKZEUG_DEBUG_PIN=off python -m flask run
 ```
 
+# Usage
+
+Select time entries from thyme and click export.
+
 # Contributing
 
 Building and running the project is easy, as you can simply clone the repo and start making PRs.
@@ -68,6 +72,10 @@ Ideas for future support:
 * Maybe a Chrome page history parser?
 
 # Settings guide
+
+Create a file called `user_settings.py` to the root folder (containing `app.py`)
+
+To load test settings you can add `from test_settings import *` to the end of the file. This will use test data and no actual API calls will be made.
 
 Each module has their own settings dict, containing a settings dict for each group. There is also
 a `global` key for non-group specific settings.

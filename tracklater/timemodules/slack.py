@@ -3,7 +3,7 @@ from slack import WebClient
 import settings
 from datetime import datetime
 from utils import FixedOffset
-from timemodules.interfaces import Entry, EntryMixin, AbstractParser
+from timemodules.interfaces import Entry, EntryMixin, AbstractParser, AbstractProvider
 
 from typing import List
 
@@ -17,20 +17,19 @@ class Parser(EntryMixin, AbstractParser):
             slack_token = group_data['API_KEY']
             user_id = group_data['USER_ID']
 
-            sc = WebClient(slack_token)
-
-            users_list = sc.api_call("users.list")
+            provider = Provider(slack_token)
+            users_list = provider.api_call("users.list")
             users = {}
             for user in users_list['members']:
                 users[user['id']] = (
                     user['profile'].get('first_name', 'NULL') + ' ' +
                     user['profile'].get('last_name', 'NULL')
                 )
-            channels = sc.api_call(
+            channels = provider.api_call(
                 "conversations.list", data={'types': 'public_channel,private_channel,mpim,im'}
             )['channels']
             for channel in channels:
-                history = sc.api_call(
+                history = provider.api_call(
                     "conversations.history",
                     data={
                         'channel': channel['id'],
@@ -40,7 +39,7 @@ class Parser(EntryMixin, AbstractParser):
                 )
 
                 # Get either Istant Message recipient or channel name
-                if channel['is_im'] and channel.get('user', ''):
+                if channel.get('is_im', False) and channel.get('user', ''):
                     channel_info = users.get(channel.get('user', ''), None)
                 else:
                     channel_info = channel.get('name_normalized', 'Unknown')
@@ -62,3 +61,54 @@ class Parser(EntryMixin, AbstractParser):
                             text=['{} - {}'.format(group, channel_info), message['text']]
                         ))
         return entries
+
+
+class Provider(AbstractProvider):
+    def __init__(self, slack_token):
+        self.sc = WebClient(slack_token)
+
+    def api_call(self, *args, **kwargs):
+        return self.sc.api_call(*args, **kwargs)
+
+    def test_api_call(self, *args, **kwargs):
+        if args[0] == "users.list":
+            return {
+                "members": [
+                    {
+                        "id": "1",
+                        "profile": {
+                            "first_name": "Firstname",
+                            "last_name": "Lastename"
+                        }
+                    },
+                    {
+                        "id": "2",
+                        "profile": {
+                            "first_name": "Secondname",
+                            "last_name": "Lastename"
+                        }
+                    }
+                ]
+            }
+        if args[0] == "conversations.list":
+            return {"channels": [{"id": "1"}]}
+        if args[0] == "conversations.history":
+            return {
+                "messages": [
+                    {
+                        "user": "1",
+                        "text": "First Message",
+                        "ts": "1234567"
+                    },
+                    {
+                        "user": "1",
+                        "text": "Second Message",
+                        "ts": "1234567"
+                    },
+                    {
+                        "user": "2",
+                        "text": "Third Message",
+                        "ts": "1234567"
+                    }
+                ]
+            }
