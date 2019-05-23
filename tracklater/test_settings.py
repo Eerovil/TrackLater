@@ -42,3 +42,23 @@ TAIGA = {
         'project_slug': 'test'
     }
 }
+
+TOGGL = {
+    'global': {
+        'API_KEY': 'your-api-key'
+    },
+    'group1': {
+        'NAME': 'First Client',
+        'PROJECTS': {
+            'Development': 'default',
+            'Bug fixing': 'bug',
+        }
+    },
+    'group2': {
+        'NAME': 'Second Client',
+        'PROJECTS': {
+            'Development': 'default',
+            'Bug fixing': 'default',
+        }
+    }
+}
