@@ -1,3 +1,6 @@
+# Disable sudo to speed up the build
+sudo: false
+
 language: python
 
 python:
