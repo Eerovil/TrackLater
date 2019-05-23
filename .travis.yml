@@ -10,3 +10,6 @@ before_install:
 install: pip install -e .
 
 script: pytest --cov=. --cov-report term
+
+after_success:
+  - codecov
