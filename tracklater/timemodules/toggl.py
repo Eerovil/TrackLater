@@ -13,8 +13,6 @@ from typing import List, Dict
 import logging
 logger = logging.getLogger(__name__)
 
-toggl_settings: Dict = settings.TOGGL
-
 
 def get_setting(key, default=None, group='global'):
     return settings.helper('TOGGL', key, group=group, default=default)
@@ -52,7 +50,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         projects = []
         for client in clients:
             group = None
-            for project, data in toggl_settings.items():
+            for project, data in settings.TOGGL.items():
                 if data.get('NAME', None) == client['name']:
                     group = project
             if not group:
@@ -61,7 +59,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 'clients/{}/projects'.format(client['id']), method='GET'
             )
             for project in resp:
-                if project['name'] not in toggl_settings[group]['PROJECTS']:
+                if project['name'] not in settings.TOGGL[group]['PROJECTS']:
                     continue
                 projects.append(Project(
                     id=project['id'],
