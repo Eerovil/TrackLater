@@ -9,4 +9,4 @@ before_install:
 
 install: pip install -e .
 
-script: pytest
+script: pytest --cov=. --cov-report term
