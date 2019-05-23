@@ -12,6 +12,8 @@ ENABLED_MODULES = [
     'slack'
 ]
 
+TIMEZONE = 'Europe/Helsinki'
+
 UI_SETTINGS = {
     'toggl': {
         'global': '#E01A22'

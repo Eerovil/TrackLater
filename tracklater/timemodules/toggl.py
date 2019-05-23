@@ -10,7 +10,7 @@ from timemodules.interfaces import (
     Entry, Project, Issue, AbstractProvider
 )
 
-from typing import List, Dict
+from typing import List
 
 import logging
 logger = logging.getLogger(__name__)

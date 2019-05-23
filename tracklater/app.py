@@ -76,7 +76,7 @@ def fetchdata() -> Optional[str]:
 def parseTimestamp(stamp):
     if not stamp:
         return None
-    tz = pytz.timezone('Europe/Helsinki')
+    tz = pytz.timezone(settings.TIMEZONE)
     date = datetime.fromtimestamp(int(stamp) / 1e3, tz)
     return date
 

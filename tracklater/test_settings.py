@@ -3,6 +3,8 @@ TESTING = True
 
 ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
+TIMEZONE = 'Europe/Helsinki'
+
 UI_SETTINGS = {
     'toggl': {
         'global': '#E01A22'

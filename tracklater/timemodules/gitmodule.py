@@ -19,7 +19,7 @@ def get_setting(key, default=None, group='global'):
 
 
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
-HEL = pytz.timezone('Europe/Helsinki')
+HEL = pytz.timezone(settings.TIMEZONE)
 
 
 def timestamp_to_datetime(timestamp: List):

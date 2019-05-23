@@ -3,12 +3,13 @@ from timemodules.slack import Parser
 import pytest
 import os
 import pytz
+import settings
 
 from datetime import datetime, timedelta
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-HEL = pytz.timezone('Europe/Helsinki')
+HEL = pytz.timezone(settings.TIMEZONE)
 
 
 @pytest.fixture()
