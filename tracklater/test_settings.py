@@ -1,7 +1,7 @@
 
 TESTING = True
 
-ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga']
+ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
 # Test settings for Jira
 JIRA = {
@@ -60,5 +60,10 @@ TOGGL = {
             'Development': 'default',
             'Bug fixing': 'default',
         }
+    }
+}
+
+THYME = {
+    'global': {
     }
 }
