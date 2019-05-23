@@ -3,7 +3,7 @@ language: python
 python:
  - "3.7"
 
-before_install: pip install -r tracklater/requirements-testing.txt 
+before_install: pip install -r requirements-testing.txt 
 
 install: pip install -e .
 
