@@ -1,6 +1,8 @@
 import requests
 import json
 
+from datetime import timedelta
+
 from utils import parse_time, _str
 import settings
 from timemodules.interfaces import (
@@ -107,7 +109,12 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 break
 
     def delete_entry(self, entry_id: str) -> None:
-        self.delete_time_entry(entry_id)
+        removed_id = self.delete_time_entry(entry_id)
+
+        for i, entry in enumerate(self.entries):
+            if entry.id == str(removed_id):
+                del self.entries[i]
+                break
 
     def push_session(self, session: dict, name: str, entry_id: str = '', project_id: str = None):
         headers = {
@@ -156,6 +163,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
 class Provider(AbstractProvider):
     def __init__(self, api_key):
         self.api_key = api_key
+        self.id_counter = 4
 
     def request(self, endpoint: str, **kwargs) -> dict:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
@@ -218,8 +226,19 @@ class Provider(AbstractProvider):
                 },
             ]
         elif endpoint == "time_entries" and method == 'post':
-            return json.loads(kwargs['data'])
+            entry = json.loads(kwargs['data'])['time_entry']
+            entry['stop'] = (
+                parse_time(entry['start']) + timedelta(seconds=entry['duration'])
+            ).isoformat()
+            entry['id'] = self.id_counter
+            self.id_counter += 1
+            return {'data': entry}
         elif endpoint.startswith("time_entries") and method == 'put':
-            return json.loads(kwargs['data'])
+            entry = json.loads(kwargs['data'])['time_entry']
+            entry['stop'] = (
+                parse_time(entry['start']) + timedelta(seconds=entry['duration'])
+            ).isoformat()
+            entry['id'] = endpoint[13:]
+            return {'data': entry}
         elif endpoint.startswith("time_entries") and method == 'delete':
-            return endpoint[12:]
+            return endpoint[13:]
