@@ -3,6 +3,21 @@ TESTING = True
 
 ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
+UI_SETTINGS = {
+    'toggl': {
+        'global': '#E01A22'
+    },
+    'thyme': {
+        'global': '#1aef65'
+    },
+    'gitmodule': {
+        'global': '#F44D27'
+    },
+    'slack': {
+        'global': '#4A154B'
+    }
+}
+
 # Test settings for Jira
 JIRA = {
     'group1': {
