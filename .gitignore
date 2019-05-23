@@ -117,3 +117,4 @@ tracklater/thyme
 tracklater/*.jira-cache
 tracklater/user_settings.py
 tracklater/*/*.jira-cache
+tracklater/.project

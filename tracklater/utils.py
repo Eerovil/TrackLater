@@ -41,7 +41,7 @@ def obj_from_dict(d):
             value = type(j)(obj_from_dict(sj) if isinstance(sj, dict) else sj for sj in j)
         else:
             value = j
-        _match = re.match('(.*)\((.*)\)', i)  # noqa
+        _match = re.match(r'(.*)\((.*)\)', i)
         if _match:
             _key = _match.groups()[0]
             # Matched parentheses, so we will need to build a function (later)
