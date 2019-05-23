@@ -99,6 +99,40 @@ class Entry:
         }
 
 
+def testing_decorator(func):
+    def _func(*args, **kwargs):
+        self = args[0]
+
+        if not getattr(settings, 'TESTING', False):
+            return func(*args, **kwargs)
+
+        if func.__name__.startswith("test_") or func.__name__.startswith("__"):
+            return func(*args, **kwargs)
+
+        if not hasattr(self, "test_{}".format(func.__name__)):
+            raise NotImplementedError("No test method for {}.{}".format(self, func.__name__))
+
+        return getattr(self, "test_{}".format(func.__name__))(*args[1:], **kwargs)
+
+    return _func
+
+
+class ProviderMetaclass(type):
+    def __new__(cls, name, bases, local):
+        for attr in local:
+            value = local[attr]
+            if callable(value):
+                local[attr] = testing_decorator(value)
+        return type.__new__(cls, name, bases, local)
+
+
+class AbstractProvider(metaclass=ProviderMetaclass):
+    """
+    Will run methods prefixed "test_" when TESTING == True
+    """
+    pass
+
+
 class AbstractParser(metaclass=ABCMeta):
     def __init__(self, start_date: datetime, end_date: datetime) -> None:
         self.start_date: datetime = start_date

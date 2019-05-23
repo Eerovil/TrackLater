@@ -3,7 +3,7 @@ import json
 import os
 from datetime import timedelta
 from utils import parse_time
-from timemodules.interfaces import EntryMixin, AbstractParser, Entry
+from timemodules.interfaces import EntryMixin, AbstractParser, Entry, AbstractProvider
 from typing import List, Any, Optional
 
 import logging
@@ -37,26 +37,11 @@ class Parser(EntryMixin, AbstractParser):
         return self._generate_sessions(snapshot_entries)
 
     def _read_files(self):
-        snapshot_entries = []
-        filenames = []
-        date = self.start_date
-        while date <= self.end_date:
-            filenames.append('{}/{}.json'.format(get_setting('DIR'), date.strftime('%Y-%m-%d')))
-            date = date + timedelta(days=1)
-
-        for filename in filenames:
-            logging.info("opening file {}".format(filename))
-            if not os.path.exists(filename):
-                continue
-            with open(filename) as f:
-                data = json.load(f)
-                entries = data.get('Snapshots')
-                for entry in entries:
-                    parsed_entry = self._parse_snapshot_entry(entry)
-                    if parsed_entry is not None:
-                        snapshot_entries.append(parsed_entry)
-
-        return snapshot_entries
+        provider = Provider()
+        _ret: List[dict] = []
+        for snapshot in provider.read_files():
+            _ret.append(self._parse_snapshot_entry(snapshot))
+        return _ret
 
     def _parse_snapshot_entry(self, entry):
         active_window = get_window(entry, entry['Active'])
@@ -134,3 +119,89 @@ class Parser(EntryMixin, AbstractParser):
         _end_session(sessions[-1], prev_entry)
 
         return sessions
+
+
+class Provider(AbstractProvider):
+    def read_files(self) -> List[dict]:
+        snapshot_entries = []
+        filenames = []
+        date = self.start_date
+        while date <= self.end_date:
+            filenames.append('{}/{}.json'.format(get_setting('DIR'), date.strftime('%Y-%m-%d')))
+            date = date + timedelta(days=1)
+
+        for filename in filenames:
+            logging.info("opening file {}".format(filename))
+            if not os.path.exists(filename):
+                continue
+            with open(filename) as f:
+                data = json.load(f)
+                entries = data.get('Snapshots')
+                for entry in entries:
+                    snapshot_entries.append(entry)
+
+        return snapshot_entries
+
+    def test_read_files(self):
+        return [
+            {
+                "Time": "2019-05-23T12:00:01.242072673+03:00",
+                "Windows": [
+                    {
+                        "ID": 1,
+                        "Desktop": -1,
+                        "Name": "Chrome - github"
+                    },
+                    {
+                        "ID": 2,
+                        "Desktop": 0,
+                        "Name": "VSCode"
+                    }
+                ],
+                "Active": 1,
+                "Visible": [
+                    1,
+                    2,
+                ]
+            },
+            {
+                "Time": "2019-05-23T12:04:01.242072673+03:00",
+                "Windows": [
+                    {
+                        "ID": 1,
+                        "Desktop": -1,
+                        "Name": "Chrome - github"
+                    },
+                    {
+                        "ID": 2,
+                        "Desktop": 0,
+                        "Name": "VSCode"
+                    }
+                ],
+                "Active": 2,
+                "Visible": [
+                    1,
+                    2,
+                ]
+            },
+            {
+                "Time": "2019-05-23T12:08:01.242072673+03:00",
+                "Windows": [
+                    {
+                        "ID": 1,
+                        "Desktop": -1,
+                        "Name": "Chrome - github"
+                    },
+                    {
+                        "ID": 2,
+                        "Desktop": 0,
+                        "Name": "VSCode"
+                    }
+                ],
+                "Active": 1,
+                "Visible": [
+                    1,
+                    2,
+                ]
+            },
+        ]

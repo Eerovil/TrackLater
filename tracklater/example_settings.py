@@ -1,6 +1,8 @@
 
 # Rename to `user_settings.py` and edit to your liking.
 
+TESTING = False
+
 ENABLED_MODULES = [
     'thyme',
     'gitmodule',
