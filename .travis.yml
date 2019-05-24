@@ -17,6 +17,10 @@ before_install:
 
 install: pip install -e .
 
+before_script:
+  - "flake8 ."
+  - "mypy"
+
 script: pytest --cov=. --cov-report term
 
 after_success:

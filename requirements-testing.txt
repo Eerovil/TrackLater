@@ -5,3 +5,5 @@ requests_mock
 pdbpp
 pytest-cov
 codecov
+flake8
+mypy
