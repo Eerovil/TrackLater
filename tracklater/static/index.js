@@ -338,6 +338,9 @@ function updateTable() {
             let selectionLast = items.get(properties.items[properties.items.length - 1]);
 
             let module_name = selection.group;
+            if (module_name == undefined) {
+                return;
+            }
             let first_entry = entries[module_name].filter((entry) => entry.idcounter == selection.id)[0]
             let last_entry = entries[module_name].filter((entry) => entry.idcounter == selectionLast.id)[0]
 
