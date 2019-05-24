@@ -31,7 +31,6 @@ class Parser(IssueMixin, AbstractParser):
     def taiga_login(self) -> None:
         taiga_settings = cast(Any, settings.TAIGA)
         self.provider = Provider(taiga_settings['global']['CREDENTIALS'])
-        self.issues = []
         self.taiga_projects: List[dict] = []
         # Get taiga project id for all clients
         # "No client" not supported yet
