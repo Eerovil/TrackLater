@@ -10,7 +10,7 @@ $(document).ready(function() {
                     global_selected.first_entry,
                     global_selected.first_entry.start_time,
                     global_selected.first_entry.end_time,
-                    global_selected.first_entry.project
+                    $('#project').val()
                 )
             } else {
                 createEntry();
