@@ -61,6 +61,8 @@ FLASK_APP=app.py FLASK_ENV=development WERKZEUG_DEBUG_PIN=off python -m flask ru
 
 Select time entries from thyme and click export.
 
+You can also double click on the timeline to create entries. Edit by selecting, dragging etc.
+
 # Contributing
 
 Building and running the project is easy, as you can simply clone the repo and start making PRs.
