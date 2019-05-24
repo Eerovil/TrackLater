@@ -16,7 +16,7 @@ PROJECT_URL = 'https://api.taiga.io/api/v1/projects/by_slug?slug={}'
 class Parser(IssueMixin, AbstractParser):
     def get_issues(self) -> List[Issue]:
         self.taiga_login()
-        issues = []
+        issues: List[Issue] = []
 
         latest_issues = self.taiga_fetch_issues()
         for issue in latest_issues:
