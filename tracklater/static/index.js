@@ -145,7 +145,7 @@ function createEntry() {
     $.post('updateentry', {
         'module': module_name,
         'start_time': first_entry.start_time.getTime(),
-        'end_time': last_entry.end_time.getTime(),
+        'end_time': (last_entry.end_time || last_entry.start_time).getTime(),
         'title': $('#actions input.description').val(),
         'project_id': $('#project').val(),
     }, function(data) {
