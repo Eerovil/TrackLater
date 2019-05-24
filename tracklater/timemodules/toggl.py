@@ -173,7 +173,10 @@ class Provider(AbstractProvider):
         kwargs['auth'] = kwargs.get('auth', (self.api_key, 'api_token'))
 
         method = kwargs.get('method', 'POST').lower()
-        del kwargs['method']
+        try:
+            del kwargs['method']
+        except KeyError:
+            pass
         return getattr(requests, method)(url, **kwargs).json()
 
     def test_request(self, endpoint: str, **kwargs) -> dict:
