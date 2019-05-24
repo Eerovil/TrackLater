@@ -44,6 +44,11 @@ $(document).ready(function() {
     console.log('hello2');
 });
 
+Date.prototype.addHours= function(h){
+    var copiedDate = new Date();
+    copiedDate.setTime(this.getTime() + (h*60*60*1000)); 
+    return copiedDate;
+}
 
 function _handleFailure(jqXHR, textStatus, errorThrown) {
     document.open();
@@ -300,8 +305,8 @@ function updateTable() {
                     updateEntry(
                         item.group, entry, item.start, item.end, entry.project
                     );
+                    return callback(item);
                 }
-                return callback(item);
             },
 
             onRemove: function(item, callback) {
@@ -315,9 +320,26 @@ function updateTable() {
                         console.log("deleted entry " + entry.id + ": " + data);
                     }, 'json')
                     .fail(_handleFailure)
+                    return callback(item);
                 }
-                return callback(item);
-            }
+            },
+
+            onAdd: function(item, callback) {
+                if (capabilities[item.group].includes('addentry')) {
+                    global_selected = {
+                        first_entry: {
+                            start_time: item.start.addHours(-0.5),
+                        },
+                        last_entry: {
+                            start_time: item.start.addHours(0.5),
+                        }
+                    }
+                    $('#modules').val(item.group)
+                    $('#actions input.description').val("Unnamed entry")
+                    $('#project').val("")
+                    createEntry();
+                }
+            },
         };
 
         var groups = []
