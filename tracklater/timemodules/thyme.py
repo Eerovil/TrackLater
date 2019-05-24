@@ -39,8 +39,10 @@ class Parser(EntryMixin, AbstractParser):
     def _read_files(self):
         provider = Provider()
         _ret: List[dict] = []
-        for snapshot in provider.read_files():
-            _ret.append(self._parse_snapshot_entry(snapshot))
+        for snapshot in provider.read_files(self.start_date, self.end_date):
+            entry = self._parse_snapshot_entry(snapshot)
+            if entry:
+                _ret.append(entry)
         return _ret
 
     def _parse_snapshot_entry(self, entry):
@@ -97,6 +99,7 @@ class Parser(EntryMixin, AbstractParser):
 
         prev_entry = entries[0]
         sessions = [_init_session(prev_entry)]
+
         for entry in entries[1:]:
             if prev_entry['active_window'] == entry['active_window']:
                 continue
@@ -122,11 +125,11 @@ class Parser(EntryMixin, AbstractParser):
 
 
 class Provider(AbstractProvider):
-    def read_files(self) -> List[dict]:
+    def read_files(self, start_date, end_date) -> List[dict]:
         snapshot_entries = []
         filenames = []
-        date = self.start_date
-        while date <= self.end_date:
+        date = start_date
+        while date <= end_date:
             filenames.append('{}/{}.json'.format(get_setting('DIR'), date.strftime('%Y-%m-%d')))
             date = date + timedelta(days=1)
 
@@ -139,10 +142,9 @@ class Provider(AbstractProvider):
                 entries = data.get('Snapshots')
                 for entry in entries:
                     snapshot_entries.append(entry)
-
         return snapshot_entries
 
-    def test_read_files(self):
+    def test_read_files(self, start_date=None, end_date=None):
         return [
             {
                 "Time": "2019-05-23T12:00:01.242072673+03:00",
