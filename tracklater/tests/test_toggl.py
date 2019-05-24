@@ -32,11 +32,11 @@ def test_toggl_get_projects(parser):
 def test_toggl_add_modify_delete(parser: Parser):
     parser.entries = parser.get_entries()
     entry = Entry(
-        id=4,
+        id="4",
         start_time=datetime.now() - timedelta(hours=2),
         end_time=datetime.now() - timedelta(hours=1),
         title="Toggl new entry (4)",
-        project=10,
+        project="10",
     )
     data = parser.create_entry(entry, None)
     assert len(data) == 1
@@ -44,9 +44,9 @@ def test_toggl_add_modify_delete(parser: Parser):
     assert parser.entries[-1].title == entry.title
 
     entry.title = "Toggl modified entry"
-    data = parser.update_entry(entry.id, entry, None)
+    parser.update_entry("4", entry, None)
     assert len(parser.entries) == 4
     assert parser.entries[-1].title == entry.title
 
-    data = parser.delete_entry(entry.id)
+    parser.delete_entry("4")
     assert len(parser.entries) == 3
