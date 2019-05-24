@@ -90,6 +90,11 @@ so you will find that the JIRA settings have no `group2` key and TAIGA settings 
 Time tracking (for billing) is done through Toggl. Also, both groups happen to have their own workspaces on slack, and obviously their own git repositories.
 
 ```
+
+# Rename to `user_settings.py` and edit to your liking.
+
+TESTING = False
+
 ENABLED_MODULES = [
     'thyme',
     'gitmodule',
@@ -99,11 +104,28 @@ ENABLED_MODULES = [
     'slack'
 ]
 
+TIMEZONE = 'Europe/Helsinki'
+
+UI_SETTINGS = {
+    'toggl': {
+        'global': '#E01A22'
+    },
+    'thyme': {
+        'global': '#1aef65'
+    },
+    'gitmodule': {
+        'global': '#F44D27'
+    },
+    'slack': {
+        'global': '#4A154B'
+    }
+}
+
 # Toggl module supports a single login using an api key.
 
 TOGGL = {
     'global': {
-        API_KEY: 'your-api-key'
+        'API_KEY': 'your-api-key'
     },
     'group1': {
         # NAME Must match the client name on toggl
