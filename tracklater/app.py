@@ -5,6 +5,7 @@ from utils import _str
 from datetime import datetime, timedelta
 import json
 import pytz
+import db
 
 from typing import Optional, Dict
 
@@ -15,6 +16,8 @@ from timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
 app = Flask(__name__)
 
 logger = app.logger
+
+db.init_app(app)
 
 
 class State(object):
