@@ -7,8 +7,10 @@ from utils import parse_time, _str
 import settings
 from timemodules.interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser,
-    Entry, Project, Issue, AbstractProvider
+    AbstractProvider
 )
+
+from models import Entry, Project, Issue
 
 from typing import List, Union, cast, Any, Optional
 

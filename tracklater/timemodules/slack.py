@@ -3,7 +3,9 @@ from slack import WebClient
 import settings
 from datetime import datetime
 from utils import FixedOffset
-from timemodules.interfaces import Entry, EntryMixin, AbstractParser, AbstractProvider
+from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
+
+from models import Entry
 
 from typing import List
 
@@ -58,7 +60,7 @@ class Parser(EntryMixin, AbstractParser):
                         entries.append(Entry(
                             start_time=start_time,
                             title='',
-                            text=['{} - {}'.format(group, channel_info), message['text']]
+                            text="{} - {} \n {}".format(group, channel_info, message['text'])
                         ))
         return entries
 

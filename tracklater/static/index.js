@@ -235,7 +235,7 @@ function makeRow(module_name, entry) {
         group: module_name,
         className: module_name,
         content: entry.title,
-        title: entry.text.join("<br />"),
+        title: (entry.text || "").replace("\n", "<br />"),
         editable: capabilities[module_name].includes('updateentry'),
     };
     if (entry.end_time != undefined) {

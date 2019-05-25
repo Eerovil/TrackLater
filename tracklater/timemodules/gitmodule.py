@@ -7,7 +7,8 @@ import json
 
 from datetime import datetime
 from utils import FixedOffset, obj_from_dict
-from timemodules.interfaces import EntryMixin, AbstractParser, Entry, AbstractProvider
+from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
+from models import Entry
 
 
 import logging
@@ -47,9 +48,7 @@ class Parser(EntryMixin, AbstractParser):
                         continue
 
                     log.append(Entry(
-                        text=[
-                            "{} - {}".format(repo_path.split('/')[-1], message)
-                        ],
+                        text="{} - {}".format(repo_path.split('/')[-1], message),
                         start_time=time,
                     ))
         return log

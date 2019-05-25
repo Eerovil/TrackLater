@@ -4,7 +4,8 @@ import os
 import pickle
 import json
 
-from .interfaces import IssueMixin, AbstractParser, AbstractProvider, Issue
+from .interfaces import IssueMixin, AbstractParser, AbstractProvider
+from models import Issue
 
 from typing import Any, List
 

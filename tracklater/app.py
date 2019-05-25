@@ -1,23 +1,28 @@
 from flask import Flask, request, render_template
+from database import db
 from main import Parser
 import settings
 from utils import _str
 from datetime import datetime, timedelta
 import json
 import pytz
-import db
-
 from typing import Optional, Dict
 
 from requests.models import Response
 
-from timemodules.interfaces import Entry, AddEntryMixin, UpdateEntryMixin
+from models import Entry
+
+from timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 
 app = Flask(__name__)
 
 logger = app.logger
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+with app.app_context():
+    db.create_all()
 
 
 class State(object):
@@ -98,7 +103,7 @@ def updateentry() -> Optional[str]:
             issue=request.values.get('issue_id', None),
             project=request.values['project_id'],
             title=request.values.get('title', ''),
-            text=request.values.get('text', []),
+            text=request.values.get('text', ""),
             extra_data=request.values.get('extra_data', {})
         )
         issue = None

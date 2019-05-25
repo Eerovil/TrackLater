@@ -10,6 +10,8 @@ from timemodules.interfaces import AbstractParser
 from typing import Dict
 from types import ModuleType
 
+from database import db
+
 import traceback
 import logging
 logger = logging.getLogger(__name__)
@@ -55,4 +57,9 @@ class Parser(object):
                         break
                 if task.exception():
                     logger.exception("Exception in %s: %s", module_name, task.exception())
+                for entry in self.modules[module_name].entries:
+                    entry.module = module_name
+                    db.session.add(entry)
+                db.session.commit()
+
                 logger.warning("Task done %s", module_name)

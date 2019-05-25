@@ -3,3 +3,4 @@ GitPython==2.1.11
 python-dateutil==2.8.0
 slackclient==2.0.1
 pytz==2019.1
+flask-sqlalchemy==2.4.0
