@@ -3,7 +3,7 @@ import settings
 
 from timemodules.interfaces import IssueMixin, AbstractParser, Issue, AbstractProvider
 
-from typing import List
+from typing import List, cast, Any
 
 import logging
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ PROJECT_URL = 'https://api.taiga.io/api/v1/projects/by_slug?slug={}'
 class Parser(IssueMixin, AbstractParser):
     def get_issues(self) -> List[Issue]:
         self.taiga_login()
-        issues = []
+        issues: List[Issue] = []
 
         latest_issues = self.taiga_fetch_issues()
         for issue in latest_issues:
@@ -29,12 +29,12 @@ class Parser(IssueMixin, AbstractParser):
         return issues
 
     def taiga_login(self) -> None:
-        self.provider = Provider(settings.TAIGA['global']['CREDENTIALS'])
-        self.issues = []
+        taiga_settings = cast(Any, settings.TAIGA)
+        self.provider = Provider(taiga_settings['global']['CREDENTIALS'])
         self.taiga_projects: List[dict] = []
         # Get taiga project id for all clients
         # "No client" not supported yet
-        for group, data in settings.TAIGA.items():
+        for group, data in taiga_settings.items():
             if 'project_slug' not in data:
                 continue
             project = self.provider.get_project(data['project_slug'])

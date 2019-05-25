@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 100
+
+exclude=./tracklater/settings.py,
+        ./tracklater/user_settings.py,
+        ./tracklater/example_settings.py,
+        ./tracklater/test_settings.py,

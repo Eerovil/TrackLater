@@ -4,10 +4,10 @@
 
 import importlib
 import settings
-from concurrent.futures import ThreadPoolExecutor, Future, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from timemodules.interfaces import AbstractParser
-from typing import Dict, Tuple, Optional, List, Any
+from typing import Dict
 from types import ModuleType
 
 import traceback

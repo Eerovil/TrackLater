@@ -10,7 +10,7 @@ from timemodules.interfaces import (
     Entry, Project, Issue, AbstractProvider
 )
 
-from typing import List
+from typing import List, Union, cast, Any, Optional
 
 import logging
 logger = logging.getLogger(__name__)
@@ -50,9 +50,10 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def get_projects(self) -> List[Project]:
         clients = self.provider.request('clients', method='GET')
         projects = []
+        toggl_settings = cast(Any, settings.TOGGL)
         for client in clients:
             group = None
-            for project, data in settings.TOGGL.items():
+            for project, data in toggl_settings.items():
                 if data.get('NAME', None) == client['name']:
                     group = project
             if not group:
@@ -61,7 +62,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 'clients/{}/projects'.format(client['id']), method='GET'
             )
             for project in resp:
-                if project['name'] not in settings.TOGGL[group]['PROJECTS']:
+                if project['name'] not in toggl_settings[group]['PROJECTS']:
                     continue
                 projects.append(Project(
                     id=project['id'],
@@ -70,7 +71,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 ))
         return projects
 
-    def create_entry(self, new_entry: Entry, issue: Issue) -> str:
+    def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> str:
         entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -88,7 +89,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         ))
         return _str(entry['id']) or entry['id']
 
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> None:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> None:
         updated_entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -165,7 +166,7 @@ class Provider(AbstractProvider):
         self.api_key = api_key
         self.id_counter = 4
 
-    def request(self, endpoint: str, **kwargs) -> dict:
+    def request(self, endpoint: str, **kwargs) -> Union[List[dict], dict]:
         url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
         kwargs['headers'] = kwargs.get('headers', {
             "Content-Type": "application/json"
@@ -179,27 +180,27 @@ class Provider(AbstractProvider):
             pass
         return getattr(requests, method)(url, **kwargs).json()
 
-    def test_request(self, endpoint: str, **kwargs) -> dict:
+    def test_request(self, endpoint: str, **kwargs) -> Union[List[dict], dict, str]:
         method = kwargs.get('method', 'POST').lower()
         if endpoint == "time_entries" and method == 'get':
             return [
                 {
-                    "id": 1,
-                    "pid": 10,
+                    "id": "1",
+                    "pid": "10",
                     "start": "2019-05-09T08:00:00+00:00",
                     "stop": "2019-05-09T09:00:00+00:00",
                     "description": "Toggl entry 1",
                 },
                 {
-                    "id": 2,
-                    "pid": 11,
+                    "id": "2",
+                    "pid": "11",
                     "start": "2019-05-13T07:42:55+00:00",
                     "stop": "2019-05-13T08:34:52+00:00",
                     "description": "Toggl entry 2",
                 },
                 {
-                    "id": 3,
-                    "pid": 20,
+                    "id": "3",
+                    "pid": "20",
                     "start": "2019-05-13T09:35:11+00:00",
                     "stop": "2019-05-13T10:34:02+00:00",
                     "description": "Toggl entry 3",
@@ -208,11 +209,11 @@ class Provider(AbstractProvider):
         elif endpoint == "clients" and method == 'get':
             return [
                 {
-                    "id": 1,
+                    "id": "1",
                     "name": "First Client",
                 },
                 {
-                    "id": 2,
+                    "id": "2",
                     "name": "Second Client",
                 },
             ]
@@ -220,11 +221,11 @@ class Provider(AbstractProvider):
             _clid = endpoint[8]
             return [
                 {
-                    "id": int(_clid) * 10,
+                    "id": str(int(_clid) * 10),
                     "name": "Development"
                 },
                 {
-                    "id": int(_clid) * 10 + 1,
+                    "id": str(int(_clid) * 10 + 1),
                     "name": "Bug fixing"
                 },
             ]
@@ -245,3 +246,4 @@ class Provider(AbstractProvider):
             return {'data': entry}
         elif endpoint.startswith("time_entries") and method == 'delete':
             return endpoint[13:]
+        return [{}]
