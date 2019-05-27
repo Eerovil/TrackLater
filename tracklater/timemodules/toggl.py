@@ -83,7 +83,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             project_id=new_entry.project
         )
         self.entries.append(Entry(
-            id=entry['id'],
+            id=_str(entry['id']),
             start_time=parse_time(entry['start']),
             end_time=parse_time(entry['stop']),
             title=entry['description'],

@@ -60,6 +60,12 @@ class Parser(object):
                 for entry in self.modules[module_name].entries:
                     entry.module = module_name
                     db.session.add(entry)
+                for issue in self.modules[module_name].issues:
+                    issue.module = module_name
+                    db.session.add(issue)
+                for project in self.modules[module_name].projects:
+                    project.module = module_name
+                    db.session.add(project)
                 db.session.commit()
 
                 logger.warning("Task done %s", module_name)

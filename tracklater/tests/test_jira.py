@@ -11,17 +11,6 @@ TEST_KEY = 'TEST'
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 
-@pytest.fixture(autouse=True)
-def mock_jira(monkeypatch):
-    monkeypatch.setattr('timemodules.jira.CACHE_LOCATION', DIRECTORY)
-
-    yield
-    try:
-        os.remove('{}/{}.jira-cache'.format(DIRECTORY, 'group1'))
-    except FileNotFoundError:
-        pass
-
-
 @pytest.fixture()
 def parser():
     _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())

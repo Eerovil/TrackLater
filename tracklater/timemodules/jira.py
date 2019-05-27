@@ -1,7 +1,6 @@
 import requests
 import settings
 import os
-import pickle
 import json
 
 from .interfaces import IssueMixin, AbstractParser, AbstractProvider
@@ -13,7 +12,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-CACHE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
 
 
@@ -34,20 +32,10 @@ class Parser(IssueMixin, AbstractParser):
 
     def get_group_issues(self, provider, group, group_settings) -> List[Issue]:
         issues: List[Issue] = []
-        filename = '{}/{}.jira-cache'.format(CACHE_LOCATION, group)
-        if os.path.exists(filename):
-            try:
-                with open(filename, 'rb') as f:
-                    issues = pickle.load(f)
-            except Exception:
-                print('cache error')
-                os.remove(filename)
-
         latest_issues = provider.fetch_issues(
             project_key=group_settings['PROJECT_KEY'],
             url=group_settings['URL']
         )
-        logging.warning('latest_issues: %s cached: %s', latest_issues['total'], len(issues))
         run_once = False
         while latest_issues['total'] - len(issues) > 0 or not run_once:
             run_once = True
@@ -72,8 +60,6 @@ class Parser(IssueMixin, AbstractParser):
                     group=group,
                     extra_data={'type': issue['fields']['issuetype']['name']},
                 ))
-        with open(filename, 'wb') as f:
-            pickle.dump(issues, f)
         return issues
 
 

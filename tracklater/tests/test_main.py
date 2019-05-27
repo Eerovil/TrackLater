@@ -1,31 +1,6 @@
-from main import Parser
-
-import pytest
-
 from timemodules.interfaces import AbstractProvider
 
-from datetime import datetime, timedelta
-
 from utils import obj_from_dict
-
-
-@pytest.fixture(autouse=True)
-def mock_main(monkeypatch):
-    monkeypatch.setattr('settings.ENABLED_MODULES', [
-        'jira',
-        'gitmodule',
-        'slack',
-    ])
-
-
-@pytest.fixture()
-def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
-    return _parser
-
-
-def test_parse(parser):
-    parser.parse()
 
 
 def test_obj_from_dict():
