@@ -8,14 +8,14 @@
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 1 Branch 1 First commit message",
-            "time": null
+            "time": [1234561, 0]
           },
           {
             "actor": {
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 1 Branch 1 Second commit message",
-            "time": null
+            "time": [1234562, 0]
           }
         ]
       },
@@ -26,21 +26,21 @@
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 1 Branch 2 First commit message",
-            "time": null
+            "time": [1234563, 0]
           },
           {
             "actor": {
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 1 Branch 2 Second commit message",
-            "time": null
+            "time": [1234564, 0]
           },
           {
             "actor": {
               "email": "other.guy@email.com"
             },
             "message": "commit: Repo 1 Branch 2 commit by someone else",
-            "time": null
+            "time": [1234565, 0]
           }
         ]
       }
@@ -55,14 +55,14 @@
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 2 Branch 1 First commit message",
-            "time": null
+            "time": [1234566, 0]
           },
           {
             "actor": {
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 2 Branch 1 Second commit message",
-            "time": null
+            "time": [1234567, 0]
           }
         ]
       }
@@ -77,14 +77,14 @@
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 3 Branch 1 First commit message",
-            "time": null
+            "time": [1234568, 0]
           },
           {
             "actor": {
               "email": "test.person@email.com"
             },
             "message": "commit: Repo 3 Branch 1 Second commit message",
-            "time": null
+            "time": [1234569, 0]
           }
         ]
       }

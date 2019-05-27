@@ -6,6 +6,9 @@ import settings
 
 from typing import Optional
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class ApiCall(db.Model):
     pk: int = Column(Integer, primary_key=True)
@@ -17,10 +20,9 @@ class ApiCall(db.Model):
 
 class Project(db.Model):
     __tablename__ = 'projects'
-    pk: int = Column(Integer, primary_key=True)
-    id: str = Column(String(50))
-    pid: str = Column(String(50))
-    module: str = Column(String(50))
+    module: str = Column(String(50), primary_key=True)
+    id: str = Column(String(50), primary_key=True, nullable=True)
+    pid: str = Column(String(50), primary_key=True, nullable=True)
     group: str = Column(String(50))
     title: str = Column(String(50))
 
@@ -34,10 +36,9 @@ class Project(db.Model):
 
 class Issue(db.Model):
     __tablename__ = 'issues'
-    pk: int = Column(Integer, primary_key=True)
-    id: str = Column(String(50))
-    key: str = Column(String(50))
-    module: str = Column(String(50))
+    module: str = Column(String(50), primary_key=True)
+    id: str = Column(String(50), primary_key=True, nullable=True)
+    key: str = Column(String(50), primary_key=True, nullable=True)
     group: str = Column(String(50))
     title: str = Column(String(50))
     uuid: Optional[str] = Column(String(50))
@@ -55,11 +56,10 @@ class Issue(db.Model):
 
 class Entry(db.Model):
     __tablename__ = 'entries'
-    pk: int = Column(Integer, primary_key=True)
-    id: str = Column(String(50))
-    module: str = Column(String(50))
+    module: str = Column(String(50), primary_key=True)
+    id: str = Column(String(50), primary_key=True, nullable=True)
+    start_time: datetime = Column(DateTime, primary_key=True)
     group: Optional[str] = Column(String(50))
-    start_time: datetime = Column(DateTime)
     end_time: Optional[datetime] = Column(DateTime)
     date_group: Optional[str] = Column(String(50))
     issue: Optional[str] = Column(String(50))  # Issue id

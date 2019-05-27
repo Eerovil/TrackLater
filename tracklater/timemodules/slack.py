@@ -108,12 +108,12 @@ class Provider(AbstractProvider):
                     {
                         "user": "1",
                         "text": "Second Message",
-                        "ts": "1234567"
+                        "ts": "1234568"
                     },
                     {
                         "user": "2",
                         "text": "Third Message",
-                        "ts": "1234567"
+                        "ts": "1234569"
                     }
                 ]
             }

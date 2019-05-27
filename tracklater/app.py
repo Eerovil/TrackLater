@@ -57,11 +57,15 @@ def fetchdata() -> Optional[str]:
             from_date = parseTimestamp(request.values['from'])
         else:
             from_date = now - timedelta(days=14)
-
         if 'to' in request.values:
             to_date = parseTimestamp(request.values['to'])
         else:
             to_date = now
+
+        if getattr(settings, 'OVERRIDE_START', None):
+            from_date = settings.OVERRIDE_START
+        if getattr(settings, 'OVERRIDE_END', None):
+            to_date = settings.OVERRIDE_END
 
         parser = Parser(from_date, to_date)
         parser.parse()
@@ -71,11 +75,11 @@ def fetchdata() -> Optional[str]:
             if keys == "all" or key in keys:
                 data[key] = {}
                 data[key]['entries'] = [entry.to_dict()
-                                        for entry in parser.modules[key].entries]
+                                        for entry in Entry.query.filter_by(module=key)]
                 data[key]['projects'] = [project.to_dict()
-                                         for project in parser.modules[key].projects]
+                                         for project in Project.query.filter_by(module=key)]
                 data[key]['issues'] = [issue.to_dict()
-                                       for issue in parser.modules[key].issues]
+                                       for issue in Issue.query.filter_by(module=key)]
                 data[key]['capabilities'] = parser.modules[key].capabilities
         return json.dumps(data, default=str)
     return None

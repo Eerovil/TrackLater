@@ -33,13 +33,13 @@ def reraise_with_stack(func):
 def store_parser_to_database(parser, module_name, start_date, end_date):
     for entry in parser.entries:
         entry.module = module_name
-        db.session.add(entry)
+        db.session.merge(entry)
     for issue in parser.issues:
         issue.module = module_name
-        db.session.add(issue)
+        db.session.merge(issue)
     for project in parser.projects:
         project.module = module_name
-        db.session.add(project)
+        db.session.merge(project)
     db.session.add(ApiCall(
         start_date=start_date,
         end_date=end_date,
