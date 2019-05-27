@@ -67,6 +67,45 @@ class AbstractParser(metaclass=ABCMeta):
         self.caching.entry_count = entry_count
         self.caching.project_count = project_count
 
+    def get_offset_dates(self):
+        """
+        Use cached api call start and end date to get a smart timeframe to use
+        e.g. We already have an api call for (Tue-Fri), and we try to get data for
+        (Mon-Wed). In this case this method returns (Mon-Tue).
+        """
+        if not self.caching.start_date or not self.caching.end_date:
+            return (self.start_date, self.end_date)
+
+        # ---a---c---a---c------
+        #    (   )
+        # ---a---c-------x------
+        #    (   )
+        # -a---a-c-------c------
+        #  (     )
+        if (self.caching.start_date > self.start_date
+                and self.caching.end_date >= self.end_date):
+            return (self.start_date, self.caching.start_date)
+
+        # ------c-a--a---c------
+        #
+        # ------x--------x------
+        #
+        if (self.caching.start_date <= self.start_date
+                and self.caching.end_date >= self.end_date):
+            return (None, None)
+
+        # ------c---a----c--a---
+        #                (  )
+        # ------c--------c-a--a-
+        #                (    )
+        # ------x--------c---a-
+        #                (   )
+        if (self.caching.start_date <= self.start_date
+                and self.caching.end_date < self.end_date):
+            return (self.caching.end_date, self.end_date)
+
+        # Other cases, just skip caching
+        return (self.start_date, self.end_date)
 
     @property
     def capabilities(self) -> List[str]:

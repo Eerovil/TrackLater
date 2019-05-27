@@ -13,6 +13,9 @@ from typing import List
 class Parser(EntryMixin, AbstractParser):
 
     def get_entries(self) -> List[Entry]:
+        start_date, end_date = self.get_offset_dates()
+        if not start_date and not end_date:
+            return []
         entries = []
         for group, group_data in settings.SLACK.items():
 
@@ -35,8 +38,8 @@ class Parser(EntryMixin, AbstractParser):
                     "conversations.history",
                     data={
                         'channel': channel['id'],
-                        'oldest': (self.start_date - datetime(1970, 1, 1)).total_seconds(),
-                        'latest': (self.end_date - datetime(1970, 1, 1)).total_seconds()
+                        'oldest': (start_date - datetime(1970, 1, 1)).total_seconds(),
+                        'latest': (end_date - datetime(1970, 1, 1)).total_seconds()
                     }
                 )
 

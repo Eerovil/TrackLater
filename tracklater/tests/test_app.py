@@ -102,3 +102,32 @@ def test_database_jira_caching(client, db: Any):
     # Hence, wwith testing data we get the 3 last issues as a response
     assert len(parser.issues) == 3
 
+
+def test_database_slack_caching(client, db: Any):
+    from timemodules.slack import Parser
+    from main import store_parser_to_database, set_parser_caching_data
+    start_date = datetime.now() - timedelta(days=7)
+    end_date = datetime.now()
+    parser = Parser(start_date, end_date)
+    parser.entries = parser.get_entries()
+    with app.app_context():
+        store_parser_to_database(parser, 'slack', start_date, end_date)
+
+    parser = Parser(start_date, end_date)
+    # Skip caching first
+    parser.entries = parser.get_entries()
+    # We get 2 entries again
+    assert len(parser.entries) == 2
+
+    parser = Parser(start_date, end_date)
+    with app.app_context():
+        set_parser_caching_data(parser, 'slack')  # Fetch caching values
+    parser.entries = parser.get_entries()
+    # Since we already fetched entries for there dates we don't get any new ones
+    assert len(parser.entries) == 0
+
+    parser = Parser(start_date, end_date + timedelta(hours=1))
+    with app.app_context():
+        set_parser_caching_data(parser, 'slack')  # Fetch caching values
+    parser.entries = parser.get_entries()
+    assert len(parser.entries) == 2
