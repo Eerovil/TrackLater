@@ -10,6 +10,8 @@ from timemodules.interfaces import AbstractParser
 from typing import Dict
 from types import ModuleType
 
+from models import ApiCall
+
 from database import db
 
 import traceback
@@ -66,6 +68,11 @@ class Parser(object):
                 for project in self.modules[module_name].projects:
                     project.module = module_name
                     db.session.add(project)
+                db.session.add(ApiCall(
+                    start_date=self.start_date,
+                    end_date=self.end_date,
+                    module=module_name
+                ))
                 db.session.commit()
 
                 logger.warning("Task done %s", module_name)

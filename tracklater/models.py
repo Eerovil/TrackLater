@@ -7,6 +7,14 @@ import settings
 from typing import Optional
 
 
+class ApiCall(db.Model):
+    pk: int = Column(Integer, primary_key=True)
+    module: str = Column(String(50), nullable=False)
+    created = Column(DateTime, default=datetime.utcnow)
+    start_date: datetime = Column(DateTime)
+    end_date: Optional[datetime] = Column(DateTime)
+
+
 class Project(db.Model):
     __tablename__ = 'projects'
     pk: int = Column(Integer, primary_key=True)

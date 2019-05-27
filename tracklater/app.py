@@ -10,7 +10,7 @@ from typing import Optional, Dict
 
 from requests.models import Response
 
-from models import Entry
+from models import Entry, Issue, Project, ApiCall  # noqa
 
 from timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 
