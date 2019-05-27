@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, PickleType
 from database import db
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import settings
 
 from typing import Optional
 
@@ -34,9 +35,6 @@ class Issue(db.Model):
     uuid: Optional[str] = Column(String(50))
     extra_data: dict = Column(PickleType)  # For custom js
 
-    # def __post_init__(self) -> None:
-    #     self.uuid = _str(uuid.uuid4())
-
     def to_dict(self):
         return {
             "title": self.title,
@@ -62,17 +60,18 @@ class Entry(db.Model):
     text: str = Column(Text())  # Text to show in timeline hover
     extra_data: dict = Column(PickleType)  # For custom js
 
-    # def __post_init__(self) -> None:
-    #     # Calculate date_group immediately
-    #     item_time = self.start_time
-    #     offset = None
-    #     if item_time.tzinfo:
-    #         offset = item_time.tzinfo.utcoffset(None)
-    #     _cutoff = getattr(settings, 'CUTOFF_HOUR', 3) + (getattr(offset, 'seconds', 0) / 3600)
-    #     if item_time.hour >= _cutoff:
-    #         self.date_group = item_time.strftime('%Y-%m-%d')
-    #     else:
-    #         self.date_group = (item_time - timedelta(days=1)).strftime('%Y-%m-%d')
+    def __init__(self, **kwargs):
+        super(Entry, self).__init__(**kwargs)
+        # Calculate date_group immediately
+        item_time = self.start_time
+        offset = None
+        if item_time.tzinfo:
+            offset = item_time.tzinfo.utcoffset(None)
+        _cutoff = getattr(settings, 'CUTOFF_HOUR', 3) + (getattr(offset, 'seconds', 0) / 3600)
+        if item_time.hour >= _cutoff:
+            self.date_group = item_time.strftime('%Y-%m-%d')
+        else:
+            self.date_group = (item_time - timedelta(days=1)).strftime('%Y-%m-%d')
 
     @property
     def duration(self) -> int:

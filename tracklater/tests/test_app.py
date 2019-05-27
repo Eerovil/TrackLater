@@ -40,6 +40,8 @@ def test_database_entries(client, db: Any):
     from timemodules.toggl import Parser
     parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
     entries = parser.get_entries()
+    assert entries[0].date_group
+
     with app.app_context():
         for entry in entries:
             entry.module = 'toggl'
