@@ -31,20 +31,23 @@ class Parser(IssueMixin, AbstractParser):
         return issues
 
     def get_group_issues(self, provider, group, group_settings) -> List[Issue]:
+        cached_issues = self.caching.issue_count or 0
         issues: List[Issue] = []
         latest_issues = provider.fetch_issues(
             project_key=group_settings['PROJECT_KEY'],
             url=group_settings['URL']
         )
         run_once = False
-        while latest_issues['total'] - len(issues) > 0 or not run_once:
+        while latest_issues['total'] - (cached_issues + len(issues)) > 0 or not run_once:
             run_once = True
-            logging.info('Fetching issues %s to %s',
-                         len(issues), len(issues) + provider.ISSUES_PER_PAGE)
+            logging.info(
+                'Fetching issues %s to %s',
+                cached_issues + len(issues), cached_issues + len(issues) + provider.ISSUES_PER_PAGE
+            )
             new_issues = provider.fetch_issues(
                 url=group_settings['URL'],
                 project_key=group_settings['PROJECT_KEY'],
-                start_from=(len(issues))
+                start_from=(cached_issues + len(issues))
             )['issues']
             for issue in new_issues:
                 exists = False

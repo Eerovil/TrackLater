@@ -4,6 +4,16 @@ import settings
 from abc import ABCMeta, abstractmethod
 
 from models import Entry, Issue, Project
+from dataclasses import dataclass
+
+
+@dataclass
+class CachingData:
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    issue_count: Optional[int] = None
+    entry_count: Optional[int] = None
+    project_count: Optional[int] = None
 
 
 def testing_decorator(func):
@@ -47,6 +57,16 @@ class AbstractParser(metaclass=ABCMeta):
         self.entries: List[Entry] = []
         self.projects: List[Project] = []
         self.issues: List[Issue] = []
+        self.caching: CachingData = CachingData()
+
+    def set_database_values(self, start_date=None, end_date=None, issue_count=None,
+                            entry_count=None, project_count=None) -> None:
+        self.caching.start_date = start_date
+        self.caching.end_date = end_date
+        self.caching.issue_count = issue_count
+        self.caching.entry_count = entry_count
+        self.caching.project_count = project_count
+
 
     @property
     def capabilities(self) -> List[str]:

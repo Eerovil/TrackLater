@@ -10,7 +10,7 @@ from timemodules.interfaces import AbstractParser
 from typing import Dict
 from types import ModuleType
 
-from models import ApiCall
+from models import ApiCall, Entry, Issue, Project
 
 from database import db
 
@@ -30,6 +30,36 @@ def reraise_with_stack(func):
     return wrapped
 
 
+def store_parser_to_database(parser, module_name, start_date, end_date):
+    for entry in parser.entries:
+        entry.module = module_name
+        db.session.add(entry)
+    for issue in parser.issues:
+        issue.module = module_name
+        db.session.add(issue)
+    for project in parser.projects:
+        project.module = module_name
+        db.session.add(project)
+    db.session.add(ApiCall(
+        start_date=start_date,
+        end_date=end_date,
+        module=module_name
+    ))
+    db.session.commit()
+
+
+def set_parser_caching_data(parser, module_name):
+    apicall = ApiCall.query.filter_by(module=module_name).order_by('created').first()
+    if apicall:
+        parser.set_database_values(
+            start_date=apicall.start_date,
+            end_date=apicall.end_date,
+            issue_count=Issue.query.filter_by(module=module_name).count(),
+            entry_count=Entry.query.filter_by(module=module_name).count(),
+            project_count=Project.query.filter_by(module=module_name).count(),
+        )
+
+
 class Parser(object):
     def __init__(self, start_date, end_date) -> None:
         self.start_date = start_date
@@ -47,6 +77,7 @@ class Parser(object):
                 if getattr(module, 'Parser', None) is None:
                     logger.warning('Module %s has no Parser class', module_name)
                 parser = module.Parser(self.start_date, self.end_date)  # type: ignore
+                set_parser_caching_data(parser, module_name)
                 self.modules[module_name] = parser
                 running_tasks[module_name] = executor.submit(reraise_with_stack(parser.parse))
                 logger.warning("Parsing %s", module_name)
@@ -59,20 +90,8 @@ class Parser(object):
                         break
                 if task.exception():
                     logger.exception("Exception in %s: %s", module_name, task.exception())
-                for entry in self.modules[module_name].entries:
-                    entry.module = module_name
-                    db.session.add(entry)
-                for issue in self.modules[module_name].issues:
-                    issue.module = module_name
-                    db.session.add(issue)
-                for project in self.modules[module_name].projects:
-                    project.module = module_name
-                    db.session.add(project)
-                db.session.add(ApiCall(
-                    start_date=self.start_date,
-                    end_date=self.end_date,
-                    module=module_name
-                ))
-                db.session.commit()
+
+                store_parser_to_database(self.modules[module_name], module_name,
+                                         start_date=self.start_date, end_date=self.end_date)
 
                 logger.warning("Task done %s", module_name)

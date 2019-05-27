@@ -38,43 +38,67 @@ def test_app_fetchdata(client):
 
 def test_database_entries(client, db: Any):
     from timemodules.toggl import Parser
-    parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
-    entries = parser.get_entries()
-    assert entries[0].date_group
-
+    from main import store_parser_to_database
+    start_date = datetime.now() - timedelta(days=7)
+    end_date = datetime.now()
+    parser = Parser(start_date, end_date)
+    parser.entries = parser.get_entries()
     with app.app_context():
-        for entry in entries:
-            entry.module = 'toggl'
-            db.session.add(entry)
-        db.session.commit()
+        store_parser_to_database(parser, 'toggl', start_date, end_date)
 
         db_entries = Entry.query.all()
-        assert len(entries) == len(db_entries)
+        assert len(parser.entries) == len(db_entries)
 
 
 def test_database_projects(client, db: Any):
     from timemodules.toggl import Parser
-    parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
-    projects = parser.get_projects()
+    from main import store_parser_to_database
+    start_date = datetime.now() - timedelta(days=7)
+    end_date = datetime.now()
+    parser = Parser(start_date, end_date)
+    parser.projects = parser.get_projects()
     with app.app_context():
-        for project in projects:
-            project.module = 'toggl'
-            db.session.add(project)
-        db.session.commit()
+        store_parser_to_database(parser, 'toggl', start_date, end_date)
 
         db_projects = Project.query.all()
-        assert len(projects) == len(db_projects)
+        assert len(parser.projects) == len(db_projects)
 
 
 def test_database_issues(client, db: Any):
     from timemodules.jira import Parser
-    parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
-    issues = parser.get_issues()
+    from main import store_parser_to_database
+    start_date = datetime.now() - timedelta(days=7)
+    end_date = datetime.now()
+    parser = Parser(start_date, end_date)
+    parser.issues = parser.get_issues()
     with app.app_context():
-        for issue in issues:
-            issue.module = 'jira'
-            db.session.add(issue)
-        db.session.commit()
+        store_parser_to_database(parser, 'jira', start_date, end_date)
 
         db_issues = Issue.query.all()
-        assert len(issues) == len(db_issues)
+        assert len(parser.issues) == len(db_issues)
+
+
+def test_database_jira_caching(client, db: Any):
+    from timemodules.jira import Parser
+    from main import store_parser_to_database, set_parser_caching_data
+    start_date = datetime.now() - timedelta(days=7)
+    end_date = datetime.now()
+    parser = Parser(start_date, end_date)
+    parser.issues = parser.get_issues()
+    with app.app_context():
+        store_parser_to_database(parser, 'jira', start_date, end_date)
+
+    parser = Parser(start_date, end_date)
+    # Skip caching first
+    parser.issues = parser.get_issues()
+    # We get 6 issues again
+    assert len(parser.issues) == 6
+
+    parser = Parser(start_date, end_date)
+    with app.app_context():
+        set_parser_caching_data(parser, 'jira')  # Fetch caching values
+    parser.issues = parser.get_issues()
+    # Since all 6 are already in database, get_issues should just run once (check jira.py)
+    # Hence, wwith testing data we get the 3 last issues as a response
+    assert len(parser.issues) == 3
+
