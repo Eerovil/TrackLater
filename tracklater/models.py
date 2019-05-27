@@ -56,7 +56,7 @@ class Entry(db.Model):
     date_group: Optional[str] = Column(String(50))
     issue: Optional[str] = Column(String(50))  # Issue id
     project: Optional[str] = Column(String(50))  # Project id
-    title: str = Column(String(255))  # Title to show in timeline
+    title: str = Column(String(255), default="")  # Title to show in timeline
     text: str = Column(Text())  # Text to show in timeline hover
     extra_data: dict = Column(PickleType)  # For custom js
 
