@@ -169,7 +169,7 @@ class IssueMixin(AbstractParser):
 
 class AddEntryMixin(AbstractParser):
     @abstractmethod
-    def create_entry(self, new_entry: Entry, issue: Issue) -> str:
+    def create_entry(self, new_entry: Entry, issue: Issue) -> Entry:
         raise NotImplementedError()
 
     @property
@@ -191,7 +191,7 @@ class DeleteEntryMixin(AbstractParser):
 
 class UpdateEntryMixin(AbstractParser):
     @abstractmethod
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> None:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> Entry:
         raise NotImplementedError()
 
     @property

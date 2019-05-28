@@ -86,7 +86,10 @@ function listModules() {
 function getSessions() {
     $.ajax('fetchdata', {
         contentType: 'application/json',
-        dataType: 'json'
+        dataType: 'json',
+        data: {
+            parse: "0"
+        }
     })
     .fail(_handleFailure)
     .done((data) => {

@@ -78,7 +78,8 @@ def fetchdata() -> Optional[str]:
                 data[key]['entries'] = [entry.to_dict()
                                         for entry in Entry.query.filter(
                                             Entry.module == key,
-                                            Entry.start_time >= from_date
+                                            Entry.start_time >= from_date,
+                                            Entry.start_time <= to_date
                                         )]
                 data[key]['projects'] = [project.to_dict()
                                          for project in Project.query.filter(
@@ -103,67 +104,65 @@ def parseTimestamp(stamp):
 
 @app.route('/updateentry', methods=['POST'])
 def updateentry() -> Optional[str]:
-    if State.parser is None:
-        return "Run fetchdata first"
     if request.method == 'POST':
         module = request.values.get('module')
         entry_id = _str(request.values.get('entry_id', None))
+        project = request.values.get('project_id', None)
+        if project == "null":
+            project = None
         new_entry = Entry(
             start_time=parseTimestamp(request.values['start_time']),
             end_time=parseTimestamp(request.values.get('end_time', None)),
             id=entry_id,
             issue=request.values.get('issue_id', None),
-            project=request.values['project_id'],
+            project=project,
             title=request.values.get('title', ''),
             text=request.values.get('text', ""),
             extra_data=request.values.get('extra_data', {})
         )
         issue = None
         if new_entry.issue:
-            for _module in settings.ENABLED_MODULES:
-                if 'issues' not in State.parser.modules[_module].capabilities:
-                    continue
-                _tmp = State.parser.modules[_module].find_issue(new_entry.issue)  # type: ignore
-                if _tmp:
-                    issue = _tmp
-                    break
+            issue = Issue.query.filter(Issue.uuid == new_entry.issue).first()
+
+        parser = Parser(None, None)
 
         if not entry_id:
             # Check that create is allowed
-            assert isinstance(State.parser.modules[module], AddEntryMixin)
-            entry_id = State.parser.modules[module].create_entry(  # type: ignore
+            assert isinstance(parser.modules[module], AddEntryMixin)
+            new_entry = parser.modules[module].create_entry(  # type: ignore
                 new_entry=new_entry,
                 issue=issue
             )
         else:
             # Check that update is allowed
-            assert isinstance(State.parser.modules[module], UpdateEntryMixin)
-            State.parser.modules[module].update_entry(  # type: ignore
+            assert isinstance(parser.modules[module], UpdateEntryMixin)
+            new_entry = parser.modules[module].update_entry(  # type: ignore
                 entry_id=new_entry.id,
                 new_entry=new_entry,
                 issue=issue
             )
+        data = "error"
 
-        data = [
-            entry.to_dict()
-            for entry in State.parser.modules[module].entries
-            if entry.id == entry_id
-        ][0]
+        if new_entry:
+            new_entry.module = module
+            db.session.merge(new_entry)
+            db.session.commit()
+            data = new_entry.to_dict()
+
         return json.dumps(data, default=str)
     return None
 
 
 @app.route('/deleteentry', methods=['POST'])
 def deleteentry() -> Optional[str]:
-    if State.parser is None:
-        return "Run fetchdata first"
     if request.method == 'POST':
         module = request.values.get('module')
         entry_id = request.values.get('entry_id')
 
+        parser = Parser(None, None)
         # Check that delete is allowed
-        assert isinstance(State.parser.modules[module], AddEntryMixin)
-        ret = State.parser.modules[module].delete_entry(  # type: ignore
+        assert isinstance(parser.modules[module], AddEntryMixin)
+        ret = parser.modules[module].delete_entry(  # type: ignore
             entry_id=entry_id
         )
 

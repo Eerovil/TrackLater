@@ -73,7 +73,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 ))
         return projects
 
-    def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> str:
+    def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -82,16 +82,15 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             name=new_entry.title,
             project_id=new_entry.project
         )
-        self.entries.append(Entry(
+        return Entry(
             id=_str(entry['id']),
             start_time=parse_time(entry['start']),
             end_time=parse_time(entry['stop']),
             title=entry['description'],
             project=entry.get('pid', None),
-        ))
-        return _str(entry['id']) or entry['id']
+        )
 
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> None:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         updated_entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -102,14 +101,13 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             project_id=new_entry.project
         )
 
-        for i, entry in enumerate(self.entries):
-            if entry.id == str(updated_entry['id']):
-                entry.start_time = parse_time(updated_entry['start'])
-                entry.end_time = parse_time(updated_entry['stop'])
-                entry.title = updated_entry.get('description', '')
-                entry.project = updated_entry.get('pid')
-                self.entries[i] = entry
-                break
+        return Entry(
+            id=_str(updated_entry['id']),
+            start_time=parse_time(updated_entry['start']),
+            end_time=parse_time(updated_entry['stop']),
+            title=updated_entry['description'],
+            project=updated_entry.get('pid', None),
+        )
 
     def delete_entry(self, entry_id: str) -> None:
         removed_id = self.delete_time_entry(entry_id)
@@ -180,7 +178,12 @@ class Provider(AbstractProvider):
             del kwargs['method']
         except KeyError:
             pass
-        return getattr(requests, method)(url, **kwargs).json()
+        response = getattr(requests, method)(url, **kwargs)
+        try:
+            return response.json()
+        except Exception as e:
+            logger.exception("%s: %s", response.content, e)
+            raise
 
     def test_request(self, endpoint: str, **kwargs) -> Union[List[dict], dict, str]:
         method = kwargs.get('method', 'POST').lower()
