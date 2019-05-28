@@ -66,22 +66,23 @@ class Parser(object):
         self.end_date = end_date
         self.modules: Dict[str, AbstractParser] = {}
 
+        for module_name in settings.ENABLED_MODULES:
+            module: ModuleType = importlib.import_module(
+                'timemodules.{}'.format(module_name)
+            )
+            if getattr(module, 'Parser', None) is None:
+                logger.warning('Module %s has no Parser class', module_name)
+            parser = module.Parser(self.start_date, self.end_date)  # type: ignore
+            self.modules[module_name] = parser
+
     def parse(self) -> None:
         with ThreadPoolExecutor() as executor:
             running_tasks = {}
 
-            for module_name in settings.ENABLED_MODULES:
-                module: ModuleType = importlib.import_module(
-                    'timemodules.{}'.format(module_name)
-                )
-                if getattr(module, 'Parser', None) is None:
-                    logger.warning('Module %s has no Parser class', module_name)
-                parser = module.Parser(self.start_date, self.end_date)  # type: ignore
+            for module_name, parser in self.modules.items():
                 set_parser_caching_data(parser, module_name)
-                self.modules[module_name] = parser
                 running_tasks[module_name] = executor.submit(reraise_with_stack(parser.parse))
                 logger.warning("Parsing %s", module_name)
-                parser = None
 
             for task in as_completed([value for key, value in running_tasks.items()]):
                 for key, value in running_tasks.items():

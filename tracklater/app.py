@@ -52,6 +52,7 @@ def listmodules() -> Optional[str]:
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.get('keys[]', 'all')
+        parse = request.values.get('parse', '1')
         now = datetime.now()
         if 'from' in request.values:
             from_date = parseTimestamp(request.values['from'])
@@ -68,18 +69,25 @@ def fetchdata() -> Optional[str]:
             to_date = settings.OVERRIDE_END
 
         parser = Parser(from_date, to_date)
-        parser.parse()
-        State.parser = parser
+        if parse == '1':
+            parser.parse()
         data: Dict[str, Dict] = {}
         for key in settings.ENABLED_MODULES:
             if keys == "all" or key in keys:
                 data[key] = {}
                 data[key]['entries'] = [entry.to_dict()
-                                        for entry in Entry.query.filter_by(module=key)]
+                                        for entry in Entry.query.filter(
+                                            Entry.module == key,
+                                            Entry.start_time >= from_date
+                                        )]
                 data[key]['projects'] = [project.to_dict()
-                                         for project in Project.query.filter_by(module=key)]
+                                         for project in Project.query.filter(
+                                            Project.module == key
+                                        )]
                 data[key]['issues'] = [issue.to_dict()
-                                       for issue in Issue.query.filter_by(module=key)]
+                                       for issue in Issue.query.filter(
+                                            Issue.module == key
+                                        )]
                 data[key]['capabilities'] = parser.modules[key].capabilities
         return json.dumps(data, default=str)
     return None
