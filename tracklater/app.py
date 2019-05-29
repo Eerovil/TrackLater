@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, date
 import json
 import pytz
 from typing import Optional, Dict
+import os
 
 from requests.models import Response
 
@@ -17,8 +18,9 @@ from timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 app = Flask(__name__)
 
 logger = app.logger
+DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}/database.db'.format(DIRECTORY)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():

@@ -8,17 +8,19 @@ from datetime import datetime, timedelta
 
 from models import Entry, Issue, Project
 
+DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+
 
 @pytest.fixture
 def client(db):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database_testing.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}/database_testing.db'.format(DIRECTORY)
     client = app.test_client()
     db.init_app(app)
     with app.app_context():
         db.create_all()
 
     yield client
-    os.remove("database_testing.db")
+    os.remove("{}/database_testing.db".format(DIRECTORY))
 
 
 def test_app_root(client):
