@@ -2,8 +2,9 @@
 from slack import WebClient
 import settings
 from datetime import datetime
-from utils import FixedOffset
-from timemodules.interfaces import Entry, EntryMixin, AbstractParser, AbstractProvider
+from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
+
+from models import Entry
 
 from typing import List
 
@@ -11,6 +12,9 @@ from typing import List
 class Parser(EntryMixin, AbstractParser):
 
     def get_entries(self) -> List[Entry]:
+        start_date, end_date = self.get_offset_dates()
+        if not start_date and not end_date:
+            return []
         entries = []
         for group, group_data in settings.SLACK.items():
 
@@ -33,8 +37,8 @@ class Parser(EntryMixin, AbstractParser):
                     "conversations.history",
                     data={
                         'channel': channel['id'],
-                        'oldest': (self.start_date - datetime(1970, 1, 1)).total_seconds(),
-                        'latest': (self.end_date - datetime(1970, 1, 1)).total_seconds()
+                        'oldest': (start_date - datetime(1970, 1, 1)).total_seconds(),
+                        'latest': (end_date - datetime(1970, 1, 1)).total_seconds()
                     }
                 )
 
@@ -46,9 +50,7 @@ class Parser(EntryMixin, AbstractParser):
 
                 for message in history['messages']:
                     if message.get('user', '') == user_id:
-                        start_time = datetime.fromtimestamp(
-                            float(message['ts']), tz=FixedOffset(0, 'Helsinki')
-                        )
+                        start_time = datetime.fromtimestamp(float(message['ts']))
                         # Replace @User id with the name
                         for _user_id in users.keys():
                             if _user_id in message['text']:
@@ -58,7 +60,7 @@ class Parser(EntryMixin, AbstractParser):
                         entries.append(Entry(
                             start_time=start_time,
                             title='',
-                            text=['{} - {}'.format(group, channel_info), message['text']]
+                            text="{} - {} \n {}".format(group, channel_info, message['text'])
                         ))
         return entries
 
@@ -103,12 +105,12 @@ class Provider(AbstractProvider):
                     {
                         "user": "1",
                         "text": "Second Message",
-                        "ts": "1234567"
+                        "ts": "1234568"
                     },
                     {
                         "user": "2",
                         "text": "Third Message",
-                        "ts": "1234567"
+                        "ts": "1234569"
                     }
                 ]
             }

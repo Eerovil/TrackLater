@@ -1,12 +1,12 @@
 import re
 from datetime import timedelta, tzinfo
 from dateutil import parser as dateparser
-
+import pytz
 from typing import Any, Optional
 
 
 def parse_time(timestr: str):
-    return dateparser.parse(timestr)
+    return dateparser.parse(timestr).astimezone(pytz.utc).replace(tzinfo=None)
 
 
 def _str(obj: Any) -> Optional[str]:

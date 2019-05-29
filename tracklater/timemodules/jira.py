@@ -1,10 +1,10 @@
 import requests
 import settings
 import os
-import pickle
 import json
 
-from .interfaces import IssueMixin, AbstractParser, AbstractProvider, Issue
+from .interfaces import IssueMixin, AbstractParser, AbstractProvider
+from models import Issue
 
 from typing import Any, List
 
@@ -12,7 +12,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-CACHE_LOCATION = os.path.dirname(os.path.realpath(__file__))
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
 
 
@@ -32,30 +31,23 @@ class Parser(IssueMixin, AbstractParser):
         return issues
 
     def get_group_issues(self, provider, group, group_settings) -> List[Issue]:
+        cached_issues = self.caching.issue_count or 0
         issues: List[Issue] = []
-        filename = '{}/{}.jira-cache'.format(CACHE_LOCATION, group)
-        if os.path.exists(filename):
-            try:
-                with open(filename, 'rb') as f:
-                    issues = pickle.load(f)
-            except Exception:
-                print('cache error')
-                os.remove(filename)
-
         latest_issues = provider.fetch_issues(
             project_key=group_settings['PROJECT_KEY'],
             url=group_settings['URL']
         )
-        logging.warning('latest_issues: %s cached: %s', latest_issues['total'], len(issues))
         run_once = False
-        while latest_issues['total'] - len(issues) > 0 or not run_once:
+        while latest_issues['total'] - (cached_issues + len(issues)) > 0 or not run_once:
             run_once = True
-            logging.info('Fetching issues %s to %s',
-                         len(issues), len(issues) + provider.ISSUES_PER_PAGE)
+            logging.info(
+                'Fetching issues %s to %s',
+                cached_issues + len(issues), cached_issues + len(issues) + provider.ISSUES_PER_PAGE
+            )
             new_issues = provider.fetch_issues(
                 url=group_settings['URL'],
                 project_key=group_settings['PROJECT_KEY'],
-                start_from=(len(issues))
+                start_from=(cached_issues + len(issues))
             )['issues']
             for issue in new_issues:
                 exists = False
@@ -71,8 +63,6 @@ class Parser(IssueMixin, AbstractParser):
                     group=group,
                     extra_data={'type': issue['fields']['issuetype']['name']},
                 ))
-        with open(filename, 'wb') as f:
-            pickle.dump(issues, f)
         return issues
 
 

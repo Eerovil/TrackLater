@@ -46,9 +46,14 @@ $(document).ready(function() {
 
 Date.prototype.addHours= function(h){
     var copiedDate = new Date();
-    copiedDate.setTime(this.getTime() + (h*60*60*1000)); 
+    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000)); 
     return copiedDate;
 }
+
+Date.prototype.getTimeUTC = function() {
+    return (this.getTime() + (this.getTimezoneOffset() * 60 * 1000))
+}
+
 
 function _handleFailure(jqXHR, textStatus, errorThrown) {
     document.open();
@@ -86,7 +91,10 @@ function listModules() {
 function getSessions() {
     $.ajax('fetchdata', {
         contentType: 'application/json',
-        dataType: 'json'
+        dataType: 'json',
+        data: {
+            parse: "1"
+        }
     })
     .fail(_handleFailure)
     .done((data) => {
@@ -149,8 +157,8 @@ function createEntry() {
     const entry_module = global_selected.module_name;
     $.post('updateentry', {
         'module': module_name,
-        'start_time': first_entry.start_time.getTime(),
-        'end_time': (last_entry.end_time || last_entry.start_time).getTime(),
+        'start_time': first_entry.start_time.getTimeUTC(),
+        'end_time': (last_entry.end_time || last_entry.start_time).getTimeUTC(),
         'title': $('#actions input.description').val(),
         'project_id': $('#project').val(),
     }, function(data) {
@@ -170,8 +178,8 @@ function updateEntry(module_name, entry, start_time, end_time, project_id) {
     $.post('updateentry', {
         'module': module_name,
         'entry_id': entry.id,
-        'start_time': start_time.getTime(),
-        'end_time': end_time.getTime(),
+        'start_time': start_time.getTimeUTC(),
+        'end_time': end_time.getTimeUTC(),
         'title': $('#actions input.description').val(),
         'issue_id': entry.issue,
         'project_id': project_id,
@@ -235,7 +243,7 @@ function makeRow(module_name, entry) {
         group: module_name,
         className: module_name,
         content: entry.title,
-        title: entry.text.join("<br />"),
+        title: (entry.text || "").replace(/(?:\r\n|\r|\n)/g, '<br />'),
         editable: capabilities[module_name].includes('updateentry'),
     };
     if (entry.end_time != undefined) {
@@ -280,7 +288,7 @@ function updateTable() {
         var items = new vis.DataSet(rows);
         chartItems[date_group] = items;
 
-        let firstDate = new Date(rows.sort((a, b) => {a.start < b.start ? -1 : 1})[0].start.getTime());
+        let firstDate = new Date(rows.sort((a, b) => {a.start < b.start ? -1 : 1})[0].start.getTimeUTC());
         const day_start = firstDate.setHours(6, 0, 0, 0);
         const day_end = firstDate.setHours(26, 0, 0, 0);
 

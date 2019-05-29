@@ -2,19 +2,15 @@ from timemodules.taiga import Parser
 
 import pytest
 import os
-import pytz
-import settings
 
 from datetime import datetime, timedelta
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-HEL = pytz.timezone(settings.TIMEZONE)
-
 
 @pytest.fixture()
 def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
+    _parser = Parser(datetime.utcnow() - timedelta(days=7), datetime.utcnow())
     return _parser
 
 

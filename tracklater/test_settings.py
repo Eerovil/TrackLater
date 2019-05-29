@@ -3,7 +3,14 @@ TESTING = True
 
 ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
-TIMEZONE = 'Europe/Helsinki'
+from datetime import datetime, timedelta
+
+OVERRIDE_START = datetime.fromtimestamp(
+    1234560
+) - timedelta(days=4)
+OVERRIDE_END = datetime.fromtimestamp(
+    1234560
+) + timedelta(days=4)
 
 UI_SETTINGS = {
     'toggl': {
@@ -80,7 +87,7 @@ TOGGL = {
     }
 }
 
-THYME = {
+THYME = {  # type: ignore
     'global': {
     }
 }

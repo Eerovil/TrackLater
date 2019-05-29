@@ -1,102 +1,19 @@
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict
-from datetime import datetime, timedelta
+from typing import List, Optional
+from datetime import datetime
 import settings
 from abc import ABCMeta, abstractmethod
 
-from utils import _str
-
-import uuid
-
-
-@dataclass
-class Project:
-    title: str
-    id: str
-    group: str
-
-    def __post_init__(self) -> None:
-        # ensure ids are str
-        self.id = _str(self.id) or self.id
-
-    def to_dict(self):
-        return {
-            "title": self.title,
-            "id": self.id,
-            "group": self.group,
-        }
+from models import Entry, Issue, Project
+from dataclasses import dataclass
 
 
 @dataclass
-class Issue:
-    key: str
-    title: str
-    group: str
-    uuid: Optional[str] = None
-    extra_data: Dict = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        self.uuid = _str(uuid.uuid4())
-
-    def to_dict(self):
-        return {
-            "title": self.title,
-            "key": self.key,
-            "group": self.group,
-            "extra_data": self.extra_data,
-            "uuid": self.uuid
-        }
-
-
-@dataclass
-class Entry:
-    start_time: datetime
-    id: Optional[str] = None
-    end_time: Optional[datetime] = None
-    date_group: Optional[str] = None
-    issue: Optional[str] = None  # Issue id
-    group: Optional[str] = None
-    project: Optional[str] = None  # Project id
-    title: str = ""  # Title to show in timeline
-    text: List[str] = field(default_factory=list)  # Text to show in timeline hover
-    extra_data: Dict = field(default_factory=dict)  # For custom js
-
-    def __post_init__(self) -> None:
-        # ensure ids are str
-        self.id = _str(self.id)
-        self.project = _str(self.project)
-        self.issue = _str(self.issue)
-
-        # Calculate date_group immediately
-        item_time = self.start_time
-        offset = None
-        if item_time.tzinfo:
-            offset = item_time.tzinfo.utcoffset(None)
-        _cutoff = getattr(settings, 'CUTOFF_HOUR', 3) + (getattr(offset, 'seconds', 0) / 3600)
-        if item_time.hour >= _cutoff:
-            self.date_group = item_time.strftime('%Y-%m-%d')
-        else:
-            self.date_group = (item_time - timedelta(days=1)).strftime('%Y-%m-%d')
-
-    @property
-    def duration(self) -> int:
-        if not self.end_time:
-            return 0
-        return int((self.end_time - self.start_time).total_seconds())
-
-    def to_dict(self):
-        return {
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "id": self.id,
-            "date_group": self.date_group,
-            "issue": self.issue,
-            "project": self.project,
-            "title": self.title,
-            "text": self.text,
-            "extra_data": self.extra_data,
-            "duration": self.duration
-        }
+class CachingData:
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    issue_count: Optional[int] = None
+    entry_count: Optional[int] = None
+    project_count: Optional[int] = None
 
 
 def testing_decorator(func):
@@ -140,6 +57,55 @@ class AbstractParser(metaclass=ABCMeta):
         self.entries: List[Entry] = []
         self.projects: List[Project] = []
         self.issues: List[Issue] = []
+        self.caching: CachingData = CachingData()
+
+    def set_database_values(self, start_date=None, end_date=None, issue_count=None,
+                            entry_count=None, project_count=None) -> None:
+        self.caching.start_date = start_date
+        self.caching.end_date = end_date
+        self.caching.issue_count = issue_count
+        self.caching.entry_count = entry_count
+        self.caching.project_count = project_count
+
+    def get_offset_dates(self):
+        """
+        Use cached api call start and end date to get a smart timeframe to use
+        e.g. We already have an api call for (Tue-Fri), and we try to get data for
+        (Mon-Wed). In this case this method returns (Mon-Tue).
+        """
+        if not self.caching.start_date or not self.caching.end_date:
+            return (self.start_date, self.end_date)
+
+        # ---a---c---a---c------
+        #    (   )
+        # ---a---c-------x------
+        #    (   )
+        # -a---a-c-------c------
+        #  (     )
+        if (self.caching.start_date > self.start_date
+                and self.caching.end_date >= self.end_date):
+            return (self.start_date, self.caching.start_date)
+
+        # ------c-a--a---c------
+        #
+        # ------x--------x------
+        #
+        if (self.caching.start_date <= self.start_date
+                and self.caching.end_date >= self.end_date):
+            return (None, None)
+
+        # ------c---a----c--a---
+        #                (  )
+        # ------c--------c-a--a-
+        #                (    )
+        # ------x--------c---a-
+        #                (   )
+        if (self.caching.start_date <= self.start_date
+                and self.caching.end_date < self.end_date):
+            return (self.caching.end_date, self.end_date)
+
+        # Other cases, just skip caching
+        return (self.start_date, self.end_date)
 
     @property
     def capabilities(self) -> List[str]:
@@ -203,7 +169,7 @@ class IssueMixin(AbstractParser):
 
 class AddEntryMixin(AbstractParser):
     @abstractmethod
-    def create_entry(self, new_entry: Entry, issue: Issue) -> str:
+    def create_entry(self, new_entry: Entry, issue: Issue) -> Entry:
         raise NotImplementedError()
 
     @property
@@ -225,7 +191,7 @@ class DeleteEntryMixin(AbstractParser):
 
 class UpdateEntryMixin(AbstractParser):
     @abstractmethod
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> None:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Issue) -> Entry:
         raise NotImplementedError()
 
     @property

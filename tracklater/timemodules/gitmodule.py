@@ -7,7 +7,8 @@ import json
 
 from datetime import datetime
 from utils import FixedOffset, obj_from_dict
-from timemodules.interfaces import EntryMixin, AbstractParser, Entry, AbstractProvider
+from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
+from models import Entry
 
 
 import logging
@@ -19,19 +20,19 @@ def get_setting(key, default=None, group='global'):
 
 
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
-HEL = pytz.timezone(settings.TIMEZONE)
 
 
 def timestamp_to_datetime(timestamp: List):
+    # Git has timezone-aware unix timestamps, convert that to a UTC datetime
     return datetime.fromtimestamp(
-        timestamp[0], tz=FixedOffset(timestamp[1], 'Helsinki')
-    )
+        timestamp[0], tz=FixedOffset(timestamp[1], '')
+    ).astimezone(pytz.utc).replace(tzinfo=None)
 
 
 class Parser(EntryMixin, AbstractParser):
     def get_entries(self) -> List[Entry]:
-        start_date = self.start_date.replace(tzinfo=HEL)
-        end_date = self.end_date.replace(tzinfo=HEL)
+        start_date = self.start_date
+        end_date = self.end_date
         log = []
         provider = Provider()
         for group, data in settings.GIT.items():
@@ -47,9 +48,7 @@ class Parser(EntryMixin, AbstractParser):
                         continue
 
                     log.append(Entry(
-                        text=[
-                            "{} - {}".format(repo_path.split('/')[-1], message)
-                        ],
+                        text="{} - {}".format(repo_path.split('/')[-1], message),
                         start_time=time,
                     ))
         return log

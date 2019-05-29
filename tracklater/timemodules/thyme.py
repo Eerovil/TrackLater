@@ -3,8 +3,10 @@ import json
 import os
 from datetime import timedelta
 from utils import parse_time
-from timemodules.interfaces import EntryMixin, AbstractParser, Entry, AbstractProvider
+from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
 from typing import List, Any, Optional
+
+from models import Entry
 
 import logging
 logger = logging.getLogger(__name__)
@@ -72,10 +74,10 @@ class Parser(EntryMixin, AbstractParser):
                 {'name': window, 'time': extra['windows'][window]}
                 for window in extra['windows']
             ]
-            session.text = [
+            session.text = "\n".join([
                 "{}s - {}".format(int(data['time']), data['name'])
                 for data in sorted(extra['windows'], key=lambda x: x["time"], reverse=True)
-            ]
+            ])
             if extra['category']['work'] >= extra['category']['leisure']:
                 extra['category'] = 'work'
             else:

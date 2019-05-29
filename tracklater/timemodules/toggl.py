@@ -7,8 +7,10 @@ from utils import parse_time, _str
 import settings
 from timemodules.interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser,
-    Entry, Project, Issue, AbstractProvider
+    AbstractProvider
 )
+
+from models import Entry, Project, Issue
 
 from typing import List, Union, cast, Any, Optional
 
@@ -28,8 +30,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
 
     def get_entries(self) -> List[Entry]:
         if self.start_date:
-            params = {'start_date': self.start_date.isoformat() + "+03:00",
-                      'end_date': self.end_date.isoformat() + "+03:00"}
+            params = {'start_date': self.start_date.isoformat() + "+00:00",
+                      'end_date': self.end_date.isoformat() + "+00:00"}
         else:
             params = {}
         data = self.provider.request(
@@ -71,7 +73,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 ))
         return projects
 
-    def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> str:
+    def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -80,16 +82,15 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             name=new_entry.title,
             project_id=new_entry.project
         )
-        self.entries.append(Entry(
-            id=entry['id'],
+        return Entry(
+            id=_str(entry['id']),
             start_time=parse_time(entry['start']),
             end_time=parse_time(entry['stop']),
             title=entry['description'],
             project=entry.get('pid', None),
-        ))
-        return _str(entry['id']) or entry['id']
+        )
 
-    def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> None:
+    def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         updated_entry = self.push_session(
             session={
                 'start_time': new_entry.start_time,
@@ -100,14 +101,13 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             project_id=new_entry.project
         )
 
-        for i, entry in enumerate(self.entries):
-            if entry.id == str(updated_entry['id']):
-                entry.start_time = parse_time(updated_entry['start'])
-                entry.end_time = parse_time(updated_entry['stop'])
-                entry.title = updated_entry.get('description', '')
-                entry.project = updated_entry.get('pid')
-                self.entries[i] = entry
-                break
+        return Entry(
+            id=_str(updated_entry['id']),
+            start_time=parse_time(updated_entry['start']),
+            end_time=parse_time(updated_entry['stop']),
+            title=updated_entry['description'],
+            project=updated_entry.get('pid', None),
+        )
 
     def delete_entry(self, entry_id: str) -> None:
         removed_id = self.delete_time_entry(entry_id)
@@ -124,7 +124,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         data = {
             'time_entry': {
                 "description": name,
-                "start": session['start_time'].isoformat(),
+                "start": session['start_time'].isoformat() + "+00:00",
                 "duration": int((session['end_time'] - session['start_time']).total_seconds()),
                 "created_with": "thyme-toggl-cli"
             }
@@ -178,7 +178,12 @@ class Provider(AbstractProvider):
             del kwargs['method']
         except KeyError:
             pass
-        return getattr(requests, method)(url, **kwargs).json()
+        response = getattr(requests, method)(url, **kwargs)
+        try:
+            return response.json()
+        except Exception as e:
+            logger.exception("%s: %s", response.content, e)
+            raise
 
     def test_request(self, endpoint: str, **kwargs) -> Union[List[dict], dict, str]:
         method = kwargs.get('method', 'POST').lower()
@@ -233,7 +238,7 @@ class Provider(AbstractProvider):
             entry = json.loads(kwargs['data'])['time_entry']
             entry['stop'] = (
                 parse_time(entry['start']) + timedelta(seconds=entry['duration'])
-            ).isoformat()
+            ).isoformat() + "+00:00"
             entry['id'] = self.id_counter
             self.id_counter += 1
             return {'data': entry}
@@ -241,7 +246,7 @@ class Provider(AbstractProvider):
             entry = json.loads(kwargs['data'])['time_entry']
             entry['stop'] = (
                 parse_time(entry['start']) + timedelta(seconds=entry['duration'])
-            ).isoformat()
+            ).isoformat() + "+00:00"
             entry['id'] = endpoint[13:]
             return {'data': entry}
         elif endpoint.startswith("time_entries") and method == 'delete':

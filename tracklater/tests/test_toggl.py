@@ -4,14 +4,14 @@ import pytest
 import os
 
 from datetime import datetime, timedelta
-from timemodules.interfaces import Entry
+from models import Entry
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.fixture()
 def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
+    _parser = Parser(datetime.utcnow() - timedelta(days=7), datetime.utcnow())
     return _parser
 
 
@@ -33,20 +33,16 @@ def test_toggl_add_modify_delete(parser: Parser):
     parser.entries = parser.get_entries()
     entry = Entry(
         id="4",
-        start_time=datetime.now() - timedelta(hours=2),
-        end_time=datetime.now() - timedelta(hours=1),
+        start_time=datetime.utcnow() - timedelta(hours=2),
+        end_time=datetime.utcnow() - timedelta(hours=1),
         title="Toggl new entry (4)",
         project="10",
     )
-    data = parser.create_entry(entry, None)
-    assert len(data) == 1
-    assert len(parser.entries) == 4
-    assert parser.entries[-1].title == entry.title
+    entry = parser.create_entry(entry, None)
+    assert entry.id == "4"
 
     entry.title = "Toggl modified entry"
-    parser.update_entry("4", entry, None)
-    assert len(parser.entries) == 4
-    assert parser.entries[-1].title == entry.title
+    entry = parser.update_entry("4", entry, None)
+    assert entry.title == "Toggl modified entry"
 
     parser.delete_entry("4")
-    assert len(parser.entries) == 3

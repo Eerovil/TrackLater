@@ -16,3 +16,9 @@ def mock_settings(monkeypatch):
             'settings.{}'.format(module_setting),
             getattr(test_settings, module_setting, {})
         )
+
+
+@pytest.fixture()
+def db():
+    from database import db
+    return db

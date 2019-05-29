@@ -1,7 +1,9 @@
 import requests
 import settings
 
-from timemodules.interfaces import IssueMixin, AbstractParser, Issue, AbstractProvider
+from timemodules.interfaces import IssueMixin, AbstractParser, AbstractProvider
+
+from models import Issue
 
 from typing import List, cast, Any
 
