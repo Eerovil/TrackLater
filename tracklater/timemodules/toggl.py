@@ -30,8 +30,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
 
     def get_entries(self) -> List[Entry]:
         if self.start_date:
-            params = {'start_date': self.start_date.isoformat() + "+03:00",
-                      'end_date': self.end_date.isoformat() + "+03:00"}
+            params = {'start_date': self.start_date.isoformat() + "+00:00",
+                      'end_date': self.end_date.isoformat() + "+00:00"}
         else:
             params = {}
         data = self.provider.request(
@@ -124,7 +124,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         data = {
             'time_entry': {
                 "description": name,
-                "start": session['start_time'].isoformat(),
+                "start": session['start_time'].isoformat() + "+00:00",
                 "duration": int((session['end_time'] - session['start_time']).total_seconds()),
                 "created_with": "thyme-toggl-cli"
             }
@@ -238,7 +238,7 @@ class Provider(AbstractProvider):
             entry = json.loads(kwargs['data'])['time_entry']
             entry['stop'] = (
                 parse_time(entry['start']) + timedelta(seconds=entry['duration'])
-            ).isoformat()
+            ).isoformat() + "+00:00"
             entry['id'] = self.id_counter
             self.id_counter += 1
             return {'data': entry}
@@ -246,7 +246,7 @@ class Provider(AbstractProvider):
             entry = json.loads(kwargs['data'])['time_entry']
             entry['stop'] = (
                 parse_time(entry['start']) + timedelta(seconds=entry['duration'])
-            ).isoformat()
+            ).isoformat() + "+00:00"
             entry['id'] = endpoint[13:]
             return {'data': entry}
         elif endpoint.startswith("time_entries") and method == 'delete':

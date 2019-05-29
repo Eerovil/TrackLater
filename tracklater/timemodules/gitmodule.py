@@ -44,7 +44,6 @@ class Parser(EntryMixin, AbstractParser):
                         continue
                     message = ''.join(log_entry.message.split(':')[1:])
                     time = timestamp_to_datetime(log_entry.time)
-                    logger.warning("%s -> %s", log_entry.time, time)
                     if time < start_date or time > end_date:
                         continue
 
