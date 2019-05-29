@@ -3,7 +3,7 @@ from database import db
 from main import Parser
 import settings
 from utils import _str
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import json
 import pytz
 from typing import Optional, Dict
@@ -29,6 +29,19 @@ class State(object):
     parser: Optional[Parser] = None
 
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime, date)):
+        if obj.tzinfo and obj.tzinfo is not pytz.utc:
+            logger.warning("Trying to serialize timezone aware date %s", obj)
+        obj.replace(tzinfo=None)
+        # No idea, but for some reason using isoformat() here did *not* work.
+        # Just add utc timezone manually then... (This will make js convert it automatically)
+        return obj.isoformat() + "+00:00"
+    raise TypeError("Type %s not serializable" % type(obj))
+
+
 @app.route("/")
 def hello() -> Response:
     return render_template(
@@ -44,7 +57,7 @@ def listmodules() -> Optional[str]:
             data[module_name] = {
                 'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None)
             }
-        return json.dumps(data, default=str)
+        return json.dumps(data, default=json_serial)
     return None
 
 
@@ -90,7 +103,7 @@ def fetchdata() -> Optional[str]:
                                             Issue.module == key
                                         )]
                 data[key]['capabilities'] = parser.modules[key].capabilities
-        return json.dumps(data, default=str)
+        return json.dumps(data, default=json_serial)
     return None
 
 
@@ -149,7 +162,7 @@ def updateentry() -> Optional[str]:
             db.session.commit()
             data = new_entry.to_dict()
 
-        return json.dumps(data, default=str)
+        return json.dumps(data, default=json_serial)
     return None
 
 
@@ -166,5 +179,5 @@ def deleteentry() -> Optional[str]:
             entry_id=entry_id
         )
 
-        return json.dumps(ret, default=str)
+        return json.dumps(ret, default=json_serial)
     return None

@@ -31,6 +31,10 @@ def reraise_with_stack(func):
 
 
 def store_parser_to_database(parser, module_name, start_date, end_date):
+    Entry.query.filter(
+        Entry.module == module_name, Entry.start_time >= start_date,
+        Entry.start_time <= end_date
+    ).delete()
     for entry in parser.entries:
         entry.module = module_name
         db.session.merge(entry)

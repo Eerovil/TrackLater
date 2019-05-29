@@ -88,7 +88,7 @@ function getSessions() {
         contentType: 'application/json',
         dataType: 'json',
         data: {
-            parse: "0"
+            parse: "1"
         }
     })
     .fail(_handleFailure)
