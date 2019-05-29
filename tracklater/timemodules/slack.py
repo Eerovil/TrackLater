@@ -5,16 +5,21 @@ from datetime import datetime
 from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
 
 from models import Entry
-
+import pytz
 from typing import List
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Parser(EntryMixin, AbstractParser):
 
     def get_entries(self) -> List[Entry]:
-        start_date, end_date = self.get_offset_dates()
-        if not start_date and not end_date:
-            return []
+        # start_date, end_date = self.get_offset_dates()
+        # if not start_date and not end_date:
+        #     return []
+        start_date = self.start_date
+        end_date = self.end_date
         entries = []
         for group, group_data in settings.SLACK.items():
 
@@ -51,6 +56,11 @@ class Parser(EntryMixin, AbstractParser):
                 for message in history['messages']:
                     if message.get('user', '') == user_id:
                         start_time = datetime.fromtimestamp(float(message['ts']))
+                        # "Guess" That the timestamp has an offset equal to settings.TIMEZONE
+                        if getattr(settings, 'TIMEZONE', None):
+                            start_time = pytz.timezone("Europe/Helsinki").localize(
+                                start_time
+                            ).astimezone(pytz.utc).replace(tzinfo=None)
                         # Replace @User id with the name
                         for _user_id in users.keys():
                             if _user_id in message['text']:
