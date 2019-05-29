@@ -3,10 +3,7 @@ TESTING = True
 
 ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
-TIMEZONE = 'Europe/Helsinki'
-
 from datetime import datetime, timedelta
-from utils import FixedOffset
 
 OVERRIDE_START = datetime.fromtimestamp(
     1234560
@@ -90,7 +87,7 @@ TOGGL = {
     }
 }
 
-THYME = {
+THYME = {  # type: ignore
     'global': {
     }
 }

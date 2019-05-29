@@ -66,7 +66,7 @@ def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.get('keys[]', 'all')
         parse = request.values.get('parse', '1')
-        now = datetime.now()
+        now = datetime.utcnow()
         if 'from' in request.values:
             from_date = parseTimestamp(request.values['from'])
         else:
@@ -110,8 +110,7 @@ def fetchdata() -> Optional[str]:
 def parseTimestamp(stamp):
     if not stamp:
         return None
-    tz = pytz.timezone(settings.TIMEZONE)
-    date = datetime.fromtimestamp(int(stamp) / 1e3, tz)
+    date = datetime.fromtimestamp(int(stamp) / 1e3)
     return date
 
 

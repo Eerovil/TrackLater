@@ -20,19 +20,19 @@ def get_setting(key, default=None, group='global'):
 
 
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
-HEL = pytz.timezone(settings.TIMEZONE)
 
 
 def timestamp_to_datetime(timestamp: List):
+    # Git has timezone-aware unix timestamps, convert that to a UTC datetime
     return datetime.fromtimestamp(
-        timestamp[0], tz=FixedOffset(timestamp[1], 'Helsinki')
-    )
+        timestamp[0], tz=FixedOffset(timestamp[1], '')
+    ).astimezone(pytz.utc).replace(tzinfo=None)
 
 
 class Parser(EntryMixin, AbstractParser):
     def get_entries(self) -> List[Entry]:
-        start_date = self.start_date.replace(tzinfo=HEL)
-        end_date = self.end_date.replace(tzinfo=HEL)
+        start_date = self.start_date
+        end_date = self.end_date
         log = []
         provider = Provider()
         for group, data in settings.GIT.items():
@@ -44,6 +44,7 @@ class Parser(EntryMixin, AbstractParser):
                         continue
                     message = ''.join(log_entry.message.split(':')[1:])
                     time = timestamp_to_datetime(log_entry.time)
+                    logger.warning("%s -> %s", log_entry.time, time)
                     if time < start_date or time > end_date:
                         continue
 

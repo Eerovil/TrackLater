@@ -2,7 +2,6 @@
 from slack import WebClient
 import settings
 from datetime import datetime
-from utils import FixedOffset
 from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
 
 from models import Entry
@@ -51,9 +50,7 @@ class Parser(EntryMixin, AbstractParser):
 
                 for message in history['messages']:
                     if message.get('user', '') == user_id:
-                        start_time = datetime.fromtimestamp(
-                            float(message['ts']), tz=FixedOffset(0, 'Helsinki')
-                        )
+                        start_time = datetime.fromtimestamp(float(message['ts']))
                         # Replace @User id with the name
                         for _user_id in users.keys():
                             if _user_id in message['text']:

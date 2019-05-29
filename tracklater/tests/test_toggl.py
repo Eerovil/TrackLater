@@ -11,7 +11,7 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 @pytest.fixture()
 def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
+    _parser = Parser(datetime.utcnow() - timedelta(days=7), datetime.utcnow())
     return _parser
 
 
@@ -33,8 +33,8 @@ def test_toggl_add_modify_delete(parser: Parser):
     parser.entries = parser.get_entries()
     entry = Entry(
         id="4",
-        start_time=datetime.now() - timedelta(hours=2),
-        end_time=datetime.now() - timedelta(hours=1),
+        start_time=datetime.utcnow() - timedelta(hours=2),
+        end_time=datetime.utcnow() - timedelta(hours=1),
         title="Toggl new entry (4)",
         project="10",
     )

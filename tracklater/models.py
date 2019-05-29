@@ -72,10 +72,7 @@ class Entry(db.Model):
         super(Entry, self).__init__(**kwargs)
         # Calculate date_group immediately
         item_time = self.start_time
-        offset = None
-        if item_time.tzinfo:
-            offset = item_time.tzinfo.utcoffset(None)
-        _cutoff = getattr(settings, 'CUTOFF_HOUR', 3) + (getattr(offset, 'seconds', 0) / 3600)
+        _cutoff = getattr(settings, 'CUTOFF_HOUR', 3)
         if item_time.hour >= _cutoff:
             self.date_group = item_time.strftime('%Y-%m-%d')
         else:

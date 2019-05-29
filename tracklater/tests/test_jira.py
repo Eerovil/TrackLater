@@ -13,7 +13,7 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 @pytest.fixture()
 def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
+    _parser = Parser(datetime.utcnow() - timedelta(days=7), datetime.utcnow())
     _parser.credentials = ('', '')
     return _parser
 

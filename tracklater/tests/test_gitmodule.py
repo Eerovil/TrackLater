@@ -2,25 +2,20 @@ from timemodules.gitmodule import Parser
 
 import pytest
 import os
-import pytz
-import settings
-
 from datetime import datetime, timedelta
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-
-HEL = pytz.timezone(settings.TIMEZONE)
 
 
 @pytest.fixture(autouse=True)
 def mock_git(monkeypatch):
     monkeypatch.setattr('timemodules.gitmodule.timestamp_to_datetime',
-                        lambda x: datetime.now(HEL) - timedelta(days=4))
+                        lambda x: datetime.utcnow() - timedelta(days=4))
 
 
 @pytest.fixture()
 def parser():
-    _parser = Parser(datetime.now() - timedelta(days=7), datetime.now())
+    _parser = Parser(datetime.utcnow() - timedelta(days=7), datetime.utcnow())
     _parser.credentials = ('', '')
     return _parser
 

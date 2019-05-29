@@ -39,8 +39,8 @@ def test_app_fetchdata(client):
 def test_database_entries(client, db: Any):
     from timemodules.toggl import Parser
     from main import store_parser_to_database
-    start_date = datetime.now() - timedelta(days=7)
-    end_date = datetime.now()
+    start_date = datetime.utcnow() - timedelta(days=7)
+    end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
     parser.entries = parser.get_entries()
     with app.app_context():
@@ -53,8 +53,8 @@ def test_database_entries(client, db: Any):
 def test_database_projects(client, db: Any):
     from timemodules.toggl import Parser
     from main import store_parser_to_database
-    start_date = datetime.now() - timedelta(days=7)
-    end_date = datetime.now()
+    start_date = datetime.utcnow() - timedelta(days=7)
+    end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
     parser.projects = parser.get_projects()
     with app.app_context():
@@ -67,8 +67,8 @@ def test_database_projects(client, db: Any):
 def test_database_issues(client, db: Any):
     from timemodules.jira import Parser
     from main import store_parser_to_database
-    start_date = datetime.now() - timedelta(days=7)
-    end_date = datetime.now()
+    start_date = datetime.utcnow() - timedelta(days=7)
+    end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
     parser.issues = parser.get_issues()
     with app.app_context():
@@ -81,8 +81,8 @@ def test_database_issues(client, db: Any):
 def test_database_jira_caching(client, db: Any):
     from timemodules.jira import Parser
     from main import store_parser_to_database, set_parser_caching_data
-    start_date = datetime.now() - timedelta(days=7)
-    end_date = datetime.now()
+    start_date = datetime.utcnow() - timedelta(days=7)
+    end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
     parser.issues = parser.get_issues()
     with app.app_context():
@@ -106,8 +106,8 @@ def test_database_jira_caching(client, db: Any):
 def test_database_slack_caching(client, db: Any):
     from timemodules.slack import Parser
     from main import store_parser_to_database, set_parser_caching_data
-    start_date = datetime.now() - timedelta(days=7)
-    end_date = datetime.now()
+    start_date = datetime.utcnow() - timedelta(days=7)
+    end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
     parser.entries = parser.get_entries()
     with app.app_context():
