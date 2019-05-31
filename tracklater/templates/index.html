@@ -1,37 +1,44 @@
+{% raw %}
+<!DOCTYPE html>
 <html>
+
 <head>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script
-    src="https://code.jquery.com/jquery-3.3.1.min.js"
-    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-    crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
-    <script type="text/javascript" src="{{ url_for('static', filename='index.js') }}" ></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" >
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>VUE SPA</title>
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+    <link href="https://unpkg.com/vuetify@1.0.17/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.1/vis.min.css" rel="stylesheet">
 </head>
+
 <body>
-        <div id="timeline" style="height: 180px;"></div>
 
-<div id="actions">
-<input class="btn_export" type="button" value="Export">
-<input class="description" type="text" value="" size="50" list="issues">
-<datalist id="issues"></datalist>
-<br />
-<select id="project">
-        <option></option>
-</select>
-<br />
-<select id="modules">
-        <option></option>
-</select>
-<div class="toggl_actions">
-        <input class="start_time" type="time" >
-        <input class="end_time" type="time" >
+<div id="app" v-cloak>
+    <toolbar></toolbar>
+    <timeline></timeline>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.1/vis.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.13/dist/vue.js"></script>
+<script src="https://unpkg.com/http-vue-loader"></script>
+<script src="https://unpkg.com/vuetify@1.0.17/dist/vuetify.min.js"></script>
+<script src="https://unpkg.com/vuex@2.0.0"></script>
+<script src="https://unpkg.com/vue2vis@0.0.8/dist/vue2vis.min.js"></script>
+<!-- Vue Pages and Components here -->
+<script src='/static/toolbar.vue.js'></script>
+<script src='/static/timeline.vue.js'></script>
 
-        <input class="btn_split" type="button" value="Split">
-        <input class="split_time" type="time" >
-</div>
-</div>
+<script>
+Vue.component('timeline', vue2vis.Timeline);
+
+var app = new Vue({
+    el: '#app',
+    watch: {},
+    methods: {},
+})
+</script>
+
 </body>
+
 </html>
+{% endraw %}
