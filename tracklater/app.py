@@ -55,9 +55,11 @@ def hello() -> Response:
 def listmodules() -> Optional[str]:
     if request.method == 'GET':
         data = {}
+        parser = Parser(None, None)
         for module_name in settings.ENABLED_MODULES:
             data[module_name] = {
-                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None)
+                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None),
+                'capabilities': parser.modules[module_name].capabilities,
             }
         return json.dumps(data, default=json_serial)
     return None
@@ -67,7 +69,6 @@ def listmodules() -> Optional[str]:
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.getlist('keys[]')
-        logger.warning(keys)
         parse = request.values.get('parse', '1')
         now = datetime.utcnow()
         if 'from' in request.values:
