@@ -44,16 +44,6 @@ $(document).ready(function() {
     console.log('hello2');
 });
 
-Date.prototype.addHours= function(h){
-    var copiedDate = new Date();
-    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000)); 
-    return copiedDate;
-}
-
-Date.prototype.getTimeUTC = function() {
-    return (this.getTime() + (this.getTimezoneOffset() * 60 * 1000))
-}
-
 
 function _handleFailure(jqXHR, textStatus, errorThrown) {
     document.open();

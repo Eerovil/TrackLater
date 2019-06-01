@@ -121,20 +121,21 @@ def parseTimestamp(stamp):
 @app.route('/updateentry', methods=['POST'])
 def updateentry() -> Optional[str]:
     if request.method == 'POST':
-        module = request.values.get('module')
-        entry_id = _str(request.values.get('entry_id', None))
-        project = request.values.get('project_id', None)
+        data = request.get_json()
+        module = data.get('module')
+        entry_id = _str(data.get('entry_id', None))
+        project = data.get('project_id', None)
         if project == "null":
             project = None
         new_entry = Entry(
-            start_time=parseTimestamp(request.values['start_time']),
-            end_time=parseTimestamp(request.values.get('end_time', None)),
+            start_time=parseTimestamp(data['start_time']),
+            end_time=parseTimestamp(data.get('end_time', None)),
             id=entry_id,
-            issue=request.values.get('issue_id', None),
+            issue=data.get('issue_id', None),
             project=project,
-            title=request.values.get('title', ''),
-            text=request.values.get('text', ""),
-            extra_data=request.values.get('extra_data', {})
+            title=data.get('title', ''),
+            text=data.get('text', ""),
+            extra_data=data.get('extra_data', {})
         )
         issue = None
         if new_entry.issue:
@@ -172,8 +173,9 @@ def updateentry() -> Optional[str]:
 @app.route('/deleteentry', methods=['POST'])
 def deleteentry() -> Optional[str]:
     if request.method == 'POST':
-        module = request.values.get('module')
-        entry_id = request.values.get('entry_id')
+        data = request.get_json()
+        module = data.get('module')
+        entry_id = data.get('entry_id')
 
         parser = Parser(None, None)
         # Check that delete is allowed

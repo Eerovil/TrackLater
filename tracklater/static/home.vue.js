@@ -8,7 +8,10 @@ var home = Vue.component("home", {
     <daytimeline
       v-for="(entries, dateGroup) in entriesByDategroup"
       :entries="entries"
-      :moduleColors="moduleColors"
+      :modules="modules"
+      @addEntry="updateEntry"
+      @updateEntry="updateEntry"
+      @deleteEntry="deleteEntry"
     ></daytimeline>
     </div>
     `,
@@ -18,16 +21,6 @@ var home = Vue.component("home", {
         }
     },
     computed: {
-        moduleColors() {
-            let ret = {};
-            for(key in this.modules){
-                if (this.modules[key].capabilities.indexOf('entries') < 0) {
-                    continue;
-                }
-                ret[key] = this.modules[key].color 
-            }
-            return ret;
-        },
         entriesByDategroup() {
             let ret = {}
             try {
@@ -57,7 +50,36 @@ var home = Vue.component("home", {
                 this.modules = Object.assign(this.modules, response.data)
                 this.$set(this.modules[module_name], 'loading', false)
             })
+        },
+        updateEntry(entry) {
+            axios.post("updateentry", {
+                'module': entry.module,
+                'entry_id': entry.id,
+                'start_time': entry.start_time.getTimeUTC(),
+                'end_time': entry.end_time.getTimeUTC(),
+                'title': "Placeholder",
+                'issue_id': entry.issue,
+                'project_id': "0",
+                'extra_data': entry.extra_data,
+                'text': entry.text,
+            }).then(response => {
+                console.log(response)
+                updated_entries = this.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                updated_entries.push(response.data)
+                this.$set(this.modules[entry.module], 'entries', updated_entries);
+            }).catch(_handleFailure)
+        },
+        deleteEntry(entry) {
+            axios.post('deleteentry', {
+                'module': entry.module,
+                'entry_id': entry.id
+            }).then((response) => {
+                console.log("deleted entry " + entry.id + ": " + response.data);
+                updated_entries = this.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                this.$set(this.modules[entry.module], 'entries', updated_entries);
+            }).catch(_handleFailure)
         }
+
     },
     mounted() {
         axios.get("listmodules").then(response => {

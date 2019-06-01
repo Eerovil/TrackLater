@@ -31,6 +31,26 @@
 <script>
 Vue.component('timeline', vue2vis.Timeline);
 
+function _handleFailure(error) {
+    if (error.response == undefined) {
+        console.log(error);
+        return;
+    }
+    document.open();
+    document.write(error.response.data);
+    document.close();
+}
+
+Date.prototype.addHours= function(h){
+    var copiedDate = new Date();
+    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000)); 
+    return copiedDate;
+}
+
+Date.prototype.getTimeUTC = function() {
+    return (this.getTime() + (this.getTimezoneOffset() * 60 * 1000))
+}
+
 var app = new Vue({
     el: '#app',
     watch: {},
