@@ -65,12 +65,14 @@ def set_parser_caching_data(parser, module_name):
 
 
 class Parser(object):
-    def __init__(self, start_date, end_date) -> None:
+    def __init__(self, start_date, end_date, modules=None) -> None:
         self.start_date = start_date
         self.end_date = end_date
         self.modules: Dict[str, AbstractParser] = {}
 
         for module_name in settings.ENABLED_MODULES:
+            if modules and module_name not in modules:
+                continue
             module: ModuleType = importlib.import_module(
                 'timemodules.{}'.format(module_name)
             )

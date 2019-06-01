@@ -66,7 +66,8 @@ def listmodules() -> Optional[str]:
 @app.route('/fetchdata', methods=['GET'])
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
-        keys = request.values.get('keys[]', 'all')
+        keys = request.values.getlist('keys[]')
+        logger.warning(keys)
         parse = request.values.get('parse', '1')
         now = datetime.utcnow()
         if 'from' in request.values:
@@ -83,7 +84,7 @@ def fetchdata() -> Optional[str]:
         if getattr(settings, 'OVERRIDE_END', None):
             to_date = settings.OVERRIDE_END
 
-        parser = Parser(from_date, to_date)
+        parser = Parser(from_date, to_date, modules=keys)
         if parse == '1':
             parser.parse()
         data: Dict[str, Dict] = {}
