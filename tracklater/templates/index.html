@@ -43,7 +43,7 @@ function _handleFailure(error) {
 
 Date.prototype.addHours= function(h){
     var copiedDate = new Date();
-    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000)); 
+    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000) - (this.getTimezoneOffset() * 60 * 1000)); 
     return copiedDate;
 }
 
