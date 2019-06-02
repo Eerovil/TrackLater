@@ -6,8 +6,8 @@ var home = Vue.component("home", {
         v-on:fetchModule=fetchModule($event)
     ></toolbar>
     <daytimeline
-      v-for="(entries, dateGroup) in entriesByDategroup"
-      :entries="entries"
+      v-for="(groupedEntries, index) in entriesByDategroup"
+      :entries="groupedEntries[1]"
       :modules="modules"
       @addEntry="updateEntry"
       @updateEntry="updateEntry"
@@ -22,22 +22,31 @@ var home = Vue.component("home", {
     },
     computed: {
         entriesByDategroup() {
-            let ret = {}
+            // Return an array of 2-arrays, containing [date_group, entry_list]
+            let keys = new Set()
+            let ret;
             try {
             for (module_name in this.modules) {
                 let entries = this.modules[module_name].entries || []
                 for (let i=0; i<entries.length; i++) {
-                    if (ret[entries[i].date_group] == undefined) {
-                        ret[entries[i].date_group] = []
-                    }
+                    keys.add(entries[i].date_group)
+                }
+            }
+            // Sort keys to make latest dategroup first
+            ret = new Map(Array.from(keys.values(), x => [x, []]).sort((a, b) => a > b ? -1 : 1));
+            for (module_name in this.modules) {
+                let entries = this.modules[module_name].entries || []
+                for (let i=0; i<entries.length; i++) {
                     entries[i].module = module_name
-                    ret[entries[i].date_group].push(entries[i])
+                    let new_entries = ret.get(entries[i].date_group);
+                    new_entries.push(entries[i]);
+                    ret.set(entries[i].date_group, new_entries);
                 }
             }
             } catch (e) {
                 console.log(e)
             }
-            return ret
+            return Array.from(ret)
         }
     },
     methods: {
