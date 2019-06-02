@@ -73,16 +73,14 @@ var daytimeline = Vue.component("daytimeline", {
           }
         }
         return ret
-      }
-    },
-    data() {
-      self = this
-      let firstDate = new Date(this.entries[0].date_group);
-      const day_start = firstDate.setHours(6, 0, 0, 0);
-      const day_end = firstDate.setHours(26, 0, 0, 0);
+      },
+      options() {
+        self = this
+        let firstDate = new Date(this.entries[0].date_group);
+        const day_start = firstDate.setHours(6, 0, 0, 0);
+        const day_end = firstDate.setHours(26, 0, 0, 0);
 
-      return {
-        options: {
+        return {
           start: day_start,
           end: day_end,
           editable: true,
