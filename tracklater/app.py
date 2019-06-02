@@ -107,6 +107,7 @@ def fetchdata() -> Optional[str]:
                                             Issue.module == key
                                         )]
                 data[key]['capabilities'] = parser.modules[key].capabilities
+                data[key]['color'] = settings.UI_SETTINGS.get(key, {}).get('global', None),
         return json.dumps(data, default=json_serial)
     return None
 
