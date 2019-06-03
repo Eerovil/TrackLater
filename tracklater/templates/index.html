@@ -56,7 +56,26 @@ const store = new Vuex.Store({
     selectedEntry: null,
     inputTitle: "",
     inputIssue: null,
-    modules: {}
+    modules: {},
+    loading: {}
+  },
+  mutations: {
+    setModules(state, value) {
+      state.modules = value
+    },
+    setSelectedEntry(state, value) {
+      state.selectedEntry = value
+    },
+    setInput(state, {title, issue}) {
+      state.inputTitle = title
+      state.inputIssue = issue
+    },
+    setLoading(state, {module_name, loading}) {
+      Vue.set(state.loading, module_name, loading);
+    },
+    setEntries(state, {module_name, entries}) {
+      Vue.set(state.modules[module_name], 'entries', entries);
+    },
   }
 })
 

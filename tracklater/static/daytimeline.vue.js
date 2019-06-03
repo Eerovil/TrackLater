@@ -4,13 +4,18 @@ var daytimeline = Vue.component("daytimeline", {
     :items="items"
     :groups="groups"
     :options="options"
-    :events="[]">
+    :events="[]"
+    @select="select">
     </timeline>
     `,
     props: ["entries"],
     methods: {
       myChangedCallback(arg1, arg2, arg3) {
         console.log(arg1, arg2, arg3)
+      },
+      select(props) {
+        this.$store.commit('setSelectedEntry', this.entries[props.items[0]])
+        this.$emit('selectedEntry', this.$store.state.selectedEntry);
       },
       onMove: function(item, callback) {
         if (this.modules[item.group].capabilities.includes('updateentry')) {

@@ -7,7 +7,7 @@ var toolbar = Vue.component("toolbar", {
     <v-btn
       v-for="(data, module) in modules"
       v-on:click=fetchModule(module)
-      :loading="modules[module].loading"
+      :loading="loading[module]"
     >{{ module }}</v-btn>
     <br>
     <v-combobox
@@ -19,8 +19,19 @@ var toolbar = Vue.component("toolbar", {
     `,
     props: [],
     computed: {
+        entryTitle: {
+            get() {
+                return this.$store.state.inputTitle
+            },
+            set(v) {
+                this.$store.commit('setInput', {title: v, issue: this.findIssue(v)})
+            }
+        },
         modules() {
             return this.$store.state.modules;
+        },
+        loading() {
+            return this.$store.state.loading;
         },
         allIssues() {
             let ret = [];
@@ -32,19 +43,19 @@ var toolbar = Vue.component("toolbar", {
             }
             return ret;
         },
-        selectedIssue() {
+    },
+    methods: {
+        findIssue(title) {
             for (let module_name in this.modules) {
                 const _issues = this.modules[module_name].issues || [];
                 for (let i=0; i<_issues.length; i++) {
-                    if (`${_issues[i].key} ${_issues[i].title}` === this.entryTitle) {
+                    if (`${_issues[i].key} ${_issues[i].title}` === title) {
                         return _issues[i];
                     }
                 }
             }
             return null;
-        }
-    },
-    methods: {
+        },
         fetchModule(module_name) {
             this.$emit('fetchModule', module_name)
         },
@@ -52,11 +63,6 @@ var toolbar = Vue.component("toolbar", {
             for (let module_name in this.modules) {
                 this.$emit('fetchModule', module_name)
             }
-        }
-    },
-    data() {
-        return {
-            entryTitle: null,
         }
     }
 });
