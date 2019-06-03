@@ -7,7 +7,7 @@ var daytimeline = Vue.component("daytimeline", {
     :events="[]">
     </timeline>
     `,
-    props: ["entries", "modules"],
+    props: ["entries"],
     methods: {
       myChangedCallback(arg1, arg2, arg3) {
         console.log(arg1, arg2, arg3)
@@ -40,6 +40,9 @@ var daytimeline = Vue.component("daytimeline", {
       },
     },
     computed: {
+      modules() {
+          return this.$store.state.modules;
+      },
       items() {
         return this.entries.map((entry, i) => {
           let row = {

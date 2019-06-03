@@ -17,8 +17,11 @@ var toolbar = Vue.component("toolbar", {
     </v-combobox>
     </div>
     `,
-    props: ["modules"],
+    props: [],
     computed: {
+        modules() {
+            return this.$store.state.modules;
+        },
         allIssues() {
             let ret = [];
             for (let module_name in this.modules) {

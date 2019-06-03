@@ -2,13 +2,11 @@ var home = Vue.component("home", {
     template: `
     <div>
     <toolbar
-        :modules="modules"
         v-on:fetchModule=fetchModule($event)
     ></toolbar>
     <daytimeline
       v-for="(groupedEntries, index) in entriesByDategroup"
       :entries="groupedEntries[1]"
-      :modules="modules"
       @addEntry="updateEntry"
       @updateEntry="updateEntry"
       @deleteEntry="deleteEntry"
@@ -16,11 +14,12 @@ var home = Vue.component("home", {
     </div>
     `,
     data() {
-        return {
-            modules: {}
-        }
+        return {}
     },
     computed: {
+        modules() {
+            return this.$store.state.modules;
+        },
         entriesByDategroup() {
             // Return an array of 2-arrays, containing [date_group, entry_list]
             let keys = new Set()
@@ -52,12 +51,12 @@ var home = Vue.component("home", {
     methods: {
         fetchModule(module_name) {
             console.log(`Fetching ${module_name}`)
-            this.$set(this.modules[module_name], 'loading', true) 
+            this.$set(this.$store.state.modules[module_name], 'loading', true) 
 
             axios.get("fetchdata", {params: {keys: [module_name]}}).then(response => {
                 console.log(response)
-                this.modules = Object.assign(this.modules, response.data)
-                this.$set(this.modules[module_name], 'loading', false)
+                this.$store.state.modules = Object.assign(this.$store.state.modules, response.data)
+                this.$set(this.$store.state.modules[module_name], 'loading', false)
             })
         },
         updateEntry(entry) {
@@ -73,9 +72,9 @@ var home = Vue.component("home", {
                 'text': entry.text,
             }).then(response => {
                 console.log(response)
-                updated_entries = this.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
                 updated_entries.push(response.data)
-                this.$set(this.modules[entry.module], 'entries', updated_entries);
+                this.$set(this.$store.state.modules[entry.module], 'entries', updated_entries);
             }).catch(_handleFailure)
         },
         deleteEntry(entry) {
@@ -84,8 +83,8 @@ var home = Vue.component("home", {
                 'entry_id': entry.id
             }).then((response) => {
                 console.log("deleted entry " + entry.id + ": " + response.data);
-                updated_entries = this.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
-                this.$set(this.modules[entry.module], 'entries', updated_entries);
+                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                this.$set(this.$store.state.modules[entry.module], 'entries', updated_entries);
             }).catch(_handleFailure)
         }
 
@@ -93,7 +92,7 @@ var home = Vue.component("home", {
     mounted() {
         axios.get("listmodules").then(response => {
             console.log(response)
-            this.modules = response.data
+            this.$store.state.modules = response.data
         })
     }
 });

@@ -51,10 +51,20 @@ Date.prototype.getTimeUTC = function() {
     return (this.getTime() + (this.getTimezoneOffset() * 60 * 1000))
 }
 
+const store = new Vuex.Store({
+  state: {
+    selectedEntry: null,
+    inputTitle: "",
+    inputIssue: null,
+    modules: {}
+  }
+})
+
 var app = new Vue({
     el: '#app',
     watch: {},
     methods: {},
+    store,
 })
 </script>
 
