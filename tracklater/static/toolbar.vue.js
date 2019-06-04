@@ -46,15 +46,7 @@ var toolbar = Vue.component("toolbar", {
     },
     methods: {
         findIssue(title) {
-            for (let module_name in this.modules) {
-                const _issues = this.modules[module_name].issues || [];
-                for (let i=0; i<_issues.length; i++) {
-                    if (`${_issues[i].key} ${_issues[i].title}` === title) {
-                        return _issues[i];
-                    }
-                }
-            }
-            return null;
+            return this.$store.getters.findIssue(title)
         },
         fetchModule(module_name) {
             this.$emit('fetchModule', module_name)

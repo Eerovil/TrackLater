@@ -76,6 +76,19 @@ const store = new Vuex.Store({
     setEntries(state, {module_name, entries}) {
       Vue.set(state.modules[module_name], 'entries', entries);
     },
+  },
+  getters: {
+    findIssue: (state) => (title) => {
+        for (let module_name in state.modules) {
+            const _issues = state.modules[module_name].issues || [];
+            for (let i=0; i<_issues.length; i++) {
+                if (`${_issues[i].key} ${_issues[i].title}` === title) {
+                    return _issues[i];
+                }
+            }
+        }
+        return null;
+    },
   }
 })
 

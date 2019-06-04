@@ -14,8 +14,17 @@ var daytimeline = Vue.component("daytimeline", {
         console.log(arg1, arg2, arg3)
       },
       select(props) {
-        this.$store.commit('setSelectedEntry', this.entries[props.items[0]])
-        this.$emit('selectedEntry', this.$store.state.selectedEntry);
+        const entry = this.entries[props.items[0]] || null;
+        this.$store.commit('setSelectedEntry', entry);
+        if (entry == null) {
+          this.$store.commit('setInput', {title: "", issue: null});
+        } else {
+          this.$store.commit('setInput', {title: entry.title, issue: entry.issue || this.findIssue(entry.title)})
+        }
+        this.$emit('selectedEntry', entry);
+      },
+      findIssue(title) {
+        return this.$store.getters.findIssue(title)
       },
       onMove: function(item, callback) {
         if (this.modules[item.group].capabilities.includes('updateentry')) {
