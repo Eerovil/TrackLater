@@ -57,7 +57,8 @@ const store = new Vuex.Store({
     inputTitle: "",
     inputIssue: null,
     modules: {},
-    loading: {}
+    loading: {},
+    selectedModule: null,
   },
   mutations: {
     setModules(state, value) {
@@ -75,6 +76,9 @@ const store = new Vuex.Store({
     },
     setEntries(state, {module_name, entries}) {
       Vue.set(state.modules[module_name], 'entries', entries);
+    },
+    setSelectedModule(state, value) {
+      state.selectedModule = value
     },
   },
   getters: {

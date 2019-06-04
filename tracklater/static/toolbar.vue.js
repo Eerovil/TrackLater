@@ -15,6 +15,11 @@ var toolbar = Vue.component("toolbar", {
       :items="allIssues"
     >
     </v-combobox>
+    <v-select
+      v-model="selectedModule"
+      :items="selectableModules"
+    >
+    </v-select>
     </div>
     `,
     props: [],
@@ -25,6 +30,14 @@ var toolbar = Vue.component("toolbar", {
             },
             set(v) {
                 this.$store.commit('setInput', {title: v, issue: this.findIssue(v)})
+            }
+        },
+        selectedModule: {
+            get() {
+                return this.$store.state.selectedModule;
+            },
+            set(v) {
+                this.$store.commit('setSelectedModule', v);
             }
         },
         modules() {
@@ -43,6 +56,15 @@ var toolbar = Vue.component("toolbar", {
             }
             return ret;
         },
+        selectableModules() {
+            let ret = [];
+            for (let module_name in this.modules) {
+                if ((this.modules[module_name].capabilities || []).includes('updateentry')) {
+                    ret.push(module_name);
+                }
+            }
+            return ret;
+        }
     },
     methods: {
         findIssue(title) {
