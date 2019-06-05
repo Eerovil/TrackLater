@@ -9,6 +9,22 @@
     <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link href="https://unpkg.com/vuetify@1.5.14/dist/vuetify.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.1/vis.min.css" rel="stylesheet">
+    <style>
+    .toolbar {
+        position:fixed; /* fixing the position takes it out of html flow - knows
+                        nothing about where to locate itself except by browser
+                        coordinates */
+        left:0;           /* top left corner should start at leftmost spot */
+        top:0;            /* top left corner should start at topmost spot */
+        width:100vw;      /* take up the full browser width */
+        z-index:200;  /* high z index so other content scrolls underneath */
+        height:240px;     /* define height for content */
+        background-color: white;
+    }
+    .toolbar-separator {
+        height: 240px;
+    }
+    </style>
 </head>
 
 <body>

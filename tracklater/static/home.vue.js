@@ -2,9 +2,11 @@ var home = Vue.component("home", {
     template: `
     <div>
     <toolbar
+        class="toolbar"
         v-on:fetchModule=fetchModule($event)
         v-on:exportEntry=updateEntry($event)
     ></toolbar>
+    <div class="toolbar-separator"></div>
     <daytimeline
       v-for="(groupedEntries, index) in entriesByDategroup"
       :entries="groupedEntries[1]"
