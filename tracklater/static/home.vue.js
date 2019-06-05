@@ -3,6 +3,7 @@ var home = Vue.component("home", {
     <div>
     <toolbar
         v-on:fetchModule=fetchModule($event)
+        v-on:exportEntry=updateEntry($event)
     ></toolbar>
     <daytimeline
       v-for="(groupedEntries, index) in entriesByDategroup"
@@ -59,13 +60,19 @@ var home = Vue.component("home", {
                 this.$store.commit('setLoading', {module_name, loading: false});
             })
         },
+        parseTime(time) {
+            if (typeof time === "string") {
+                return new Date(time)
+            }
+            return time
+        },
         updateEntry(entry) {
             axios.post("updateentry", {
                 'module': entry.module,
                 'entry_id': entry.id,
-                'start_time': entry.start_time.getTimeUTC(),
-                'end_time': entry.end_time.getTimeUTC(),
-                'title': "Placeholder",
+                'start_time': this.parseTime(entry.start_time).getTimeUTC(),
+                'end_time': this.parseTime(entry.end_time).getTimeUTC(),
+                'title': entry.title || "Placeholder",
                 'issue_id': entry.issue,
                 'project_id': "0",
                 'extra_data': entry.extra_data,
@@ -75,6 +82,7 @@ var home = Vue.component("home", {
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
                 updated_entries.push(response.data)
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
+                this.$set(this.$store.state.loading, 'export', false);
             }).catch(_handleFailure)
         },
         deleteEntry(entry) {

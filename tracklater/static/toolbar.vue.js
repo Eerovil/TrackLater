@@ -20,6 +20,11 @@ var toolbar = Vue.component("toolbar", {
       :items="selectableModules"
     >
     </v-select>
+    <v-btn
+      v-on:click="exportEntry"
+      :loading="loading['export']"
+      :disabled="selectedEntry == null"
+    >Export</v-btn>
     </div>
     `,
     props: [],
@@ -39,6 +44,9 @@ var toolbar = Vue.component("toolbar", {
             set(v) {
                 this.$store.commit('setSelectedModule', v);
             }
+        },
+        selectedEntry() {
+            return this.$store.state.selectedEntry;
         },
         modules() {
             return this.$store.state.modules;
@@ -77,6 +85,14 @@ var toolbar = Vue.component("toolbar", {
             for (let module_name in this.modules) {
                 this.$emit('fetchModule', module_name)
             }
+        },
+        exportEntry() {
+            this.$set(this.$store.state.loading, 'export', true);
+            this.$emit('exportEntry', Object.assign(this.selectedEntry, {
+                issue: this.$store.state.inputIssue,
+                title: this.entryTitle,
+                module: this.selectedModule
+            }));
         }
     }
 });
