@@ -75,8 +75,8 @@ var home = Vue.component("home", {
                 'start_time': this.parseTime(entry.start_time).getTimeUTC(),
                 'end_time': this.parseTime(entry.end_time).getTimeUTC(),
                 'title': entry.title || "Placeholder",
-                'issue_id': entry.issue,
-                'project_id': "0",
+                'issue_id': (entry.issue || {}).id,
+                'project_id': entry.project || "0",
                 'extra_data': entry.extra_data,
                 'text': entry.text,
             }).then(response => {

@@ -20,7 +20,6 @@ var daytimeline = Vue.component("daytimeline", {
           this.$store.commit('setInput', {title: "", issue: null});
         } else {
           this.$store.commit('setInput', {title: entry.title, issue: entry.issue || this.findIssue(entry.title)})
-          this.$store.commit('setSelectedModule', entry.module);
         }
         this.$emit('selectedEntry', entry);
       },

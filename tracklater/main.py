@@ -41,6 +41,7 @@ def store_parser_to_database(parser, module_name, start_date, end_date):
     for issue in parser.issues:
         issue.module = module_name
         db.session.merge(issue)
+    Project.query.delete()
     for project in parser.projects:
         project.module = module_name
         db.session.merge(project)

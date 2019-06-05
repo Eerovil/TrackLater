@@ -21,7 +21,6 @@ class ApiCall(db.Model):
 class Project(db.Model):
     __tablename__ = 'projects'
     module: str = Column(String(50), primary_key=True)
-    id: str = Column(String(50), primary_key=True, nullable=True)
     pid: str = Column(String(50), primary_key=True, nullable=True)
     group: str = Column(String(50))
     title: str = Column(String(50))
@@ -46,6 +45,7 @@ class Issue(db.Model):
 
     def to_dict(self):
         return {
+            "id": self.id,
             "title": self.title,
             "key": self.key,
             "group": self.group,

@@ -20,6 +20,13 @@ var toolbar = Vue.component("toolbar", {
       :items="selectableModules"
     >
     </v-select>
+    <v-select
+      v-model="selectedProject"
+      :items="projects"
+      :item-text="(item) => item.title"
+      :item-value="(item) => item.id"
+    >
+    </v-select>
     <v-btn
       v-on:click="exportEntry"
       :loading="loading['export']"
@@ -37,16 +44,15 @@ var toolbar = Vue.component("toolbar", {
                 this.$store.commit('setInput', {title: v, issue: this.findIssue(v)})
             }
         },
-        selectedModule: {
-            get() {
-                return this.$store.state.selectedModule;
-            },
-            set(v) {
-                this.$store.commit('setSelectedModule', v);
+        projects() {
+            if (this.selectedModule == null) {
+                return [];
             }
+            return this.modules[this.selectedModule].projects;
         },
         selectedEntry() {
-            return this.$store.state.selectedEntry;
+            let entry = this.$store.state.selectedEntry;
+            return entry;
         },
         modules() {
             return this.$store.state.modules;
@@ -74,6 +80,12 @@ var toolbar = Vue.component("toolbar", {
             return ret;
         }
     },
+    watch: {
+        selectedEntry(entry, oldEntry) {
+            this.selectedProject = (entry || {}).project;
+            this.selectedModule = (entry || {}).module;
+        }
+    },
     methods: {
         findIssue(title) {
             return this.$store.getters.findIssue(title)
@@ -91,8 +103,15 @@ var toolbar = Vue.component("toolbar", {
             this.$emit('exportEntry', Object.assign(this.selectedEntry, {
                 issue: this.$store.state.inputIssue,
                 title: this.entryTitle,
-                module: this.selectedModule
+                module: this.selectedModule,
+                project: this.selectedProject
             }));
+        }
+    },
+    data() {
+        return {
+            selectedModule: null,
+            selectedProject: null,
         }
     }
 });

@@ -67,7 +67,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                 if project['name'] not in toggl_settings[group]['PROJECTS']:
                     continue
                 projects.append(Project(
-                    id=project['id'],
+                    pid=project['id'],
                     title="{} - {}".format(client['name'], project['name']),
                     group=group
                 ))
@@ -106,7 +106,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             start_time=parse_time(updated_entry['start']),
             end_time=parse_time(updated_entry['stop']),
             title=updated_entry['description'],
-            project=updated_entry.get('pid', None),
+            project=_str(updated_entry.get('pid', None)),
         )
 
     def delete_entry(self, entry_id: str) -> None:
