@@ -4,7 +4,7 @@ var daytimeline = Vue.component("daytimeline", {
     :items="items"
     :groups="groups"
     :options="options"
-    :events="[]"
+    :events="['select']"
     @select="select">
     </timeline>
     `,
