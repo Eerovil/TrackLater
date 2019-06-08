@@ -10,23 +10,31 @@ var toolbar = Vue.component("toolbar", {
       :loading="loading[module]"
     >{{ module }}</v-btn>
     <br>
-    <v-combobox
-      v-model="entryTitle"
-      :items="allIssues"
-    >
-    </v-combobox>
-    <v-select
-      v-model="selectedModule"
-      :items="selectableModules"
-    >
-    </v-select>
-    <v-select
-      v-model="selectedProject"
-      :items="projects"
-      :item-text="(item) => item.title"
-      :item-value="(item) => item.id"
-    >
-    </v-select>
+    <v-layout row wrap>
+        <v-flex xs4>
+            <v-combobox
+            v-model="entryTitle"
+            :items="allIssues"
+            >
+            </v-combobox>
+        </v-flex>
+        <v-flex xs4>
+            <v-select
+            v-model="selectedModule"
+            :items="selectableModules"
+            >
+            </v-select>
+        </v-flex>
+        <v-flex xs4>
+            <v-select
+            v-model="selectedProject"
+            :items="projects"
+            :item-text="(item) => item.title"
+            :item-value="(item) => item.id"
+            >
+            </v-select>
+        </v-flex>
+    <v-layout>
     <v-btn
       v-on:click="exportEntry"
       :loading="loading['export']"
