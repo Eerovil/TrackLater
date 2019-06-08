@@ -15,6 +15,7 @@ var toolbar = Vue.component("toolbar", {
             <v-combobox
             v-model="entryTitle"
             :items="allIssues"
+            @change="exportEntry"
             >
             </v-combobox>
         </v-flex>
@@ -22,6 +23,7 @@ var toolbar = Vue.component("toolbar", {
             <v-select
             v-model="selectedModule"
             :items="selectableModules"
+            @change="exportEntry"
             >
             </v-select>
         </v-flex>
@@ -31,15 +33,11 @@ var toolbar = Vue.component("toolbar", {
             :items="projects"
             :item-text="(item) => item.title"
             :item-value="(item) => item.id"
+            @change="exportEntry"
             >
             </v-select>
         </v-flex>
     <v-layout>
-    <v-btn
-      v-on:click="exportEntry"
-      :loading="loading['export']"
-      :disabled="selectedEntry == null"
-    >Export</v-btn>
     </div>
     `,
     props: [],
