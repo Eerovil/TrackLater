@@ -23,18 +23,10 @@ var daytimeline = Vue.component("daytimeline", {
       },
       select(props) {
         const entry = this.entries[props.items[0]] || null;
-        const oldEntry = this.$store.state.selectedEntry;
-        this.$store.commit('setSelectedEntry', entry);
-        if (entry == null) {
-          setTimeout(() => {  // Debounce: Only set to null if selectedEntry is unchanged after 100ms
-            if (oldEntry == entry) {
-              this.$store.commit('setInput', {title: "", issue: null});
-            }
-          }, 100);
-        } else {
+        if (entry != null) {
           this.$store.commit('setInput', {title: entry.title, issue: entry.issue || this.findIssue(entry.title)})
+          this.$store.commit('setSelectedEntry', entry);
         }
-        this.$emit('selectedEntry', entry);
       },
       findIssue(title) {
         return this.$store.getters.findIssue(title)
