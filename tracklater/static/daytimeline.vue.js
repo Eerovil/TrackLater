@@ -1,12 +1,12 @@
 var daytimeline = Vue.component("daytimeline", {
     template: `
-    <timeline ref="timeline"
+    <vuetimeline ref="timeline"
     :items="items"
     :groups="groups"
     :options="options"
     :events="['select']"
     @select="select">
-    </timeline>
+    </vuetimeline>
     `,
     props: ["entries"],
     data() {
