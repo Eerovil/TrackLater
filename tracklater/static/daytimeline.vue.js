@@ -74,7 +74,10 @@ var daytimeline = Vue.component("daytimeline", {
             className: entry.module,
             content: entry.title,
             title: (entry.text || "").replace(/(?:\r\n|\r|\n)/g, '<br />'),
-            editable: this.modules[entry.module].capabilities.includes('updateentry'),
+            editable: {
+              updateTime: this.modules[entry.module].capabilities.includes('updateentry'),
+              remove: this.modules[entry.module].capabilities.includes('deleteentry')
+            },
           }
           if (entry.end_time != undefined) {
               row.end = new Date(entry.end_time);
