@@ -170,6 +170,9 @@ var daytimeline = Vue.component("daytimeline", {
           onMove: self.onMove,
           onRemove: self.onRemove,
           onAdd:self.onAdd,
+          tooltip: {
+            delay: 1
+          }
         }
       }
     },
