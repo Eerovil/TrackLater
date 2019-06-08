@@ -8,8 +8,9 @@ var home = Vue.component("home", {
     ></toolbar>
     <div class="toolbar-separator"></div>
     <daytimeline
-      v-for="(groupedEntries, index) in entriesByDategroup"
-      :entries="groupedEntries[1]"
+      v-for="dateGroupData in entriesByDategroup"
+      :entries="dateGroupData.entries"
+      :key="dateGroupData.dateGroup"
       @addEntry="updateEntry"
       @updateEntry="updateEntry"
       @deleteEntry="deleteEntry"
@@ -24,7 +25,7 @@ var home = Vue.component("home", {
             return this.$store.state.modules;
         },
         entriesByDategroup() {
-            // Return an array of 2-arrays, containing [date_group, entry_list]
+            // Return an array of objects, containing {dateGroup, entries}
             let keys = new Set()
             let ret;
             try {
@@ -35,20 +36,23 @@ var home = Vue.component("home", {
                 }
             }
             // Sort keys to make latest dategroup first
-            ret = new Map(Array.from(keys.values(), x => [x, []]).sort((a, b) => a > b ? -1 : 1));
+            ret = []
+            for (dateGroup of Array.from(keys.values()).sort((a, b) => a > b ? -1 : 1)) {
+                ret.push({dateGroup, entries: []});
+            }
             for (module_name in this.modules) {
                 let entries = this.modules[module_name].entries || []
                 for (let i=0; i<entries.length; i++) {
                     entries[i].module = module_name
-                    let new_entries = ret.get(entries[i].date_group);
-                    new_entries.push(entries[i]);
-                    ret.set(entries[i].date_group, new_entries);
+                    const index = ret.findIndex((item) => item.dateGroup === entries[i].date_group);
+                    ret[index].entries.push(entries[i]);
                 }
             }
             } catch (e) {
                 console.log(e)
             }
-            return Array.from(ret)
+            console.log(ret)
+            return ret;
         }
     },
     methods: {
