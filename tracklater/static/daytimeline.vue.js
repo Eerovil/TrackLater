@@ -9,6 +9,14 @@ var daytimeline = Vue.component("daytimeline", {
     </timeline>
     `,
     props: ["entries"],
+    data() {
+      return {
+        items: [],
+      }
+    },
+    mounted() {
+      this.items = this.entriesToItems(this.entries);
+    },
     methods: {
       myChangedCallback(arg1, arg2, arg3) {
         console.log(arg1, arg2, arg3)
@@ -57,13 +65,8 @@ var daytimeline = Vue.component("daytimeline", {
               this.$emit('addEntry', entry)
           }
       },
-    },
-    computed: {
-      modules() {
-          return this.$store.state.modules;
-      },
-      items() {
-        return this.entries.map((entry, i) => {
+      entriesToItems(entries) {
+        return entries.map((entry, i) => {
           let row = {
             id: i,
             group: entry.module,
@@ -82,7 +85,54 @@ var daytimeline = Vue.component("daytimeline", {
               row.type = 'point'
           }
           return row
-        })
+        });
+      },
+      itemArraysEqual(thisArray, thatArray) {
+        if (!thatArray)
+            return false;
+        if (thisArray.length != thatArray.length)
+            return false;
+
+        const keys = [
+          'id',
+          'group',
+          'start',
+          'className',
+          'content',
+          'title',
+          'editable',
+        ]
+
+        function itemcmp(thisItem, thatItem) {
+          if (thisItem instanceof Date) {
+            return (thisItem.getTimeUTC() === thatItem.getTimeUTC())
+          }
+          else {
+            return (thisItem === thatItem)
+          }
+        }
+
+        for (var i = 0, l=thisArray.length; i < l; i++) {
+          for (let key of keys) {
+            if (!itemcmp(thisArray[i][key], thatArray[i][key])) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+    },
+    watch: {
+      entries(entries, oldEntries) {
+        const newItems = this.entriesToItems(entries);
+        if (!this.itemArraysEqual(newItems, this.items)) {
+          this.items = newItems;
+        }
+      }
+    },
+    computed: {
+      modules() {
+          return this.$store.state.modules;
       },
       groups() {
         ret = []
