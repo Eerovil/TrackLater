@@ -25,6 +25,7 @@ class Parser(IssueMixin, AbstractParser):
             taiga_project = [p for p in self.taiga_projects if p['id'] == issue['project']][0]
             issues.append(Issue(
                 key="#{}".format(issue['ref']),
+                id=issue['id'],
                 title=issue['subject'],
                 group=taiga_project['group']
             ))
