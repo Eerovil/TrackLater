@@ -102,6 +102,9 @@ var daytimeline = Vue.component("daytimeline", {
           if (thisItem instanceof Date) {
             return (thisItem.getTimeUTC() === thatItem.getTimeUTC())
           }
+          else if (thisItem instanceof Object) {
+            return true; // TODO: If this is ever needed, remember to implement
+          }
           else {
             return (thisItem === thatItem)
           }
