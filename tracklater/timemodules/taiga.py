@@ -96,16 +96,19 @@ class Provider(AbstractProvider):
         return [
             {
                 "ref": "1",
+                "id": "1",
                 "subject": "Taiga issue 1",
                 "project": "1"
             },
             {
                 "ref": 2,
+                "id": "2",
                 "subject": "Taiga issue 2",
                 "project": "1"
             },
             {
                 "ref": 3,
+                "id": "3",
                 "subject": "Taiga issue 3",
                 "project": "1"
             }
