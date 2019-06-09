@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request
 from database import db
 from main import Parser
 import settings
@@ -46,9 +46,7 @@ def json_serial(obj):
 
 @app.route("/")
 def hello() -> Response:
-    return render_template(
-        'index.html'
-    )
+    return app.send_static_file('index.html')
 
 
 @app.route('/listmodules', methods=['GET'])
