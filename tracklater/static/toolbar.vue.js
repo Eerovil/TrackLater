@@ -37,7 +37,7 @@ var toolbar = Vue.component("toolbar", {
             >
             </v-select>
         </v-flex>
-    <v-layout>
+    </v-layout>
     </div>
     `,
     props: [],
