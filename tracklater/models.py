@@ -57,7 +57,7 @@ class Issue(db.Model):
 class Entry(db.Model):
     __tablename__ = 'entries'
     module: str = Column(String(50), primary_key=True)
-    id: str = Column(String(50), primary_key=True, nullable=True)
+    id: str = Column(String(50), primary_key=True, nullable=True, unique=True)
     start_time: datetime = Column(DateTime, primary_key=True)
     group: Optional[str] = Column(String(50))
     end_time: Optional[datetime] = Column(DateTime)

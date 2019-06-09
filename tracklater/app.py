@@ -160,6 +160,7 @@ def updateentry() -> Optional[str]:
         data = "error"
 
         if new_entry:
+            Entry.query.filter(Entry.id == new_entry.id).delete()
             new_entry.module = module
             db.session.merge(new_entry)
             db.session.commit()
