@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request
 from database import db
 from main import Parser
 import settings
@@ -46,18 +46,18 @@ def json_serial(obj):
 
 @app.route("/")
 def hello() -> Response:
-    return render_template(
-        'index.html'
-    )
+    return app.send_static_file('index.html')
 
 
 @app.route('/listmodules', methods=['GET'])
 def listmodules() -> Optional[str]:
     if request.method == 'GET':
         data = {}
+        parser = Parser(None, None)
         for module_name in settings.ENABLED_MODULES:
             data[module_name] = {
-                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None)
+                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None),
+                'capabilities': parser.modules[module_name].capabilities,
             }
         return json.dumps(data, default=json_serial)
     return None
@@ -66,7 +66,7 @@ def listmodules() -> Optional[str]:
 @app.route('/fetchdata', methods=['GET'])
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
-        keys = request.values.get('keys[]', 'all')
+        keys = request.values.getlist('keys[]')
         parse = request.values.get('parse', '1')
         now = datetime.utcnow()
         if 'from' in request.values:
@@ -83,7 +83,7 @@ def fetchdata() -> Optional[str]:
         if getattr(settings, 'OVERRIDE_END', None):
             to_date = settings.OVERRIDE_END
 
-        parser = Parser(from_date, to_date)
+        parser = Parser(from_date, to_date, modules=keys)
         if parse == '1':
             parser.parse()
         data: Dict[str, Dict] = {}
@@ -105,6 +105,7 @@ def fetchdata() -> Optional[str]:
                                             Issue.module == key
                                         )]
                 data[key]['capabilities'] = parser.modules[key].capabilities
+                data[key]['color'] = settings.UI_SETTINGS.get(key, {}).get('global', None),
         return json.dumps(data, default=json_serial)
     return None
 
@@ -119,20 +120,21 @@ def parseTimestamp(stamp):
 @app.route('/updateentry', methods=['POST'])
 def updateentry() -> Optional[str]:
     if request.method == 'POST':
-        module = request.values.get('module')
-        entry_id = _str(request.values.get('entry_id', None))
-        project = request.values.get('project_id', None)
+        data = request.get_json()
+        module = data.get('module')
+        entry_id = _str(data.get('entry_id', None))
+        project = data.get('project_id', None)
         if project == "null":
             project = None
         new_entry = Entry(
-            start_time=parseTimestamp(request.values['start_time']),
-            end_time=parseTimestamp(request.values.get('end_time', None)),
+            start_time=parseTimestamp(data['start_time']),
+            end_time=parseTimestamp(data.get('end_time', None)),
             id=entry_id,
-            issue=request.values.get('issue_id', None),
+            issue=data.get('issue_id', None),
             project=project,
-            title=request.values.get('title', ''),
-            text=request.values.get('text', ""),
-            extra_data=request.values.get('extra_data', {})
+            title=data.get('title', ''),
+            text=data.get('text', ""),
+            extra_data=data.get('extra_data', {})
         )
         issue = None
         if new_entry.issue:
@@ -170,8 +172,9 @@ def updateentry() -> Optional[str]:
 @app.route('/deleteentry', methods=['POST'])
 def deleteentry() -> Optional[str]:
     if request.method == 'POST':
-        module = request.values.get('module')
-        entry_id = request.values.get('entry_id')
+        data = request.get_json()
+        module = data.get('module')
+        entry_id = data.get('entry_id')
 
         parser = Parser(None, None)
         # Check that delete is allowed

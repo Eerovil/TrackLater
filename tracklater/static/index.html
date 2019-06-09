@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>VUE SPA</title>
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+    <link href="https://unpkg.com/vuetify@1.5.14/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/timeline-plus/dist/timeline.css" rel="stylesheet" type="text/css" />
+    <style>
+    .toolbar {
+        position:fixed; /* fixing the position takes it out of html flow - knows
+                        nothing about where to locate itself except by browser
+                        coordinates */
+        left:0;           /* top left corner should start at leftmost spot */
+        top:0;            /* top left corner should start at topmost spot */
+        width:100vw;      /* take up the full browser width */
+        z-index:200;  /* high z index so other content scrolls underneath */
+        height:110px;     /* define height for content */
+        background-color: white;
+    }
+    .toolbar-separator {
+        height: 110px;
+    }
+    </style>
+</head>
+
+<body>
+
+<div id="app" v-cloak>
+<home></home>
+</div>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.5.13/dist/vue.js"></script>
+<script src="https://unpkg.com/http-vue-loader"></script>
+<script src="https://unpkg.com/vuetify@1.5.14/dist/vuetify.min.js"></script>
+<script src="https://unpkg.com/vuex@2.0.0"></script>
+<script src="https://unpkg.com/timeline-plus/dist/timeline.js"></script>
+<!-- Vue Pages and Components here -->
+<script src='/static/home.vue.js'></script>
+<script src='/static/toolbar.vue.js'></script>
+<script src='/static/daytimeline.vue.js'></script>
+<script src='/static/timeline.vue.js'></script>
+
+
+<script>
+function _handleFailure(error) {
+    if (error.response == undefined) {
+        console.log(error);
+        return;
+    }
+    document.open();
+    document.write(error.response.data);
+    document.close();
+}
+
+Date.prototype.addHours= function(h){
+    var copiedDate = new Date();
+    copiedDate.setTime(this.getTimeUTC() + (h*60*60*1000) - (this.getTimezoneOffset() * 60 * 1000)); 
+    return copiedDate;
+}
+
+Date.prototype.getTimeUTC = function() {
+    return (this.getTime() + (this.getTimezoneOffset() * 60 * 1000))
+}
+
+const store = new Vuex.Store({
+  state: {
+    selectedEntry: null,
+    inputTitle: "",
+    inputIssue: null,
+    modules: {},
+    loading: {},
+  },
+  mutations: {
+    setModules(state, value) {
+      state.modules = value
+    },
+    setSelectedEntry(state, value) {
+      state.selectedEntry = value
+    },
+    setInput(state, {title, issue}) {
+      state.inputTitle = title
+      state.inputIssue = issue
+    },
+    setLoading(state, {module_name, loading}) {
+      Vue.set(state.loading, module_name, loading);
+    },
+    setEntries(state, {module_name, entries}) {
+      Vue.set(state.modules[module_name], 'entries', entries);
+    },
+  },
+  getters: {
+    findIssue: (state) => (title) => {
+        for (let module_name in state.modules) {
+            const _issues = state.modules[module_name].issues || [];
+            for (let i=0; i<_issues.length; i++) {
+                if (`${_issues[i].key} ${_issues[i].title}` === title) {
+                    return _issues[i];
+                }
+            }
+        }
+        return null;
+    },
+  }
+})
+
+var app = new Vue({
+    el: '#app',
+    watch: {},
+    methods: {},
+    store,
+})
+</script>
+
+</body>
+
+</html>
