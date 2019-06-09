@@ -47,7 +47,10 @@ var toolbar = Vue.component("toolbar", {
                 return this.$store.state.inputTitle
             },
             set(v) {
-                this.$store.commit('setInput', {title: v, issue: this.findIssue(v)})
+                this.$store.commit('setInput', {title: v, issue: this.findIssue(v)});
+                if (this.$store.state.inputIssue !== null) {
+                    this.selectedProject = (this.getProject(this.$store.state.inputIssue) || {}).id;
+                }
             }
         },
         projects() {
@@ -103,6 +106,15 @@ var toolbar = Vue.component("toolbar", {
             for (let module_name in this.modules) {
                 this.$emit('fetchModule', module_name)
             }
+        },
+        getProject(issue) {
+            // Get a matching project for issue
+            for (const project of this.projects) {
+                if (project.group === issue.group) {
+                    return project
+                }
+            }
+            return null
         },
         exportEntry() {
             this.$set(this.$store.state.loading, 'export', true);
