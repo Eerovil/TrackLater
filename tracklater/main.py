@@ -4,7 +4,6 @@
 
 import importlib
 import settings
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from timemodules.interfaces import AbstractParser
 from typing import Dict
@@ -14,20 +13,8 @@ from models import ApiCall, Entry, Issue, Project
 
 from database import db
 
-import traceback
 import logging
 logger = logging.getLogger(__name__)
-
-
-def reraise_with_stack(func):
-    def wrapped(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception:
-            traceback_str = traceback.format_exc()
-            raise Exception("Error occurred. Original traceback "
-                            "is\n%s\n" % traceback_str)
-    return wrapped
 
 
 def store_parser_to_database(parser, module_name, start_date, end_date):
@@ -83,23 +70,10 @@ class Parser(object):
             self.modules[module_name] = parser
 
     def parse(self) -> None:
-        with ThreadPoolExecutor() as executor:
-            running_tasks = {}
-
-            for module_name, parser in self.modules.items():
-                set_parser_caching_data(parser, module_name)
-                running_tasks[module_name] = executor.submit(reraise_with_stack(parser.parse))
-                logger.warning("Parsing %s", module_name)
-
-            for task in as_completed([value for key, value in running_tasks.items()]):
-                for key, value in running_tasks.items():
-                    if value is task:
-                        module_name = key
-                        break
-                if task.exception():
-                    logger.exception("Exception in %s: %s", module_name, task.exception())
-
-                store_parser_to_database(self.modules[module_name], module_name,
-                                         start_date=self.start_date, end_date=self.end_date)
-
-                logger.warning("Task done %s", module_name)
+        for module_name, parser in self.modules.items():
+            set_parser_caching_data(parser, module_name)
+            parser.parse()
+            logger.warning("Parsing %s", module_name)
+            store_parser_to_database(self.modules[module_name], module_name,
+                                     start_date=self.start_date, end_date=self.end_date)
+            logger.warning("Task done %s", module_name)
