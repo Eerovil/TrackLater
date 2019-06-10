@@ -111,9 +111,6 @@ var home = Vue.component("home", {
         axios.get("fetchdata", {params: {parse: "0"}}).then(response => {
             console.log("fetchdata (parse: 0)", response)
             this.$store.commit('updateModules', response.data);
-            for (module_name in this.modules) {
-                this.fetchModule(module_name);
-            }
         })
     }
 });
