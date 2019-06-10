@@ -73,6 +73,7 @@ var home = Vue.component("home", {
             return time
         },
         updateEntry(entry) {
+            this.$store.commit('setLoading', {module_name: 'updateentry', loading: true});
             axios.post("updateentry", {
                 'module': entry.module,
                 'entry_id': entry.id,
@@ -88,10 +89,11 @@ var home = Vue.component("home", {
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
                 updated_entries.push(response.data)
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
-                this.$set(this.$store.state.loading, 'export', false);
+                this.$store.commit('setLoading', {module_name: 'updateentry', loading: false});
             }).catch(_handleFailure)
         },
         deleteEntry(entry) {
+            this.$store.commit('setLoading', {module_name: 'deleteentry', loading: true});
             axios.post('deleteentry', {
                 'module': entry.module,
                 'entry_id': entry.id
@@ -99,6 +101,7 @@ var home = Vue.component("home", {
                 console.log("deleted entry " + entry.id + ": " + response.data);
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
+                this.$store.commit('setLoading', {module_name: 'deleteentry', loading: false});
             }).catch(_handleFailure)
         }
 
@@ -108,9 +111,11 @@ var home = Vue.component("home", {
             console.log(response)
             this.$store.commit('updateModules', response.data);
         })
+        this.$store.commit('setLoading', {module_name: 'fetchdata', loading: true});
         axios.get("fetchdata", {params: {parse: "0"}}).then(response => {
             console.log("fetchdata (parse: 0)", response)
             this.$store.commit('updateModules', response.data);
+            this.$store.commit('setLoading', {module_name: 'fetchdata', loading: false});
         })
     }
 });

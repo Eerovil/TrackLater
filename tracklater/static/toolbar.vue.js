@@ -1,16 +1,25 @@
 var toolbar = Vue.component("toolbar", {
     template: `
     <div>
-    <v-btn
-      v-on:click="fetchAllModules()"
-    >Fetch all</v-btn>
-    <v-btn
-      v-for="(data, module) in modules"
-      v-on:click=fetchModule(module)
-      :loading="loading[module]"
-    >{{ module }}</v-btn>
-    <br>
     <v-layout row wrap>
+        <v-flex xs10>
+            <v-btn
+            v-on:click="fetchAllModules()"
+            >Fetch all</v-btn>
+            <v-btn
+            v-for="(data, module) in modules"
+            v-on:click=fetchModule(module)
+            :loading="loading[module]"
+            >{{ module }}</v-btn>
+        </v-flex>
+        <v-flex>
+            <v-btn
+            icon
+            :loading="somethingLoading"
+            >
+            <v-icon>done</v-icon>
+            </v-btn>
+        </v-flex>
         <v-flex xs4>
             <v-combobox
             v-model="entryTitle"
@@ -52,6 +61,14 @@ var toolbar = Vue.component("toolbar", {
                     this.selectedProject = (this.getProject(this.$store.state.inputIssue) || {}).id;
                 }
             }
+        },
+        somethingLoading() {
+            for (key in this.loading) {
+                if (this.loading[key] === true) {
+                    return true;
+                }
+            }
+            return false;
         },
         projects() {
             if (this.selectedModule == null) {
@@ -117,7 +134,6 @@ var toolbar = Vue.component("toolbar", {
             return null
         },
         exportEntry() {
-            this.$set(this.$store.state.loading, 'export', true);
             this.$emit('exportEntry', Object.assign(this.selectedEntry, {
                 issue: this.$store.state.inputIssue,
                 title: this.entryTitle,
