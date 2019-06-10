@@ -5,6 +5,7 @@ var daytimeline = Vue.component("daytimeline", {
     :groups="groups"
     :options="options"
     :events="['select']"
+    :selection=selection
     @select="select">
     </vuetimeline>
     `,
@@ -34,6 +35,10 @@ var daytimeline = Vue.component("daytimeline", {
       onMove: function(item, callback) {
         if (this.modules[item.group].capabilities.includes('updateentry')) {
             let entry = this.entries[item.id];
+            if (new Date(entry.start_time).getTimeUTC() === item.start.getTimeUTC() &&
+                  new Date(entry.end_time).getTimeUTC() === item.end.getTimeUTC()) {
+              return;
+            }
             entry.start_time = item.start
             entry.end_time = item.end
             this.$emit('updateEntry', entry)
@@ -129,6 +134,18 @@ var daytimeline = Vue.component("daytimeline", {
       }
     },
     computed: {
+      selection() {
+        const selectedEntry = this.$store.state.selectedEntry;
+        if (selectedEntry != null && selectedEntry.date_group === (this.entries[0] || {}).date_group) {
+          for (let i=0; i<this.entries.length; i++) {
+            if (this.entries[i].module == selectedEntry.module &&
+                selectedEntry.id != null &&
+                this.entries[i].id === selectedEntry.id) {
+                  return i;
+                }
+          }
+        }
+      },
       modules() {
           return this.$store.state.modules;
       },
@@ -156,11 +173,10 @@ var daytimeline = Vue.component("daytimeline", {
           editable: true,
           zoomable: false,
           horizontalScroll: false,
+          moveable: false,
           margin: {
               item: 0
           },
-          multiselect: true,
-          multiselectPerGroup: true,
           snap: null,
           onMove: self.onMove,
           onRemove: self.onRemove,

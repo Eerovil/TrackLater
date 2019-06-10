@@ -88,7 +88,7 @@ def fetchdata() -> Optional[str]:
             parser.parse()
         data: Dict[str, Dict] = {}
         for key in settings.ENABLED_MODULES:
-            if keys == "all" or key in keys:
+            if not keys or key in keys:
                 data[key] = {}
                 data[key]['entries'] = [entry.to_dict()
                                         for entry in Entry.query.filter(
@@ -160,6 +160,7 @@ def updateentry() -> Optional[str]:
         data = "error"
 
         if new_entry:
+            Entry.query.filter(Entry.id == new_entry.id).delete()
             new_entry.module = module
             db.session.merge(new_entry)
             db.session.commit()

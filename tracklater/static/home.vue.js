@@ -62,7 +62,7 @@ var home = Vue.component("home", {
 
             axios.get("fetchdata", {params: {keys: [module_name]}}).then(response => {
                 console.log(response)
-                this.$store.commit('setModules', Object.assign(this.modules, response.data));
+                this.$store.commit('updateModules', response.data);
                 this.$store.commit('setLoading', {module_name, loading: false});
             })
         },
@@ -106,7 +106,11 @@ var home = Vue.component("home", {
     mounted() {
         axios.get("listmodules").then(response => {
             console.log(response)
-            this.$store.commit('setModules', response.data);
+            this.$store.commit('updateModules', response.data);
+        })
+        axios.get("fetchdata", {params: {parse: "0"}}).then(response => {
+            console.log("fetchdata (parse: 0)", response)
+            this.$store.commit('updateModules', response.data);
         })
     }
 });

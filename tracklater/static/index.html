@@ -28,14 +28,14 @@
 
 <body>
 
-<div id="app" v-cloak>
+<v-app id="app" v-cloak>
 <home></home>
-</div>
+</v-app>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.5.13/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
 <script src="https://unpkg.com/http-vue-loader"></script>
 <script src="https://unpkg.com/vuetify@1.5.14/dist/vuetify.min.js"></script>
-<script src="https://unpkg.com/vuex@2.0.0"></script>
+<script src="https://unpkg.com/vuex@3.1.1"></script>
 <script src="https://unpkg.com/timeline-plus/dist/timeline.js"></script>
 <!-- Vue Pages and Components here -->
 <script src='/static/home.vue.js'></script>
@@ -74,8 +74,8 @@ const store = new Vuex.Store({
     loading: {},
   },
   mutations: {
-    setModules(state, value) {
-      state.modules = value
+    updateModules(state, value) {
+      state.modules = Object.assign({}, Object.assign(state.modules, value));
     },
     setSelectedEntry(state, value) {
       state.selectedEntry = value
