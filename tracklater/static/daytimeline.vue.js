@@ -5,6 +5,7 @@ var daytimeline = Vue.component("daytimeline", {
     :groups="groups"
     :options="options"
     :events="['select']"
+    :selection=selection
     @select="select">
     </vuetimeline>
     `,
@@ -133,6 +134,18 @@ var daytimeline = Vue.component("daytimeline", {
       }
     },
     computed: {
+      selection() {
+        const selectedEntry = this.$store.state.selectedEntry;
+        if (selectedEntry != null && selectedEntry.date_group === (this.entries[0] || {}).date_group) {
+          for (let i=0; i<this.entries.length; i++) {
+            if (this.entries[i].module == selectedEntry.module &&
+                selectedEntry.id != null &&
+                this.entries[i].id === selectedEntry.id) {
+                  return i;
+                }
+          }
+        }
+      },
       modules() {
           return this.$store.state.modules;
       },

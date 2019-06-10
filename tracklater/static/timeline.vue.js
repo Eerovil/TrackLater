@@ -18,21 +18,27 @@ var vuetimeline = Vue.component("vuetimeline", {
         options: {
           type: Object
         },
+        selection: {
+          type: Number,
+          default: () => -1
+        }
     },
     watch: {
-        items() {
+        items(newItems) {
            this.parsedItems.clear();
-           this.parsedItems.add(this.items);
+           this.parsedItems.add(newItems);
+           this.timeline.setSelection(this.selection);
         },
-        groups() {
+        groups(newGroups) {
           this.parsedGroups.clear();
-          this.parsedGroups.add(this.groups);
-        }
+          this.parsedGroups.add(newGroups);
+        },
     },
     data() {
       return {
         parsedItems: new timeline.DataSet([]),
-        parsedGroups: new timeline.DataSet([])
+        parsedGroups: new timeline.DataSet([]),
+        timeline: null
       }
     },
     mounted() {
