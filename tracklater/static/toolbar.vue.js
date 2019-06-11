@@ -134,6 +134,9 @@ var toolbar = Vue.component("toolbar", {
             return null
         },
         exportEntry() {
+            if (this.selectedEntry == null) {
+                return;
+            }
             this.$emit('exportEntry', Object.assign(this.selectedEntry, {
                 issue: this.$store.state.inputIssue,
                 title: this.entryTitle,
