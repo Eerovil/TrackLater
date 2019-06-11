@@ -59,6 +59,8 @@ var toolbar = Vue.component("toolbar", {
                 this.$store.commit('setInput', {title: v, issue: this.findIssue(v)});
                 if (this.$store.state.inputIssue !== null) {
                     this.selectedProject = (this.getProject(this.$store.state.inputIssue) || {}).id;
+                } else {
+                    this.selectedProject = (this.guessProject(this.entryTitle) || {}).id;
                 }
             }
         },
@@ -128,6 +130,15 @@ var toolbar = Vue.component("toolbar", {
             // Get a matching project for issue
             for (const project of this.projects) {
                 if (project.group === issue.group) {
+                    return project
+                }
+            }
+            return null
+        },
+        guessProject(title) {
+            // Guess project based on the title. return null if no guess
+            for (const project of this.projects) {
+                if (title.indexOf(project.group) > -1) {
                     return project
                 }
             }
