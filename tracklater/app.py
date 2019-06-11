@@ -184,5 +184,8 @@ def deleteentry() -> Optional[str]:
             entry_id=entry_id
         )
 
+        Entry.query.filter(Entry.id == entry_id).delete()
+        db.session.commit()
+
         return json.dumps(ret, default=json_serial)
     return None
