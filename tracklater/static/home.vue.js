@@ -88,6 +88,8 @@ var home = Vue.component("home", {
                 console.log(response)
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
                 updated_entries.push(response.data)
+                this.$store.commit('setSelectedEntry', response.data)
+                this.$store.commit('setInput', {title: response.data.title, issue: null})
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'updateentry', loading: false});
             }).catch(_handleFailure)
