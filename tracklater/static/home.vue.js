@@ -102,6 +102,8 @@ var home = Vue.component("home", {
             }).then((response) => {
                 console.log("deleted entry " + entry.id + ": " + response.data);
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                this.$store.commit('setSelectedEntry', null)
+                this.$store.commit('setInput', {title: null, issue: null})
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'deleteentry', loading: false});
             }).catch(_handleFailure)
