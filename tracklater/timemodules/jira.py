@@ -32,6 +32,8 @@ class Parser(IssueMixin, AbstractParser):
 
     def get_group_issues(self, provider, group, group_settings) -> List[Issue]:
         cached_issues = self.caching.issue_count or 0
+        # Go back a few pages to be sure
+        cached_issues = max(cached_issues - provider.ISSUES_PER_PAGE * 2, 0)
         issues: List[Issue] = []
         latest_issues = provider.fetch_issues(
             project_key=group_settings['PROJECT_KEY'],
@@ -40,7 +42,7 @@ class Parser(IssueMixin, AbstractParser):
         run_once = False
         while latest_issues['total'] - (cached_issues + len(issues)) > 0 or not run_once:
             run_once = True
-            logging.info(
+            logger.warning(
                 'Fetching issues %s to %s',
                 cached_issues + len(issues), cached_issues + len(issues) + provider.ISSUES_PER_PAGE
             )
@@ -49,6 +51,7 @@ class Parser(IssueMixin, AbstractParser):
                 project_key=group_settings['PROJECT_KEY'],
                 start_from=(cached_issues + len(issues))
             )['issues']
+            logger.warning(new_issues)
             for issue in new_issues:
                 exists = False
                 for existing_issue in issues:
@@ -74,8 +77,8 @@ class Provider(AbstractProvider):
     def fetch_issues(self, url, project_key, start_from=None) -> dict:
         start_str = '&startAt={}'.format(start_from) if (start_from and start_from > 0) else ''
         response = requests.get(
-            '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}&fields=key,summary,issuetype'
-            '&maxResults={ISSUES_PER_PAGE}{start_str}'.format(
+            '{JIRA_URL}/rest/api/2/search?jql=project={JIRA_KEY}+order+by+id&fields=key,summary'
+            ',issuetype&maxResults={ISSUES_PER_PAGE}{start_str}'.format(
                 JIRA_URL=url, JIRA_KEY=project_key, start_str=start_str,
                 ISSUES_PER_PAGE=self.ISSUES_PER_PAGE
             ), auth=self.credentials
