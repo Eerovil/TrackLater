@@ -1,34 +1,21 @@
-from flask import Flask, request
-from database import db
-from main import Parser
-import settings
-from utils import _str
+from flask import request
+from tracklater.utils import _str
 from datetime import datetime, timedelta, date
 import json
 import pytz
 from typing import Optional, Dict
-import os
-
 from requests.models import Response
 
-from models import Entry, Issue, Project, ApiCall  # noqa
+from tracklater.database import db
+from tracklater.main import Parser
+from tracklater import settings
+from tracklater.models import Entry, Issue, Project, ApiCall  # noqa
+from tracklater.timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 
-from timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
+from . import endpoints
 
-app = Flask(__name__)
-
-logger = app.logger
-DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}/database.db'.format(DIRECTORY)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
-with app.app_context():
-    db.create_all()
-
-
-class State(object):
-    parser: Optional[Parser] = None
+import logging
+logger = logging.getLogger(__name__)
 
 
 def json_serial(obj):
@@ -44,12 +31,12 @@ def json_serial(obj):
     raise TypeError("Type %s not serializable" % type(obj))
 
 
-@app.route("/")
+@endpoints.route("/")
 def hello() -> Response:
-    return app.send_static_file('index.html')
+    return endpoints.send_static_file('index.html')
 
 
-@app.route('/listmodules', methods=['GET'])
+@endpoints.route('/listmodules', methods=['GET'])
 def listmodules() -> Optional[str]:
     if request.method == 'GET':
         data = {}
@@ -63,7 +50,7 @@ def listmodules() -> Optional[str]:
     return None
 
 
-@app.route('/fetchdata', methods=['GET'])
+@endpoints.route('/fetchdata', methods=['GET'])
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.getlist('keys[]')
@@ -117,7 +104,7 @@ def parseTimestamp(stamp):
     return date
 
 
-@app.route('/updateentry', methods=['POST'])
+@endpoints.route('/updateentry', methods=['POST'])
 def updateentry() -> Optional[str]:
     if request.method == 'POST':
         data = request.get_json()
@@ -170,7 +157,7 @@ def updateentry() -> Optional[str]:
     return None
 
 
-@app.route('/deleteentry', methods=['POST'])
+@endpoints.route('/deleteentry', methods=['POST'])
 def deleteentry() -> Optional[str]:
     if request.method == 'POST':
         data = request.get_json()
