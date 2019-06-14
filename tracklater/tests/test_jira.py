@@ -1,4 +1,4 @@
-from timemodules.jira import Parser, Provider
+from tracklater.timemodules.jira import Parser, Provider
 
 import pytest
 import os

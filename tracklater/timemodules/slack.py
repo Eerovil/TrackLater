@@ -1,12 +1,12 @@
 
 from slack import WebClient
-import settings
 from datetime import datetime
-from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
-
-from models import Entry
 import pytz
 from typing import List
+
+from tracklater import settings
+from .interfaces import EntryMixin, AbstractParser, AbstractProvider
+from tracklater.models import Entry
 
 import logging
 logger = logging.getLogger(__name__)

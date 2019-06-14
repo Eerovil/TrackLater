@@ -1,6 +1,6 @@
-from timemodules.interfaces import AbstractProvider
+from tracklater.timemodules.interfaces import AbstractProvider
 
-from utils import obj_from_dict
+from tracklater.utils import obj_from_dict
 
 
 def test_obj_from_dict():

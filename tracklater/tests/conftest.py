@@ -1,7 +1,7 @@
 
 import pytest
-import settings
-import test_settings
+from tracklater import settings
+from tracklater import test_settings
 
 
 @pytest.fixture(autouse=True)
@@ -20,5 +20,5 @@ def mock_settings(monkeypatch):
 
 @pytest.fixture()
 def db():
-    from database import db
+    from tracklater.database import db
     return db

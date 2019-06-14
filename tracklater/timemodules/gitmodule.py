@@ -1,15 +1,14 @@
 from typing import List
-import settings
 import git
 import pytz
 import os
 import json
-
 from datetime import datetime
-from utils import FixedOffset, obj_from_dict
-from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
-from models import Entry
 
+from tracklater.utils import FixedOffset, obj_from_dict
+from tracklater import settings
+from tracklater.timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
+from tracklater.models import Entry
 
 import logging
 logger = logging.getLogger(__name__)

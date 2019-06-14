@@ -1,4 +1,4 @@
-from timemodules.gitmodule import Parser
+from tracklater.timemodules.gitmodule import Parser
 
 import pytest
 import os

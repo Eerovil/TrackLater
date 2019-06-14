@@ -1,4 +1,4 @@
-from timemodules.slack import Parser
+from tracklater.timemodules.slack import Parser
 
 import pytest
 import os

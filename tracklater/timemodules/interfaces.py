@@ -1,10 +1,10 @@
 from typing import List, Optional
 from datetime import datetime
-import settings
 from abc import ABCMeta, abstractmethod
-
-from models import Entry, Issue, Project
 from dataclasses import dataclass
+
+from tracklater import settings
+from tracklater.models import Entry, Issue, Project
 
 
 @dataclass

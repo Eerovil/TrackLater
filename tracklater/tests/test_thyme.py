@@ -1,4 +1,4 @@
-from timemodules.thyme import Parser
+from tracklater.timemodules.thyme import Parser
 
 import pytest
 import os

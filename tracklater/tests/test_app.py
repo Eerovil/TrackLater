@@ -1,12 +1,11 @@
 import pytest
 import os
 
-from app import app
-
 from typing import Any
 from datetime import datetime, timedelta
 
-from models import Entry, Issue, Project
+from tracklater.app import app
+from tracklater.models import Entry, Issue, Project
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
@@ -39,8 +38,8 @@ def test_app_fetchdata(client):
 
 
 def test_database_entries(client, db: Any):
-    from timemodules.toggl import Parser
-    from main import store_parser_to_database
+    from tracklater.timemodules.toggl import Parser
+    from tracklater.main import store_parser_to_database
     start_date = datetime.utcnow() - timedelta(days=7)
     end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
@@ -53,8 +52,8 @@ def test_database_entries(client, db: Any):
 
 
 def test_database_projects(client, db: Any):
-    from timemodules.toggl import Parser
-    from main import store_parser_to_database
+    from tracklater.timemodules.toggl import Parser
+    from tracklater.main import store_parser_to_database
     start_date = datetime.utcnow() - timedelta(days=7)
     end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
@@ -67,8 +66,8 @@ def test_database_projects(client, db: Any):
 
 
 def test_database_issues(client, db: Any):
-    from timemodules.jira import Parser
-    from main import store_parser_to_database
+    from tracklater.timemodules.jira import Parser
+    from tracklater.main import store_parser_to_database
     start_date = datetime.utcnow() - timedelta(days=7)
     end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
@@ -81,8 +80,8 @@ def test_database_issues(client, db: Any):
 
 
 def test_database_jira_caching(client, db: Any):
-    from timemodules.jira import Parser
-    from main import store_parser_to_database, set_parser_caching_data
+    from tracklater.timemodules.jira import Parser
+    from tracklater.main import store_parser_to_database, set_parser_caching_data
     start_date = datetime.utcnow() - timedelta(days=7)
     end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)
@@ -107,8 +106,8 @@ def test_database_jira_caching(client, db: Any):
 
 @pytest.mark.skip('Broken from commit be24bce7a5c3e472c49c1a9e5712712501453ba5')
 def test_database_slack_caching(client, db: Any):
-    from timemodules.slack import Parser
-    from main import store_parser_to_database, set_parser_caching_data
+    from tracklater.timemodules.slack import Parser
+    from tracklater.main import store_parser_to_database, set_parser_caching_data
     start_date = datetime.utcnow() - timedelta(days=7)
     end_date = datetime.utcnow()
     parser = Parser(start_date, end_date)

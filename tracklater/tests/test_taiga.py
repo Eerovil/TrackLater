@@ -1,4 +1,4 @@
-from timemodules.taiga import Parser
+from tracklater.timemodules.taiga import Parser
 
 import pytest
 import os
