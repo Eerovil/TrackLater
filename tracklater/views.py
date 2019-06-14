@@ -1,10 +1,9 @@
-from flask import request
+from flask import request, Blueprint
 from tracklater.utils import _str
 from datetime import datetime, timedelta, date
 import json
 import pytz
 from typing import Optional, Dict
-from requests.models import Response
 
 from tracklater.database import db
 from tracklater.main import Parser
@@ -12,10 +11,11 @@ from tracklater import settings
 from tracklater.models import Entry, Issue, Project, ApiCall  # noqa
 from tracklater.timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 
-from . import endpoints
-
 import logging
 logger = logging.getLogger(__name__)
+
+
+bp = Blueprint("main", __name__)
 
 
 def json_serial(obj):
@@ -31,12 +31,7 @@ def json_serial(obj):
     raise TypeError("Type %s not serializable" % type(obj))
 
 
-@endpoints.route("/")
-def hello() -> Response:
-    return endpoints.send_static_file('index.html')
-
-
-@endpoints.route('/listmodules', methods=['GET'])
+@bp.route('/listmodules', methods=['GET'])
 def listmodules() -> Optional[str]:
     if request.method == 'GET':
         data = {}
@@ -50,7 +45,7 @@ def listmodules() -> Optional[str]:
     return None
 
 
-@endpoints.route('/fetchdata', methods=['GET'])
+@bp.route('/fetchdata', methods=['GET'])
 def fetchdata() -> Optional[str]:
     if request.method == 'GET':
         keys = request.values.getlist('keys[]')
@@ -104,7 +99,7 @@ def parseTimestamp(stamp):
     return date
 
 
-@endpoints.route('/updateentry', methods=['POST'])
+@bp.route('/updateentry', methods=['POST'])
 def updateentry() -> Optional[str]:
     if request.method == 'POST':
         data = request.get_json()
@@ -157,7 +152,7 @@ def updateentry() -> Optional[str]:
     return None
 
 
-@endpoints.route('/deleteentry', methods=['POST'])
+@bp.route('/deleteentry', methods=['POST'])
 def deleteentry() -> Optional[str]:
     if request.method == 'POST':
         data = request.get_json()
