@@ -13,7 +13,7 @@ def mock_settings(monkeypatch):
         if module_setting == 'helper':
             continue
         monkeypatch.setattr(
-            'settings.{}'.format(module_setting),
+            'tracklater.settings.{}'.format(module_setting),
             getattr(test_settings, module_setting, {})
         )
 

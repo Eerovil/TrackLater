@@ -37,7 +37,7 @@ class TestProvider(AbstractProvider):
 
 
 def test_provider_normal(monkeypatch):
-    monkeypatch.setattr('settings.TESTING', False)
+    monkeypatch.setattr('tracklater.settings.TESTING', False)
     provider = TestProvider()
 
     assert provider.normal_method() == "normal"

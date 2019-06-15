@@ -9,7 +9,7 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 @pytest.fixture(autouse=True)
 def mock_git(monkeypatch):
-    monkeypatch.setattr('timemodules.gitmodule.timestamp_to_datetime',
+    monkeypatch.setattr('tracklater.timemodules.gitmodule.timestamp_to_datetime',
                         lambda x: datetime.utcnow() - timedelta(days=4))
 
 
