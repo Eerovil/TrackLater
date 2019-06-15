@@ -3,11 +3,16 @@ from setuptools import setup, find_packages
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name='tracklater',
     version='1.1',
     description=('TrackLater helps you track time after-the-fact by combining clues and showing'
                  'your day on a simple timeline view.'),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='Eero Vilpponen',
     author_email='eero.vilpponen@gmail.com',
     packages=find_packages(),
