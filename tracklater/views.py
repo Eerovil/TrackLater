@@ -15,7 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-bp = Blueprint("main", __name__)
+bp = Blueprint("main", __name__, static_folder="static", static_url_path="/static/views")
+
+
+@bp.route('/', methods=['GET'])
+def index():
+    return bp.send_static_file('index.html')
 
 
 def json_serial(obj):

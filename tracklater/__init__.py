@@ -6,8 +6,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def create_app():
-    app = Flask(__name__)
+def create_app(name=__name__):
+    app = Flask(name)
 
     DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
@@ -21,6 +21,9 @@ def create_app():
 
     app.register_blueprint(views.bp)
 
-    app.add_url_rule("/", endpoint="index", view_func=lambda: app.send_static_file('index.html'))
-
     return app
+
+
+def run():
+    app = create_app(name="tracklater")
+    app.run(debug=True, port=5000, host="localhost")
