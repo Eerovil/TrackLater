@@ -17,4 +17,10 @@ setup(
     entry_points={
         'console_scripts': ['tracklater = tracklater.__init__:run']
     },
+    url="https://github.com/Eerovil/TrackLater",
+    classifiers=[
+        "Programming Language :: Python :: 3.7",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )
