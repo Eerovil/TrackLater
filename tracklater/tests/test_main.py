@@ -1,6 +1,6 @@
-from timemodules.interfaces import AbstractProvider
+from tracklater.timemodules.interfaces import AbstractProvider
 
-from utils import obj_from_dict
+from tracklater.utils import obj_from_dict
 
 
 def test_obj_from_dict():
@@ -37,7 +37,7 @@ class TestProvider(AbstractProvider):
 
 
 def test_provider_normal(monkeypatch):
-    monkeypatch.setattr('settings.TESTING', False)
+    monkeypatch.setattr('tracklater.settings.TESTING', False)
     provider = TestProvider()
 
     assert provider.normal_method() == "normal"

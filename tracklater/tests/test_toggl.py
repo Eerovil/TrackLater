@@ -1,10 +1,10 @@
-from timemodules.toggl import Parser
+from tracklater.timemodules.toggl import Parser
 
 import pytest
 import os
 
 from datetime import datetime, timedelta
-from models import Entry
+from tracklater.models import Entry
 
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 

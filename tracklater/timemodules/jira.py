@@ -1,10 +1,11 @@
 import requests
-import settings
 import os
 import json
 
 from .interfaces import IssueMixin, AbstractParser, AbstractProvider
-from models import Issue
+
+from tracklater import settings
+from tracklater.models import Issue
 
 from typing import Any, List
 

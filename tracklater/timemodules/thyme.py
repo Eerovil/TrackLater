@@ -1,12 +1,12 @@
-import settings
 import json
 import os
 from datetime import timedelta
-from utils import parse_time
-from timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
 from typing import List, Any, Optional
 
-from models import Entry
+from tracklater import settings
+from tracklater.utils import parse_time
+from .interfaces import EntryMixin, AbstractParser, AbstractProvider
+from tracklater.models import Entry
 
 import logging
 logger = logging.getLogger(__name__)

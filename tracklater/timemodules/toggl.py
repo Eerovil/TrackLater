@@ -1,18 +1,16 @@
 import requests
 import json
-
+from typing import List, Union, cast, Any, Optional
 from datetime import timedelta
 
-from utils import parse_time, _str
-import settings
-from timemodules.interfaces import (
+from tracklater.utils import parse_time, _str
+from tracklater import settings
+from .interfaces import (
     EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, ProjectMixin, AbstractParser,
     AbstractProvider
 )
+from tracklater.models import Entry, Project, Issue
 
-from models import Entry, Project, Issue
-
-from typing import List, Union, cast, Any, Optional
 
 import logging
 logger = logging.getLogger(__name__)

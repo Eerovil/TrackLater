@@ -3,15 +3,13 @@
 
 
 import importlib
-import settings
-
-from timemodules.interfaces import AbstractParser
 from typing import Dict
 from types import ModuleType
 
-from models import ApiCall, Entry, Issue, Project
-
-from database import db
+from tracklater import settings
+from tracklater.timemodules.interfaces import AbstractParser
+from tracklater.models import ApiCall, Entry, Issue, Project
+from tracklater.database import db
 
 import logging
 logger = logging.getLogger(__name__)
@@ -62,7 +60,7 @@ class Parser(object):
             if modules and module_name not in modules:
                 continue
             module: ModuleType = importlib.import_module(
-                'timemodules.{}'.format(module_name)
+                'tracklater.timemodules.{}'.format(module_name)
             )
             if getattr(module, 'Parser', None) is None:
                 logger.warning('Module %s has no Parser class', module_name)

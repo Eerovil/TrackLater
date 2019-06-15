@@ -1,0 +1,2 @@
+include tracklater/static/*
+include tracklater/timemodules/fixture/*

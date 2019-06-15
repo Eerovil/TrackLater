@@ -1,11 +1,9 @@
 import requests
-import settings
-
-from timemodules.interfaces import IssueMixin, AbstractParser, AbstractProvider
-
-from models import Issue
-
 from typing import List, cast, Any
+
+from tracklater import settings
+from .interfaces import IssueMixin, AbstractParser, AbstractProvider
+from tracklater.models import Issue
 
 import logging
 logger = logging.getLogger(__name__)

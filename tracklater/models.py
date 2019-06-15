@@ -1,10 +1,9 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, PickleType
-from database import db
 from datetime import datetime, timedelta
-
-import settings
-
 from typing import Optional
+
+from tracklater.database import db
+from tracklater import settings
 
 import logging
 logger = logging.getLogger(__name__)

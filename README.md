@@ -52,9 +52,18 @@ To run thyme automatically every 20 seconds you can add this to your crontab. Wi
 
 # Running
 
-Example command to start the server. Must be run in the `tracklater` directory (containing `app.py`)
+Clone the repository, install inside a virtualenv and run:
 ```
-FLASK_APP=app.py python -m flask run
+git clone git@github.com:Eerovil/TrackLater.git
+cd TrackLater
+mkvirtualenv tracklater -p python3.7 -a .
+pip install .
+tracklater
+```
+
+Additional example command to start the server. Must be run in the root directory.
+```
+FLASK_APP=tracklater python -m flask run
 ```
 
 # Usage

@@ -1,4 +1,4 @@
-from timemodules.jira import Parser, Provider
+from tracklater.timemodules.jira import Parser, Provider
 
 import pytest
 import os
@@ -37,7 +37,7 @@ def test_fetch_issues(provider: Provider):
 
 
 def test_get_group_issues(parser: Parser, provider: Provider):
-    import settings
+    from tracklater import settings
     issues = parser.get_group_issues(provider, 'group1', settings.JIRA['group1'])
     assert len(issues) == 6
 
