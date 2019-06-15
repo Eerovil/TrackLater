@@ -13,6 +13,7 @@ setup(
     packages=find_packages(),
     py_modules=['tracklater'],
     install_requires=requirements,
+    python_requires='>=3.7.1',
     include_package_data=True,
     entry_points={
         'console_scripts': ['tracklater = tracklater.__init__:run']
