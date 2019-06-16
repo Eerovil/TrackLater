@@ -2,6 +2,7 @@ import json
 import appdirs
 import os
 import shutil
+from typing import Any
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ class Dummy(object):
     pass
 
 
-settings_wrapper = Dummy()
+settings_wrapper: Any = Dummy()
 
 if not os.path.exists(user_config_path):
     shutil.copy(os.path.join(DIRECTORY, 'example_config.json'), user_config_path)
