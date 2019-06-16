@@ -1,0 +1,91 @@
+{
+    "TESTING": false,
+    "ENABLED_MODULES": [
+        "thyme",
+        "gitmodule",
+        "toggl",
+        "taiga",
+        "jira",
+        "slack"
+    ],
+
+    "UI_SETTINGS": {
+        "toggl": {
+            "global": "#E01A22"
+        },
+        "thyme": {
+            "global": "#1aef65"
+        },
+        "gitmodule": {
+            "global": "#F44D27"
+        },
+        "slack": {
+            "global": "#4A154B"
+        }
+    },
+    "TOGGL": {
+        "global": {
+            "API_KEY": "your-api-key"
+        },
+        "group1": {
+            "NAME": "First Group",
+            "PROJECTS": {
+                "Development": "default",
+                "Bug fixing": "bug"
+            }
+        },
+        "group2": {
+            "NAME": "Second Group",
+            "PROJECTS": {
+                "Development": "default",
+                "Bug fixing": "default"
+            }
+        }
+    },
+
+    "GIT": {
+        "global": {
+            "EMAILS": ["firstname.lastname@email.com"]
+        },
+        "group1": {
+            "REPOS": ["/full/path/to/group1/repo"]
+        },
+        "group2": {
+            "REPOS": ["/full/path/to/group2/repo"]
+        }
+    },
+
+    "JIRA": {
+        "group1": {
+            "CREDENTIALS": ["username", "password"],
+            "URL": "https://group1.atlassian.net",
+            "PROJECT_KEY": "DEV"
+        }
+    },
+
+    "TAIGA": {
+        "global": {
+            "CREDENTIALS": ["username", "password"]
+        },
+        "group2": {
+            "project_slug": "username-group2"
+        }
+    },
+
+    "THYME": {
+        "global": {
+            "DIR": "/full/path/to/thyme/dir"
+        }
+    },
+
+    "SLACK": {
+        "global": {
+            "API_KEY": "legacy-slack-api-key-global",
+            "USER_ID": "your-user-id"
+        },
+        "group2": {
+            "API_KEY": "legacy-slack-api-key-group2",
+            "USER_ID": "your-user-id"
+        }
+    }
+}
