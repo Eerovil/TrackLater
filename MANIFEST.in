@@ -1,2 +1,3 @@
 include tracklater/static/*
 include tracklater/timemodules/fixture/*
+include tracklater/example_settings.json
