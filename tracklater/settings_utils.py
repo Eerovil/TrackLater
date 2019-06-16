@@ -24,7 +24,7 @@ if not os.path.exists(user_config_path):
 try:
     with open(user_config_path, 'rb') as f:
         for key, value in json.load(f).items():
-            setattr(settings_wrapper, key, value) 
+            setattr(settings_wrapper, key, value)
 except json.JSONDecodeError as e:
     logger.exception("Error reading settings file: %s", e)
 
