@@ -5,3 +5,4 @@ slackclient==2.0.1
 pytz==2019.1
 flask-sqlalchemy==2.4.0
 requests==2.22.0
+appdirs==1.4.3

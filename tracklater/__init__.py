@@ -1,6 +1,7 @@
 from flask import Flask
 import os
 from tracklater.database import db
+from tracklater.settings_utils import settings_wrapper as settings  # noqa
 
 import logging
 logger = logging.getLogger(__name__)
