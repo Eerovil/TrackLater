@@ -52,6 +52,17 @@ To run thyme automatically every 20 seconds you can add this to your crontab. Wi
 
 # Running
 
+Install inside a virtualenv from PiPy. After first run & page load the example configuration should
+be created at `~/.config/tracklater.json` (Windows and Mac configs found somewhere else, check [here](https://github.com/ActiveState/appdirs)).
+
+```
+mkvirtualenv tracklater -p python3.7
+pip install tracklater
+tracklater
+```
+
+or
+
 Clone the repository, install inside a virtualenv and run:
 ```
 git clone git@github.com:Eerovil/TrackLater.git
