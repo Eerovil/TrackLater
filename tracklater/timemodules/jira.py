@@ -84,7 +84,11 @@ class Provider(AbstractProvider):
                 ISSUES_PER_PAGE=self.ISSUES_PER_PAGE
             ), auth=self.credentials
         )
-        return response.json()
+        try:
+            return response.json()
+        except Exception:
+            logger.error(response.text)
+            return {}
 
     def test_fetch_issues(self, url, project_key, start_from=None) -> dict:
         print(start_from)
