@@ -59,7 +59,7 @@ def fetchdata() -> Optional[str]:
         if 'from' in request.values:
             from_date = parseTimestamp(request.values['from'])
         else:
-            from_date = now - timedelta(days=14)
+            from_date = now - timedelta(days=21)
         if 'to' in request.values:
             to_date = parseTimestamp(request.values['to'])
         else:
