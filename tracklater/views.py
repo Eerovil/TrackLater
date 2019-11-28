@@ -3,7 +3,7 @@ from tracklater.utils import _str
 from datetime import datetime, timedelta, date
 import json
 import pytz
-from typing import Optional, Dict
+from typing import Dict, Any
 
 from tracklater.database import db
 from tracklater.main import Parser
@@ -37,7 +37,7 @@ def json_serial(obj):
 
 
 @bp.route('/listmodules', methods=['GET'])
-def listmodules() -> Optional[str]:
+def listmodules() -> Any:
     if request.method == 'GET':
         data = {}
         parser = Parser(None, None)
@@ -51,7 +51,7 @@ def listmodules() -> Optional[str]:
 
 
 @bp.route('/fetchdata', methods=['GET'])
-def fetchdata() -> Optional[str]:
+def fetchdata() -> Any:
     if request.method == 'GET':
         keys = request.values.getlist('keys[]')
         parse = request.values.get('parse', '1')
@@ -105,7 +105,7 @@ def parseTimestamp(stamp):
 
 
 @bp.route('/updateentry', methods=['POST'])
-def updateentry() -> Optional[str]:
+def updateentry() -> Any:
     if request.method == 'POST':
         data = request.get_json()
         module = data.get('module')
@@ -158,7 +158,7 @@ def updateentry() -> Optional[str]:
 
 
 @bp.route('/deleteentry', methods=['POST'])
-def deleteentry() -> Optional[str]:
+def deleteentry() -> Any:
     if request.method == 'POST':
         data = request.get_json()
         module = data.get('module')
