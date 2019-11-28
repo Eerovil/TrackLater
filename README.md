@@ -198,6 +198,18 @@ Time tracking (for billing) is done through Toggl. Also, both groups happen to h
         }
     },
 
+    "GITHUB": {
+        "global": {
+            "TOKEN": "token" # needs permissions specified here: https://developer.github.com/v4/guides/forming-calls/#authenticating-with-graphql
+        },
+        "group1": {
+            "repo": ["owner", "repo1"]
+        },
+        "group2": {
+            "repo": ["owner", "repo2"]
+        }
+    },
+
     "SLACK": {
         # Each group should contain a workspace to match all messager to a group
         "global": {
