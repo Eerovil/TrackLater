@@ -72,7 +72,7 @@ class Parser(IssueMixin, AbstractParser):
 
 class Provider(AbstractProvider):
     def __init__(self, credentials):
-        self.credentials = credentials
+        self.credentials = (credentials[0], credentials[1])
         self.ISSUES_PER_PAGE = 100 if not getattr(settings, 'TESTING', False) else 3
 
     def fetch_issues(self, url, project_key, start_from=None) -> dict:
