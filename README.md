@@ -15,6 +15,7 @@ Time entries can be exported to
 Issues and projects/clients can be fetched from
 * Jira
 * Taiga
+* GitHub
 * Toggl (projects/clients)
 
 # Background
