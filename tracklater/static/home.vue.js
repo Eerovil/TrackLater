@@ -5,8 +5,13 @@ var home = Vue.component("home", {
         class="toolbar"
         v-on:fetchModule=fetchModule($event)
         v-on:exportEntry=updateEntry($event)
+        v-on:setToolbarHeight=setToolbarHeight($event)
+        v-bind:style="{ height: toolbarHeight }"
     ></toolbar>
-    <div class="toolbar-separator"></div>
+    <div
+        class="toolbar-separator"
+        v-bind:style="{ height: toolbarHeight }"
+    ></div>
     <daytimeline
       v-for="dateGroupData in entriesByDategroup"
       :entries="dateGroupData.entries"
@@ -18,7 +23,9 @@ var home = Vue.component("home", {
     </div>
     `,
     data() {
-        return {}
+        return {
+            toolbarHeight: '110px',
+        }
     },
     computed: {
         modules() {
@@ -107,8 +114,10 @@ var home = Vue.component("home", {
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'deleteentry', loading: false});
             }).catch(_handleFailure)
+        },
+        setToolbarHeight(newHeight) {
+            this.toolbarHeight = `${newHeight}px`;
         }
-
     },
     mounted() {
         axios.get("listmodules").then(response => {

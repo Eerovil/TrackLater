@@ -1,7 +1,7 @@
 var toolbar = Vue.component("toolbar", {
     template: `
     <div>
-    <v-layout row wrap>
+    <v-layout ref="layout" row wrap>
         <v-flex xs10>
             <v-btn
             v-on:click="fetchAllModules()"
@@ -161,5 +161,13 @@ var toolbar = Vue.component("toolbar", {
             selectedModule: null,
             selectedProject: null,
         }
+    },
+    mounted() {
+        // Tried to use this.$nextTick here, but still didn't get the full height.
+        // Terrible workaround is setTimeout...
+        setTimeout(()=>{
+            console.log("second", this.$refs.layout.clientHeight)
+            this.$emit('setToolbarHeight', this.$refs.layout.clientHeight);
+        }, 500);
     }
 });
