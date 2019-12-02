@@ -10,7 +10,7 @@ var home = Vue.component("home", {
     ></toolbar>
     <div
         class="toolbar-separator"
-        v-bind:style="{ height: toolbarHeight }"
+        v-bind:style="{ height: toolbarSepHeight }"
     ></div>
     <daytimeline
       v-for="dateGroupData in entriesByDategroup"
@@ -25,6 +25,7 @@ var home = Vue.component("home", {
     data() {
         return {
             toolbarHeight: '110px',
+            toolbarSepHeight: '110px',
         }
     },
     computed: {
@@ -115,8 +116,11 @@ var home = Vue.component("home", {
                 this.$store.commit('setLoading', {module_name: 'deleteentry', loading: false});
             }).catch(_handleFailure)
         },
-        setToolbarHeight(newHeight) {
-            this.toolbarHeight = `${newHeight}px`;
+        setToolbarHeight(event) {
+            this.toolbarHeight = `${event.height}px`;
+            if (event.separator) {
+                this.toolbarSepHeight = `${event.height}px`;
+            }
         }
     },
     mounted() {
