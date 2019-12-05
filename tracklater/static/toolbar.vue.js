@@ -168,7 +168,7 @@ var toolbar = Vue.component("toolbar", {
             if (currentScrollPosition < 0) {
               return
             }
-            this.showButtons = (currentScrollPosition < 60);
+            this.showButtons = (currentScrollPosition < 2);
         }
     },
     data() {
