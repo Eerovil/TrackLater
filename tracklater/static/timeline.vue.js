@@ -36,8 +36,8 @@ var vuetimeline = Vue.component("vuetimeline", {
     },
     data() {
       return {
-        parsedItems: new timeline.DataSet([]),
-        parsedGroups: new timeline.DataSet([]),
+        parsedItems: new vis.DataSet([]),
+        parsedGroups: new vis.DataSet([]),
         timeline: null
       }
     },
@@ -45,7 +45,7 @@ var vuetimeline = Vue.component("vuetimeline", {
         this.parsedItems.add(this.items);
         this.parsedGroups.add(this.groups);
         const container = this.$refs.visualization;
-        this.timeline = new timeline.Timeline(container, this.parsedItems, this.parsedGroups, this.options);
+        this.timeline = new vis.Timeline(container, this.parsedItems, this.parsedGroups, this.options);
         this.events.forEach(eventName =>
           this.timeline.on(eventName, props => this.$emit(eventName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase(), props))
         );
