@@ -171,9 +171,9 @@ var daytimeline = Vue.component("daytimeline", {
           start: day_start,
           end: day_end,
           editable: true,
-          zoomable: false,
+          zoomable: (screen.width < 960),
           horizontalScroll: false,
-          moveable: false,
+          moveable: true,
           margin: {
               item: 0
           },

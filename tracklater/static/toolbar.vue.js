@@ -1,8 +1,11 @@
 var toolbar = Vue.component("toolbar", {
     template: `
     <div>
-    <v-layout row wrap>
-        <v-flex xs10>
+    <v-layout ref="layout" row wrap>
+        <v-flex
+            xs10
+            v-if="showButtons"
+            >
             <v-btn
             v-on:click="fetchAllModules()"
             >Fetch all</v-btn>
@@ -12,15 +15,7 @@ var toolbar = Vue.component("toolbar", {
             :loading="loading[module]"
             >{{ module }}</v-btn>
         </v-flex>
-        <v-flex>
-            <v-btn
-            icon
-            :loading="somethingLoading"
-            >
-            <v-icon>done</v-icon>
-            </v-btn>
-        </v-flex>
-        <v-flex xs4>
+        <v-flex xs6>
             <v-combobox
             v-model="entryTitle"
             :items="allIssues"
@@ -28,7 +23,7 @@ var toolbar = Vue.component("toolbar", {
             >
             </v-combobox>
         </v-flex>
-        <v-flex xs4>
+        <v-flex xs2>
             <v-select
             v-model="selectedModule"
             :items="selectableModules"
@@ -36,7 +31,7 @@ var toolbar = Vue.component("toolbar", {
             >
             </v-select>
         </v-flex>
-        <v-flex xs4>
+        <v-flex xs3>
             <v-select
             v-model="selectedProject"
             :items="projects"
@@ -45,6 +40,14 @@ var toolbar = Vue.component("toolbar", {
             @change="exportEntry"
             >
             </v-select>
+        </v-flex>
+        <v-flex xs1>
+            <v-btn
+            icon
+            :loading="somethingLoading"
+            >
+            <v-icon>done</v-icon>
+            </v-btn>
         </v-flex>
     </v-layout>
     </div>
@@ -112,6 +115,11 @@ var toolbar = Vue.component("toolbar", {
         selectedEntry(entry, oldEntry) {
             this.selectedProject = (entry || {}).project;
             this.selectedModule = (entry || {}).module;
+        },
+        showButtons() {
+            setTimeout(()=>{
+                this.$emit('setToolbarHeight', {height: this.$refs.layout.clientHeight});
+            }, 50);
         }
     },
     methods: {
@@ -154,12 +162,32 @@ var toolbar = Vue.component("toolbar", {
                 module: this.selectedModule,
                 project: this.selectedProject
             }));
+        },
+        onScroll() {
+            const currentScrollPosition = window.pageYOffset || document.documentElement.scrollTop
+            if (currentScrollPosition < 0) {
+              return
+            }
+            this.showButtons = (currentScrollPosition < 2);
         }
     },
     data() {
         return {
             selectedModule: null,
             selectedProject: null,
+            showButtons: true,
         }
+    },
+    mounted() {
+        // Tried to use this.$nextTick here, but still didn't get the full height.
+        // Terrible workaround is setTimeout...
+        setTimeout(()=>{
+            this.$emit('setToolbarHeight', {height: this.$refs.layout.clientHeight, separator: true});
+        }, 500);
+
+        window.addEventListener('scroll', this.onScroll)
+    },
+    beforeDestroy () {
+        window.removeEventListener('scroll', this.onScroll)
     }
 });
