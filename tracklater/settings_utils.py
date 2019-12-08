@@ -18,6 +18,7 @@ class Dummy(object):
 settings_wrapper: Any = Dummy()
 
 if not os.path.exists(user_config_path):
+    os.mkdir(appdirs.user_config_dir())
     shutil.copy(os.path.join(DIRECTORY, 'example_settings.json'), user_config_path)
     logger.error("No user settings file! Modify the example settings created (path: %s)",
                  user_config_path)
