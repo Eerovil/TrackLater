@@ -10,6 +10,9 @@
 
 # Getting started with the code
 
+Requirements:
+* Python 3.7 with pip
+
 Clone the repo
 ```
 git clone git@github.com:Eerovil/TrackLater.git
