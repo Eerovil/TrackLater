@@ -49,6 +49,7 @@ class Parser(EntryMixin, AbstractParser):
                     log.append(Entry(
                         text="{} - {}".format(repo_path.split('/')[-1], message),
                         start_time=time,
+                        group=group,
                     ))
         return log
 

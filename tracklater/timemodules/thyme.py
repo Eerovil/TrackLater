@@ -99,6 +99,8 @@ class Parser(EntryMixin, AbstractParser):
             elif category == 'leisure':
                 session.extra_data['category']['leisure'] += seconds * 2
 
+        if not entries:
+            return []
         prev_entry = entries[0]
         sessions = [_init_session(prev_entry)]
 
@@ -140,7 +142,11 @@ class Provider(AbstractProvider):
             if not os.path.exists(filename):
                 continue
             with open(filename) as f:
-                data = json.load(f)
+                try:
+                    data = json.load(f)
+                except Exception as e:
+                    logger.exception(e)
+                    continue
                 entries = data.get('Snapshots')
                 for entry in entries:
                     snapshot_entries.append(entry)

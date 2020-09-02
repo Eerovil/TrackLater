@@ -1,5 +1,7 @@
 var daytimeline = Vue.component("daytimeline", {
     template: `
+    <div>
+    <v-btn @click="generateEntries()">Generate</v-btn>
     <vuetimeline ref="timeline"
     :items="items"
     :groups="groups"
@@ -8,6 +10,7 @@ var daytimeline = Vue.component("daytimeline", {
     :selection=selection
     @select="select">
     </vuetimeline>
+    </div>
     `,
     props: ["entries"],
     data() {
@@ -123,6 +126,74 @@ var daytimeline = Vue.component("daytimeline", {
           }
         }
         return true;
+      },
+      generateEntries() {
+        const cutoffSeconds = 300;
+        let lastEnd = null;
+        let newEntries = [];
+        let currentEntry = null;
+        this.entries.slice().sort((a, b) => {
+          if (new Date(a.start_time) > new Date(b.start_time)) {
+            return 1;
+          }
+          if (new Date(a.start_time) < new Date(b.start_time)) {
+            return -1;
+          }
+          return 0;
+        }).map(i => {
+          console.log(i.project)
+          const startTime = new Date(i.start_time)
+          const endTime = new Date(i.end_time)
+          if (i.module == "thyme") {
+            if (lastEnd == null) {
+              currentEntry = {
+                start_time: startTime.addHours(-0.1)
+              }
+              lastEnd = endTime;
+              return;
+            }
+            
+            if ((startTime.getTime() - lastEnd.getTime()) > (cutoffSeconds * 1000)) {
+              // Too long time between time entries
+              if (currentEntry != null) {
+                currentEntry.end_time = lastEnd.addHours(0.1);
+                newEntries.push(currentEntry);
+                currentEntry = null;
+                lastEnd = null;
+                return;
+              }
+            } else {
+              if (currentEntry == null) {
+                currentEntry = {
+                  start_time: startTime.addHours(-0.1)
+                }
+              }
+              lastEnd = endTime;
+            }
+          } else if (i.module == "gitmodule") {
+            if (currentEntry != null && lastEnd != null) {
+              if (currentEntry.project != undefined && currentEntry.project != i.project) {
+                // project changed
+                currentEntry.end_time = lastEnd;
+                newEntries.push(currentEntry);
+                currentEntry = {
+                  project: i.project,
+                  start: new Date(i.start_time),
+                };
+                lastEnd = null;
+                return;
+              } else {
+                currentEntry.project = i.project;
+              }
+            }
+          }
+        })
+        console.log(newEntries)
+        newEntries.map(e => {
+          e.title = "Generated entry"
+          e.module = "toggl"
+          this.$emit('addEntry', e)
+        })
       }
     },
     watch: {

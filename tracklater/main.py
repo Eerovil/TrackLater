@@ -26,7 +26,6 @@ def store_parser_to_database(parser, module_name, start_date, end_date):
     for issue in parser.issues:
         issue.module = module_name
         db.session.merge(issue)
-    Project.query.delete()
     for project in parser.projects:
         project.module = module_name
         db.session.merge(project)
@@ -68,10 +67,15 @@ class Parser(object):
             self.modules[module_name] = parser
 
     def parse(self) -> None:
+        parsers = []
+        group_to_project = {project.group: project.pid for project in Project.query.all()}
         for module_name, parser in self.modules.items():
             set_parser_caching_data(parser, module_name)
-            parser.parse()
             logger.warning("Parsing %s", module_name)
+            parser.parse()
+            parsers.append((module_name, parser))
+            for entry in parser.entries:
+                entry.project = group_to_project.get(entry.group, None)
             store_parser_to_database(self.modules[module_name], module_name,
                                      start_date=self.start_date, end_date=self.end_date)
             logger.warning("Task done %s", module_name)
