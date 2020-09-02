@@ -92,11 +92,15 @@ var toolbar = Vue.component("toolbar", {
             return this.$store.state.loading;
         },
         allIssues() {
-            let ret = [];
+            let ret = this.latestIssues.slice();
             for (let module_name in this.modules) {
                 const _issues = this.modules[module_name].issues || [];
                 for (let i=0; i<_issues.length; i++) {
-                    ret.push(`${_issues[i].key} ${_issues[i].title}`);
+                    const newIssue = `${_issues[i].key} ${_issues[i].title}`
+                    if (ret.includes(newIssue)) {
+                        continue
+                    }
+                    ret.push(newIssue);
                 }
             }
             return ret;
@@ -156,6 +160,8 @@ var toolbar = Vue.component("toolbar", {
             if (this.selectedEntry == null) {
                 return;
             }
+            this.latestIssues = this.latestIssues.filter(item => item !== this.entryTitle)
+            this.latestIssues.unshift(this.entryTitle)
             this.$emit('exportEntry', Object.assign(this.selectedEntry, {
                 issue: this.$store.state.inputIssue,
                 title: this.entryTitle,
@@ -176,6 +182,7 @@ var toolbar = Vue.component("toolbar", {
             selectedModule: null,
             selectedProject: null,
             showButtons: true,
+            latestIssues: [],
         }
     },
     mounted() {
