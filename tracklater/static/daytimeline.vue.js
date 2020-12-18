@@ -1,7 +1,6 @@
 var daytimeline = Vue.component("daytimeline", {
     template: `
     <div>
-    <v-btn @click="generateEntries()">Generate</v-btn>
     <vuetimeline ref="timeline"
     :items="items"
     :groups="groups"
@@ -55,9 +54,10 @@ var daytimeline = Vue.component("daytimeline", {
       },
       onAdd: function(item, callback) {
           if (this.modules[item.group].capabilities.includes('addentry')) {
+              let timeSnippet = this.generateTimeSnippet(item.start);
               let entry = {
-                start_time: item.start.addHours(-0.5),
-                end_time: item.start.addHours(0.5),
+                start_time: timeSnippet.start_time,
+                end_time: timeSnippet.end_time,
                 title: "Unnamed Entry",
                 module: item.group,
                 project: ''
@@ -126,6 +126,86 @@ var daytimeline = Vue.component("daytimeline", {
           }
         }
         return true;
+      },
+      generateTimeSnippet(middle_time) {
+        // Go backwards and forwards unit "not much" is happening, and return the 
+        // start and end time. If nothing is happening, return a hour.
+        const cutoffSeconds = 300;
+        let ret = {
+          start_time: middle_time.addHours(-0.5),
+          end_time: middle_time.addHours(0.5),
+        }
+        const sorted = this.entries.slice().filter(i => ["thyme", "toggl"].includes(i.module)).sort((a, b) => {
+          if (new Date(a.start_time) > new Date(b.start_time)) {
+            return 1;
+          }
+          if (new Date(a.start_time) < new Date(b.start_time)) {
+            return -1;
+          }
+          return 0;
+        }).map(i => {
+          i.start_time = new Date(i.start_time)
+          i.end_time = new Date(i.end_time)
+          return i
+        })
+        console.log('sorted: ', sorted);
+        console.log('middle_time: ', middle_time);
+        if (sorted.length == 0) {
+          return ret;
+        }
+        // Special case: first thyme entry is after middle_time. Not good
+        if (sorted[0].start_time > middle_time) {
+          return ret;
+        }
+        // Special case: last thyme entry is before middle_time. Not good
+        if (sorted[sorted.length - 1].end_time < middle_time) {
+          return ret;
+        }
+        // Find the middle thyme entry
+        let middleIndex;
+        for (let i in sorted) {
+          if (sorted[i].end_time > middle_time) {
+            middleIndex = i;
+            break;
+          }
+        }
+        // Middle item is too far
+        if (sorted[middleIndex].start_time.getTime() - middle_time.getTime() > cutoffSeconds * 1000) {
+          return ret;
+        }
+        console.log('middleIndex: ', middleIndex);
+        if (!middleIndex) {
+          return ret;
+        }
+        // Go back
+        let prevTime = sorted[middleIndex].start_time
+        for (let i=middleIndex; i>=0; i--) {
+          if (prevTime.getTime() - sorted[i].end_time.getTime() > cutoffSeconds * 1000) {
+            ret.start_time = prevTime.addHours(-0.2);
+            break;
+          }
+          if (sorted[i].module == "toggl") {
+            // We reached another toggl entry! Return its end_time here for no overlap
+            ret.start_time = sorted[i].end_time
+            break;
+          }
+          prevTime = sorted[i].start_time
+        }
+        // Go forward
+        prevTime = sorted[middleIndex].end_time
+        for (let i=middleIndex; i<sorted.length; i++) {
+          if (sorted[i].start_time.getTime() - prevTime.getTime() > cutoffSeconds * 1000) {
+            ret.end_time = prevTime.addHours(0.2);
+            break;
+          }
+          if (sorted[i].module == "toggl") {
+            // We reached another toggl entry! Return its start_time here for no overlap
+            ret.end_time = sorted[i].start_time
+            break;
+          }
+          prevTime = sorted[i].end_time
+        }
+        return ret;
       },
       generateEntries() {
         const cutoffSeconds = 300;
