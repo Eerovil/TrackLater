@@ -62,6 +62,11 @@ var daytimeline = Vue.component("daytimeline", {
                 module: item.group,
                 project: ''
               }
+              let detectedIssue = this.detectIssue(timeSnippet);
+              if (detectedIssue) {
+                entry.title = detectedIssue.message;
+                entry.project = detectedIssue.project;
+              }
               this.$emit('addEntry', entry)
           }
       },
@@ -79,13 +84,19 @@ var daytimeline = Vue.component("daytimeline", {
               remove: this.modules[entry.module].capabilities.includes('deleteentry')
             },
           }
+          let colorObj = this.modules[entry.module].color;
+          console.log("colorObj", JSON.stringify(colorObj))
+          color = colorObj[entry.group] || colorObj.global;
           if (entry.end_time != undefined) {
               row.end = new Date(entry.end_time);
-              if (this.modules[entry.module].color != null) {
-                  row.style = `background-color: ${this.modules[entry.module].color}`
+              if (color != null) {
+                  row.style = `background-color: ${color}`
               }
           } else {
               row.type = 'point'
+              if (color != null) {
+                  row.className += ` point-color-${color}`
+              }
           }
           return row
         });
@@ -206,6 +217,53 @@ var daytimeline = Vue.component("daytimeline", {
           prevTime = sorted[i].end_time
         }
         return ret;
+      },
+      detectIssue(timeSnippet) {
+        console.log(timeSnippet)
+        const entries = this.entries.slice()
+          .filter(i => ["gitmodule"]
+          .includes(i.module))
+          .filter(i => (new Date(i.start_time) < timeSnippet.end_time && new Date(i.start_time) > timeSnippet.start_time))
+          .sort((a, b) => {
+            if (new Date(a.start_time) > new Date(b.start_time)) {
+              return 1;
+            }
+            if (new Date(a.start_time) < new Date(b.start_time)) {
+              return -1;
+            }
+            return 0;
+          })
+          .reverse()
+        if (entries.length == 0) {
+          return null
+        }
+        let ret = {
+          group: entries[0].group
+        }
+        let issueFound = false;
+        entries.forEach(entry => {
+          if (issueFound) {
+            return;
+          }
+          // Try to parse issue
+          let issueMatch = entry.text.match(/^\w* - ([^ ]+)(.*)/)
+          if (issueMatch) {
+            let issueSlug = issueMatch[1]
+            let issue = this.$store.getters.findIssueByKey(issueSlug);
+            console.log(issue)
+            if (issue) {
+              ret.group = issue.group;
+              ret.message = issue.key + " " + issue.title;
+              issueFound = true;
+            } else {
+              ret.message = issueMatch[1] + issueMatch[2];
+              ret.group = entry.group;
+            }
+          }
+        });
+        ret.project = this.$store.getters.getProjectId(ret.group);
+        console.log(ret)
+        return ret
       },
       generateEntries() {
         const cutoffSeconds = 300;

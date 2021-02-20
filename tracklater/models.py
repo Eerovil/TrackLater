@@ -94,5 +94,6 @@ class Entry(db.Model):
             "title": self.title,
             "text": self.text,
             "extra_data": self.extra_data,
-            "duration": self.duration
+            "duration": self.duration,
+            "group": self.group
         }

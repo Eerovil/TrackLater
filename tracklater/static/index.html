@@ -29,6 +29,15 @@
     .vis-timeline {
       width: 100%;
     }
+    .point-color-red * {
+      border-color: red;
+    }
+    .point-color-blue * {
+      border-color: blue;
+    }
+    .point-color-green * {
+      border-color: green;
+    }
     </style>
 </head>
 
@@ -99,11 +108,33 @@ const store = new Vuex.Store({
     },
   },
   getters: {
+    getProjectId: (state) => (group) => {
+        for (let module_name in state.modules) {
+            const projects = state.modules[module_name].projects || [];
+            for (let _project of projects) {
+                if (_project.group == group) {
+                    return _project.id;
+                }
+            }
+        }
+        return null;
+    },
     findIssue: (state) => (title) => {
         for (let module_name in state.modules) {
             const _issues = state.modules[module_name].issues || [];
             for (let i=0; i<_issues.length; i++) {
                 if (`${_issues[i].key} ${_issues[i].title}` === title) {
+                    return _issues[i];
+                }
+            }
+        }
+        return null;
+    },
+    findIssueByKey: (state) => (key) => {
+        for (let module_name in state.modules) {
+            const _issues = state.modules[module_name].issues || [];
+            for (let i=0; i<_issues.length; i++) {
+                if (_issues[i].key === key) {
                     return _issues[i];
                 }
             }
