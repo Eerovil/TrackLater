@@ -1,14 +1,6 @@
 var vuetimeline = Vue.component("vuetimeline", {
     template: `
-    <v-layout class="my-timeline justify-center align-center" ref="visualization" v-observe-visibility="{
-      callback: visibilityChanged,
-      throttle: 300,
-    }">
-      <v-progress-circular
-        v-if="loading"
-        indeterminate
-        color="primary"
-      ></v-progress-circular>
+    <v-layout class="my-timeline justify-center align-center" ref="visualization">
     </v-layout>
     `,
     props: {
@@ -36,6 +28,9 @@ var vuetimeline = Vue.component("vuetimeline", {
         items(newItems) {
            this.parsedItems.clear();
            this.parsedItems.add(newItems);
+           if (!this.timeline) {
+             return;
+           }
            this.timeline.setSelection(this.selection);
         },
         groups(newGroups) {
@@ -48,28 +43,16 @@ var vuetimeline = Vue.component("vuetimeline", {
         parsedItems: new vis.DataSet([]),
         parsedGroups: new vis.DataSet([]),
         timeline: null,
-        loading: true,
       }
     },
     methods: {
-      visibilityChanged(isVisible, entry) {
-        console.log(isVisible)
-        console.log(entry)
-        if (isVisible) {
-          this.loadTimeline();
-        } else {
-          this.unloadTimeline();
-        }
-      },
       loadTimeline() {
         if (this.timeline == null) {
-          this.loading = true;
           const container = this.$refs.visualization;
           this.timeline = new vis.Timeline(container, this.parsedItems, this.parsedGroups, this.options);
           this.events.forEach(eventName =>
             this.timeline.on(eventName, props => this.$emit(eventName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase(), props))
           );
-          this.loading = false;
         }
       },
       unloadTimeline() {
@@ -82,5 +65,6 @@ var vuetimeline = Vue.component("vuetimeline", {
     mounted() {
       this.parsedItems.add(this.items);
       this.parsedGroups.add(this.groups);
+      this.loadTimeline()
     }
 });

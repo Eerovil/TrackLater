@@ -14,6 +14,7 @@ var home = Vue.component("home", {
     ></div>
     <daytimeline
       v-for="dateGroupData in entriesByDategroup"
+      ref="daytimelines"
       :entries="dateGroupData.entries"
       :key="dateGroupData.dateGroup"
       @addEntry="updateEntry"
@@ -59,16 +60,26 @@ var home = Vue.component("home", {
             } catch (e) {
                 console.log(e)
             }
-            console.log(ret)
             return ret;
+        },
+        debounceUpdateWeek() {
+            return _.debounce(this.updateWeek, 500)
         }
     },
     methods: {
-        fetchModule(module_name) {
+        fetchModule(module_name, parse) {
+            if (parse == undefined) {
+                parse = 1;
+            }
             console.log(`Fetching ${module_name}`)
             this.$store.commit('setLoading', {module_name, loading: true});
 
-            axios.get("fetchdata", {params: {keys: [module_name]}}).then(response => {
+            axios.get("fetchdata", {params: {
+                    parse: parse,
+                    keys: [module_name],
+                    from: this.$store.getters.getFrom,
+                    to: this.$store.getters.getTo,
+                }}).then(response => {
                 console.log(response)
                 this.$store.commit('updateModules', response.data);
                 this.$store.commit('setLoading', {module_name, loading: false});
@@ -82,6 +93,16 @@ var home = Vue.component("home", {
         },
         updateEntry(entry) {
             this.$store.commit('setLoading', {module_name: 'updateentry', loading: true});
+            updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+            updated_entries.push({
+                id: entry.id || "placeholderid",
+                start_time: this.parseTime(entry.start_time),
+                end_time: this.parseTime(entry.end_time),
+                title: entry.title || "Placeholder",
+                module: entry.module,
+                date_group: this.parseTime(entry.start_time).toISOString().split('T')[0],
+            })
+            this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
             axios.post("updateentry", {
                 'module': entry.module,
                 'entry_id': entry.id,
@@ -94,7 +115,7 @@ var home = Vue.component("home", {
                 'text': entry.text,
             }).then(response => {
                 console.log(response)
-                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id && _entry.id !== "placeholderid");
                 updated_entries.push(response.data)
                 this.$store.commit('setSelectedEntry', response.data)
                 this.$store.commit('setInput', {title: response.data.title, issue: null})
@@ -104,6 +125,11 @@ var home = Vue.component("home", {
         },
         deleteEntry(entry) {
             this.$store.commit('setLoading', {module_name: 'deleteentry', loading: true});
+            updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+            this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
+            if (entry.id == "placeholderid") {
+                return;
+            }
             axios.post('deleteentry', {
                 'module': entry.module,
                 'entry_id': entry.id
@@ -121,6 +147,22 @@ var home = Vue.component("home", {
             if (event.separator) {
                 this.toolbarSepHeight = `${event.height}px`;
             }
+        },
+        updateWeek() {
+            for (el of this.$refs.daytimelines) {
+                el.$refs.timeline.unloadTimeline();
+            }
+            this.$store.commit('setSelectedEntry', null)
+            this.$store.commit('setInput', {title: null, issue: null})
+            this.fetchModule("all", 0)
+        },
+    },
+    watch: {
+        "$store.state.currentWeek"() {
+            if (!this.$refs.daytimelines) {
+                return;
+            }
+            this.debounceUpdateWeek();
         }
     },
     mounted() {
@@ -128,8 +170,16 @@ var home = Vue.component("home", {
             console.log(response)
             this.$store.commit('updateModules', response.data);
         })
+        axios.get("getsettings").then(response => {
+            console.log(response)
+            this.$store.commit('setSettings', response.data);
+        })
         this.$store.commit('setLoading', {module_name: 'fetchdata', loading: true});
-        axios.get("fetchdata", {params: {parse: "0"}}).then(response => {
+        axios.get("fetchdata", {params: {
+                parse: "0",
+                from: this.$store.getters.getFrom,
+                to: this.$store.getters.getTo,
+            }}).then(response => {
             console.log("fetchdata (parse: 0)", response)
             this.$store.commit('updateModules', response.data);
             this.$store.commit('setLoading', {module_name: 'fetchdata', loading: false});

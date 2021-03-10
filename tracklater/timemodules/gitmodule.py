@@ -5,7 +5,7 @@ import os
 import json
 from datetime import datetime
 
-from tracklater.utils import FixedOffset, obj_from_dict
+from tracklater.utils import obj_from_dict
 from tracklater import settings
 from tracklater.timemodules.interfaces import EntryMixin, AbstractParser, AbstractProvider
 from tracklater.models import Entry
@@ -21,11 +21,9 @@ def get_setting(key, default=None, group='global'):
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
 
 
-def timestamp_to_datetime(timestamp: List):
+def git_time_to_datetime(_datetime):
     # Git has timezone-aware unix timestamps, convert that to a UTC datetime
-    return datetime.fromtimestamp(
-        timestamp[0], tz=FixedOffset(timestamp[1], '')
-    ).astimezone(pytz.utc).replace(tzinfo=None)
+    return _datetime.astimezone(pytz.utc).replace(tzinfo=None)
 
 
 class Parser(EntryMixin, AbstractParser):
@@ -36,45 +34,38 @@ class Parser(EntryMixin, AbstractParser):
         provider = Provider()
         for group, data in settings.GIT.items():
             for repo_path in data.get('REPOS', []):
-                for log_entry in provider.get_log_entries(repo_path):
-                    if log_entry.actor.email not in settings.GIT['global']['EMAILS']:
+                for log_entry in provider.get_log_entries(repo_path, start_date=start_date):
+                    if log_entry.author.email not in settings.GIT['global']['EMAILS']:
+                        logger.info(log_entry.author.email)
                         continue
-                    if not log_entry.message.startswith('commit'):
-                        continue
-                    message = ''.join(log_entry.message.split(':')[1:])
-                    time = timestamp_to_datetime(log_entry.time)
+                    time = git_time_to_datetime(log_entry.authored_datetime)
                     if time < start_date or time > end_date:
                         continue
 
                     log.append(Entry(
-                        text="{} - {}".format(repo_path.split('/')[-1], message),
+                        text="{} - {}".format(repo_path.split('/')[-1], log_entry.message),
                         start_time=time,
+                        group=group,
                     ))
         return log
 
 
 class Provider(AbstractProvider):
-    def get_log_entries(self, repo_path):
+    def get_log_entries(self, repo_path, start_date=None):
         repo = git.Repo(repo_path)
-        for branch in repo.branches:
+        iterator = repo.iter_commits()
+        for commit in iterator:
             try:
-                entries = branch.log()
+                if start_date and git_time_to_datetime(commit.authored_datetime) < start_date:
+                    break
             except Exception as e:
                 logger.warning(e)
                 continue
-            for log_entry in entries:
-                yield log_entry
+            yield commit
 
-    def test_get_log_entries(self, repo_path):
+    def test_get_log_entries(self, repo_path, start_date=None):
         with open(FIXTURE_DIR + '/git_test_data.json', 'r') as f:
             _git = obj_from_dict(json.load(f))
 
-        repo = _git.Repo(repo_path)
-        for branch in repo.branches:
-            try:
-                entries = branch.log()
-            except Exception as e:
-                logger.warning(e)
-                continue
-            for log_entry in entries:
-                yield log_entry
+        for commit in _git.commits:
+            yield commit

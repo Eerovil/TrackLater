@@ -36,6 +36,11 @@ def json_serial(obj):
     raise TypeError("Type %s not serializable" % type(obj))
 
 
+class MyEncoder(json.JSONEncoder):
+    def default(self, o):
+        return {k.lstrip('_'): v for k, v in vars(o).items()}
+
+
 @bp.route('/listmodules', methods=['GET'])
 def listmodules() -> Any:
     if request.method == 'GET':
@@ -43,11 +48,16 @@ def listmodules() -> Any:
         parser = Parser(None, None)
         for module_name in settings.ENABLED_MODULES:
             data[module_name] = {
-                'color': settings.UI_SETTINGS.get(module_name, {}).get('global', None),
+                'color': settings.UI_SETTINGS.get(module_name, {}),
                 'capabilities': parser.modules[module_name].capabilities,
             }
         return json.dumps(data, default=json_serial)
     return None
+
+
+@bp.route('/getsettings', methods=['GET'])
+def getsettings() -> Any:
+    return json.dumps(settings, cls=MyEncoder)
 
 
 @bp.route('/fetchdata', methods=['GET'])
@@ -59,7 +69,7 @@ def fetchdata() -> Any:
         if 'from' in request.values:
             from_date = parseTimestamp(request.values['from'])
         else:
-            from_date = now - timedelta(days=31)
+            from_date = now - timedelta(days=41)
         if 'to' in request.values:
             to_date = parseTimestamp(request.values['to'])
         else:
@@ -70,6 +80,8 @@ def fetchdata() -> Any:
         if getattr(settings, 'OVERRIDE_END', None):
             to_date = settings.OVERRIDE_END
 
+        if keys and keys[0] == "all":
+            keys = None
         parser = Parser(from_date, to_date, modules=keys)
         if parse == '1':
             parser.parse()
@@ -92,7 +104,7 @@ def fetchdata() -> Any:
                                             Issue.module == key
                                         )]
                 data[key]['capabilities'] = parser.modules[key].capabilities
-                data[key]['color'] = settings.UI_SETTINGS.get(key, {}).get('global', None),
+                data[key]['color'] = settings.UI_SETTINGS.get(key, {})
         return json.dumps(data, default=json_serial)
     return None
 
