@@ -1,8 +1,11 @@
 import re
-from datetime import timedelta, tzinfo
+from datetime import datetime, timedelta, tzinfo
 from dateutil import parser as dateparser
 import pytz
 from typing import Any, Optional
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 def parse_time(timestr: str):
@@ -42,6 +45,7 @@ def obj_from_dict(d):
         else:
             value = j
         _match = re.match(r'(.*)\((.*)\)', i)
+        _match2 = re.match(r'datetime\((.*)\)', j) if isinstance(j, str) else None
         if _match:
             _key = _match.groups()[0]
             # Matched parentheses, so we will need to build a function (later)
@@ -52,6 +56,10 @@ def obj_from_dict(d):
             callables[_key] = callables.get(_key, [])
             # Store a list of possible arguments and their corresponding value
             callables[_key].append((_args, value))
+        elif _match2:
+            _datetimeval = _match2.groups()[0]
+            value = datetime.fromtimestamp(int(_datetimeval))
+            setattr(top, i, value)
         else:
             setattr(top, i, value)
 

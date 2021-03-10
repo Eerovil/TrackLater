@@ -63,16 +63,9 @@ class Provider(AbstractProvider):
                 continue
             yield commit
 
-    def test_get_log_entries(self, repo_path):
+    def test_get_log_entries(self, repo_path, start_date=None):
         with open(FIXTURE_DIR + '/git_test_data.json', 'r') as f:
             _git = obj_from_dict(json.load(f))
 
-        repo = _git.Repo(repo_path)
-        for branch in repo.branches:
-            try:
-                entries = branch.log()
-            except Exception as e:
-                logger.warning(e)
-                continue
-            for log_entry in entries:
-                yield log_entry
+        for commit in _git.commits:
+            yield commit
