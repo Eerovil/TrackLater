@@ -61,6 +61,9 @@ var home = Vue.component("home", {
                 console.log(e)
             }
             return ret;
+        },
+        debounceUpdateWeek() {
+            return _.debounce(this.updateWeek, 500)
         }
     },
     methods: {
@@ -144,19 +147,22 @@ var home = Vue.component("home", {
             if (event.separator) {
                 this.toolbarSepHeight = `${event.height}px`;
             }
-        }
-    },
-    watch: {
-        "$store.state.currentWeek"() {
-            if (!this.$refs.daytimelines) {
-                return;
-            }
+        },
+        updateWeek() {
             for (el of this.$refs.daytimelines) {
                 el.$refs.timeline.unloadTimeline();
             }
             this.$store.commit('setSelectedEntry', null)
             this.$store.commit('setInput', {title: null, issue: null})
             this.fetchModule("all", 0)
+        },
+    },
+    watch: {
+        "$store.state.currentWeek"() {
+            if (!this.$refs.daytimelines) {
+                return;
+            }
+            this.debounceUpdateWeek();
         }
     },
     mounted() {
