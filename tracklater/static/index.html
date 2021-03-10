@@ -89,10 +89,14 @@ const store = new Vuex.Store({
     modules: {},
     loading: {},
     currentWeek: null,
+    settings: {},
   },
   mutations: {
     updateModules(state, value) {
       state.modules = Object.assign({}, Object.assign(state.modules, value));
+    },
+    setSettings(state, value) {
+      state.settings = value;
     },
     setSelectedEntry(state, value) {
       state.selectedEntry = value

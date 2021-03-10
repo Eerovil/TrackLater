@@ -54,7 +54,7 @@ var daytimeline = Vue.component("daytimeline", {
       },
       onAdd: function(item, callback) {
           if (this.modules[item.group].capabilities.includes('addentry')) {
-              let timeSnippet = this.generateTimeSnippet(item.start);
+              let timeSnippet = this.generateTimeSnippet(item.start, item.group);
               if (!timeSnippet) {
                 return;
               }
@@ -140,7 +140,7 @@ var daytimeline = Vue.component("daytimeline", {
         }
         return true;
       },
-      generateTimeSnippet(middle_time) {
+      generateTimeSnippet(middle_time, activeModule) {
         // Go backwards and forwards unit "not much" is happening, and return the 
         // start and end time. If nothing is happening, return an hour.
         const cutoffSeconds = 400;
@@ -148,7 +148,7 @@ var daytimeline = Vue.component("daytimeline", {
           start_time: middle_time.addHours(-0.5),
           end_time: middle_time.addHours(0.5),
         }
-        const sorted = this.entries.slice().filter(i => ["thyme", "toggl"].includes(i.module)).sort((a, b) => {
+        const sorted = this.entries.slice().filter(i => this.timeEntryModules.includes(i.module)).sort((a, b) => {
           if (new Date(a.start_time) > new Date(b.start_time)) {
             return 1;
           }
@@ -164,7 +164,7 @@ var daytimeline = Vue.component("daytimeline", {
         function parseRet(_ret) {
           // Update ret to fix overlapping issues
           for (el of sorted) {
-            if (el.module !== "toggl") {
+            if (el.module !== activeModule) {
               continue;
             }
             // If any toggl entry starts or ends between ret times, change ret.
@@ -216,7 +216,7 @@ var daytimeline = Vue.component("daytimeline", {
             ret.start_time = prevTime.addHours(-0.2);
             break;
           }
-          if (sorted[i].module == "toggl") {
+          if (sorted[i].module == activeModule) {
             // We reached another toggl entry! Return its end_time here for no overlap
             ret.start_time = sorted[i].end_time
             break;
@@ -230,7 +230,7 @@ var daytimeline = Vue.component("daytimeline", {
             ret.end_time = prevTime.addHours(0.2);
             break;
           }
-          if (sorted[i].module == "toggl") {
+          if (sorted[i].module == activeModule) {
             // We reached another toggl entry! Return its start_time here for no overlap
             ret.end_time = sorted[i].start_time
             break;
@@ -307,6 +307,9 @@ var daytimeline = Vue.component("daytimeline", {
       },
       modules() {
           return this.$store.state.modules;
+      },
+      timeEntryModules() {
+        return Object.keys(this.modules).filter(key => this.modules[key].capabilities.includes("entries"));
       },
       groups() {
         ret = []

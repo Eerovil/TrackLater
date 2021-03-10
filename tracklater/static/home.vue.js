@@ -170,6 +170,10 @@ var home = Vue.component("home", {
             console.log(response)
             this.$store.commit('updateModules', response.data);
         })
+        axios.get("getsettings").then(response => {
+            console.log(response)
+            this.$store.commit('setSettings', response.data);
+        })
         this.$store.commit('setLoading', {module_name: 'fetchdata', loading: true});
         axios.get("fetchdata", {params: {
                 parse: "0",

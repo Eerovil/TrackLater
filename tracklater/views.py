@@ -36,6 +36,11 @@ def json_serial(obj):
     raise TypeError("Type %s not serializable" % type(obj))
 
 
+class MyEncoder(json.JSONEncoder):
+    def default(self, o):
+        return {k.lstrip('_'): v for k, v in vars(o).items()}
+
+
 @bp.route('/listmodules', methods=['GET'])
 def listmodules() -> Any:
     if request.method == 'GET':
@@ -48,6 +53,11 @@ def listmodules() -> Any:
             }
         return json.dumps(data, default=json_serial)
     return None
+
+
+@bp.route('/getsettings', methods=['GET'])
+def getsettings() -> Any:
+    return json.dumps(settings, cls=MyEncoder)
 
 
 @bp.route('/fetchdata', methods=['GET'])
