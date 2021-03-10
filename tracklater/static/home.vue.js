@@ -14,6 +14,7 @@ var home = Vue.component("home", {
     ></div>
     <daytimeline
       v-for="dateGroupData in entriesByDategroup"
+      ref="daytimelines"
       :entries="dateGroupData.entries"
       :key="dateGroupData.dateGroup"
       @addEntry="updateEntry"
@@ -63,11 +64,19 @@ var home = Vue.component("home", {
         }
     },
     methods: {
-        fetchModule(module_name) {
+        fetchModule(module_name, parse) {
+            if (parse == undefined) {
+                parse = 1;
+            }
             console.log(`Fetching ${module_name}`)
             this.$store.commit('setLoading', {module_name, loading: true});
 
-            axios.get("fetchdata", {params: {keys: [module_name]}}).then(response => {
+            axios.get("fetchdata", {params: {
+                    parse: parse,
+                    keys: [module_name],
+                    from: this.$store.getters.getFrom,
+                    to: this.$store.getters.getTo,
+                }}).then(response => {
                 console.log(response)
                 this.$store.commit('updateModules', response.data);
                 this.$store.commit('setLoading', {module_name, loading: false});
@@ -137,13 +146,28 @@ var home = Vue.component("home", {
             }
         }
     },
+    watch: {
+        "$store.state.currentWeek"() {
+            if (!this.$refs.daytimelines) {
+                return;
+            }
+            for (el of this.$refs.daytimelines) {
+                el.$refs.timeline.unloadTimeline();
+            }
+            this.fetchModule("all", 0)
+        }
+    },
     mounted() {
         axios.get("listmodules").then(response => {
             console.log(response)
             this.$store.commit('updateModules', response.data);
         })
         this.$store.commit('setLoading', {module_name: 'fetchdata', loading: true});
-        axios.get("fetchdata", {params: {parse: "0"}}).then(response => {
+        axios.get("fetchdata", {params: {
+                parse: "0",
+                from: this.$store.getters.getFrom,
+                to: this.$store.getters.getTo,
+            }}).then(response => {
             console.log("fetchdata (parse: 0)", response)
             this.$store.commit('updateModules', response.data);
             this.$store.commit('setLoading', {module_name: 'fetchdata', loading: false});

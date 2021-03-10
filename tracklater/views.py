@@ -70,6 +70,8 @@ def fetchdata() -> Any:
         if getattr(settings, 'OVERRIDE_END', None):
             to_date = settings.OVERRIDE_END
 
+        if keys and keys[0] == "all":
+            keys = None
         parser = Parser(from_date, to_date, modules=keys)
         if parse == '1':
             parser.parse()

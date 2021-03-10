@@ -1,8 +1,8 @@
 var toolbar = Vue.component("toolbar", {
     template: `
     <div>
-    <v-layout ref="layout" row wrap>
-        <v-flex
+    <v-container fluid ref="container">
+        <v-row
             xs10
             v-if="showButtons"
             >
@@ -14,46 +14,60 @@ var toolbar = Vue.component("toolbar", {
             v-on:click=fetchModule(module)
             :loading="loading[module]"
             >{{ module }}</v-btn>
-        </v-flex>
-        <v-flex xs6>
-            <v-combobox
-            v-model="entryTitle"
-            :items="allIssues"
-            @change="exportEntry"
-            >
-            </v-combobox>
-        </v-flex>
-        <v-flex xs2>
-            <v-select
-            v-model="selectedModule"
-            :items="selectableModules"
-            @change="exportEntry"
-            >
-            </v-select>
-        </v-flex>
-        <v-flex xs3>
-            <v-select
-            v-model="selectedProject"
-            :items="projects"
-            :item-text="(item) => item.title"
-            :item-value="(item) => item.id"
-            @change="exportEntry"
-            >
-            </v-select>
-        </v-flex>
-        <v-flex xs1>
-            <v-btn
-            icon
-            :loading="somethingLoading"
-            >
-            <v-icon>done</v-icon>
-            </v-btn>
-        </v-flex>
-    </v-layout>
+            <v-spacer></v-spacer>
+            <v-btn @click="moveWeek(-1)"><</v-btn>
+            <v-btn>{{ currentWeek }}</v-btn>
+            <v-btn @click="moveWeek(1)">></v-btn>
+        </v-row>
+        <v-row>
+            <v-col xs6>
+                <v-combobox
+                v-model="entryTitle"
+                :items="allIssues"
+                @change="exportEntry"
+                >
+                </v-combobox>
+            </v-col>
+            <v-col xs2>
+                <v-select
+                v-model="selectedModule"
+                :items="selectableModules"
+                @change="exportEntry"
+                >
+                </v-select>
+            </v-col>
+            <v-col xs3>
+                <v-select
+                v-model="selectedProject"
+                :items="projects"
+                :item-text="(item) => item.title"
+                :item-value="(item) => item.id"
+                @change="exportEntry"
+                >
+                </v-select>
+            </v-col>
+            <v-col xs1>
+                <v-btn
+                icon
+                :loading="somethingLoading"
+                >
+                <v-icon>done</v-icon>
+                </v-btn>
+            </v-col>
+        </v-row>
+    </v-container>
     </div>
     `,
     props: [],
     computed: {
+        currentWeek: {
+            get() {
+                return this.$store.state.currentWeek
+            },
+            set(v) {
+                this.$store.commit('setCurrentWeek', v);
+            }
+        },
         entryTitle: {
             get() {
                 return this.$store.state.inputTitle
@@ -175,6 +189,22 @@ var toolbar = Vue.component("toolbar", {
               return
             }
             this.showButtons = (currentScrollPosition < 2);
+        },
+        moveWeek(count) {
+            let now;
+            if (!this.currentWeek) {
+                now = new Date();
+            } else {
+                now = new Date(Date.parse(this.currentWeek))
+            }
+            // I want monday as first day.
+            let dayOfWeek = now.getDay() - 1;
+            if (dayOfWeek == -1) {
+                dayOfWeek = 7
+            }
+            let newTime = new Date();
+            newTime.setTime((now.getTime() - ((24*60*60*1000) * (dayOfWeek + (count * -1) * 7))));
+            this.currentWeek = newTime.toISOString().split('T')[0]
         }
     },
     data() {
@@ -193,6 +223,7 @@ var toolbar = Vue.component("toolbar", {
         }, 500);
 
         window.addEventListener('scroll', this.onScroll)
+        this.moveWeek(0)
     },
     beforeDestroy () {
         window.removeEventListener('scroll', this.onScroll)
