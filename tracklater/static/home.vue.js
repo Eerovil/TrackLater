@@ -82,6 +82,16 @@ var home = Vue.component("home", {
         },
         updateEntry(entry) {
             this.$store.commit('setLoading', {module_name: 'updateentry', loading: true});
+            updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+            updated_entries.push({
+                id: entry.id || "placeholderid",
+                start_time: this.parseTime(entry.start_time),
+                end_time: this.parseTime(entry.end_time),
+                title: entry.title || "Placeholder",
+                module: entry.module,
+                date_group: this.parseTime(entry.start_time).toISOString().split('T')[0],
+            })
+            this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
             axios.post("updateentry", {
                 'module': entry.module,
                 'entry_id': entry.id,
@@ -94,7 +104,7 @@ var home = Vue.component("home", {
                 'text': entry.text,
             }).then(response => {
                 console.log(response)
-                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+                updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id && _entry.id !== "placeholderid");
                 updated_entries.push(response.data)
                 this.$store.commit('setSelectedEntry', response.data)
                 this.$store.commit('setInput', {title: response.data.title, issue: null})
@@ -104,6 +114,11 @@ var home = Vue.component("home", {
         },
         deleteEntry(entry) {
             this.$store.commit('setLoading', {module_name: 'deleteentry', loading: true});
+            updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
+            this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
+            if (entry.id == "placeholderid") {
+                return;
+            }
             axios.post('deleteentry', {
                 'module': entry.module,
                 'entry_id': entry.id
