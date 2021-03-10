@@ -160,7 +160,7 @@ var daytimeline = Vue.component("daytimeline", {
         })
         // Update ret to fix overlapping issues
         for (el of sorted) {
-          if (!el.module == "toggl") {
+          if (el.module !== "toggl") {
             continue;
           }
           // If any toggl entry starts or ends between ret times, change ret.
