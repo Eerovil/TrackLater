@@ -325,6 +325,7 @@ var daytimeline = Vue.component("daytimeline", {
           end: day_end,
           editable: true,
           zoomable: (screen.width < 960),
+          showCurrentTime: false,
           horizontalScroll: false,
           moveable: true,
           margin: {
