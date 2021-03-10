@@ -75,7 +75,9 @@ class Parser(object):
             parser.parse()
             parsers.append((module_name, parser))
             for entry in parser.entries:
-                entry.project = group_to_project.get(entry.group, None)
+                new_project = group_to_project.get(entry.group, None)
+                if new_project:
+                    entry.project = new_project
             store_parser_to_database(self.modules[module_name], module_name,
                                      start_date=self.start_date, end_date=self.end_date)
             logger.warning("Task done %s", module_name)

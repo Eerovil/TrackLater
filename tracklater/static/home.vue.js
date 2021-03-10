@@ -154,6 +154,8 @@ var home = Vue.component("home", {
             for (el of this.$refs.daytimelines) {
                 el.$refs.timeline.unloadTimeline();
             }
+            this.$store.commit('setSelectedEntry', null)
+            this.$store.commit('setInput', {title: null, issue: null})
             this.fetchModule("all", 0)
         }
     },
