@@ -85,7 +85,6 @@ var daytimeline = Vue.component("daytimeline", {
             },
           }
           let colorObj = this.modules[entry.module].color;
-          console.log("colorObj", JSON.stringify(colorObj))
           color = colorObj[entry.group] || colorObj.global;
           if (entry.end_time != undefined) {
               row.end = new Date(entry.end_time);
@@ -235,7 +234,6 @@ var daytimeline = Vue.component("daytimeline", {
         return ret;
       },
       detectIssue(timeSnippet) {
-        console.log(timeSnippet)
         const entries = this.entries.slice()
           .filter(i => ["gitmodule"]
           .includes(i.module))
@@ -266,7 +264,6 @@ var daytimeline = Vue.component("daytimeline", {
           if (issueMatch) {
             let issueSlug = issueMatch[1]
             let issue = this.$store.getters.findIssueByKey(issueSlug);
-            console.log(issue)
             if (issue) {
               ret.group = issue.group;
               ret.message = issue.key + " " + issue.title;
@@ -278,7 +275,6 @@ var daytimeline = Vue.component("daytimeline", {
           }
         });
         ret.project = this.$store.getters.getProjectId(ret.group);
-        console.log(ret)
         return ret
       },
     },

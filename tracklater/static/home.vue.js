@@ -59,7 +59,6 @@ var home = Vue.component("home", {
             } catch (e) {
                 console.log(e)
             }
-            console.log(ret)
             return ret;
         }
     },

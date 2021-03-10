@@ -36,6 +36,9 @@ var vuetimeline = Vue.component("vuetimeline", {
         items(newItems) {
            this.parsedItems.clear();
            this.parsedItems.add(newItems);
+           if (!this.timeline) {
+             return;
+           }
            this.timeline.setSelection(this.selection);
         },
         groups(newGroups) {
@@ -53,8 +56,6 @@ var vuetimeline = Vue.component("vuetimeline", {
     },
     methods: {
       visibilityChanged(isVisible, entry) {
-        console.log(isVisible)
-        console.log(entry)
         if (isVisible) {
           this.loadTimeline();
         } else {
