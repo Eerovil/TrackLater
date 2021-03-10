@@ -140,8 +140,8 @@ var daytimeline = Vue.component("daytimeline", {
       },
       generateTimeSnippet(middle_time) {
         // Go backwards and forwards unit "not much" is happening, and return the 
-        // start and end time. If nothing is happening, return a hour.
-        const cutoffSeconds = 300;
+        // start and end time. If nothing is happening, return an hour.
+        const cutoffSeconds = 400;
         let ret = {
           start_time: middle_time.addHours(-0.5),
           end_time: middle_time.addHours(0.5),
@@ -159,6 +159,22 @@ var daytimeline = Vue.component("daytimeline", {
           i.end_time = new Date(i.end_time)
           return i
         })
+        // Update ret to fix overlapping issues
+        for (el of sorted) {
+          if (!el.module == "toggl") {
+            continue;
+          }
+          // If any toggl entry starts or ends between ret times, change ret.
+          if (el.start_time < ret.end_time && el.start_time > ret.start_time) {
+            ret.end_time = el.start_time;
+          }
+          if (el.end_time < ret.end_time && el.end_time > ret.start_time) {
+            ret.start_time = el.end_time;
+          }
+        }
+        if (ret.start_time >= ret.end_time) {
+          return
+        }
         console.log('sorted: ', sorted);
         console.log('middle_time: ', middle_time);
         if (sorted.length == 0) {
