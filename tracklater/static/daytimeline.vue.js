@@ -55,6 +55,9 @@ var daytimeline = Vue.component("daytimeline", {
       onAdd: function(item, callback) {
           if (this.modules[item.group].capabilities.includes('addentry')) {
               let timeSnippet = this.generateTimeSnippet(item.start);
+              if (!timeSnippet) {
+                return;
+              }
               let entry = {
                 start_time: timeSnippet.start_time,
                 end_time: timeSnippet.end_time,
@@ -158,34 +161,37 @@ var daytimeline = Vue.component("daytimeline", {
           i.end_time = new Date(i.end_time)
           return i
         })
-        // Update ret to fix overlapping issues
-        for (el of sorted) {
-          if (el.module !== "toggl") {
-            continue;
+        function parseRet(_ret) {
+          // Update ret to fix overlapping issues
+          for (el of sorted) {
+            if (el.module !== "toggl") {
+              continue;
+            }
+            // If any toggl entry starts or ends between ret times, change ret.
+            if (el.start_time < _ret.end_time && el.start_time > _ret.start_time) {
+              _ret.end_time = el.start_time;
+            }
+            if (el.end_time < _ret.end_time && el.end_time > _ret.start_time) {
+              _ret.start_time = el.end_time;
+            }
           }
-          // If any toggl entry starts or ends between ret times, change ret.
-          if (el.start_time < ret.end_time && el.start_time > ret.start_time) {
-            ret.end_time = el.start_time;
+          if (_ret.start_time >= _ret.end_time) {
+            return
           }
-          if (el.end_time < ret.end_time && el.end_time > ret.start_time) {
-            ret.start_time = el.end_time;
-          }
-        }
-        if (ret.start_time >= ret.end_time) {
-          return
+          return _ret
         }
         console.log('sorted: ', sorted);
         console.log('middle_time: ', middle_time);
         if (sorted.length == 0) {
-          return ret;
+          return parseRet(ret);
         }
         // Special case: first thyme entry is after middle_time. Not good
         if (sorted[0].start_time > middle_time) {
-          return ret;
+          return parseRet(ret);
         }
         // Special case: last thyme entry is before middle_time. Not good
         if (sorted[sorted.length - 1].end_time < middle_time) {
-          return ret;
+          return parseRet(ret);
         }
         // Find the middle thyme entry
         let middleIndex;
@@ -197,11 +203,11 @@ var daytimeline = Vue.component("daytimeline", {
         }
         // Middle item is too far
         if (sorted[middleIndex].start_time.getTime() - middle_time.getTime() > cutoffSeconds * 1000) {
-          return ret;
+          return parseRet(ret);
         }
         console.log('middleIndex: ', middleIndex);
         if (!middleIndex) {
-          return ret;
+          return parseRet(ret);
         }
         // Go back
         let prevTime = sorted[middleIndex].start_time
@@ -231,7 +237,7 @@ var daytimeline = Vue.component("daytimeline", {
           }
           prevTime = sorted[i].end_time
         }
-        return ret;
+        return parseRet(ret);
       },
       detectIssue(timeSnippet) {
         const entries = this.entries.slice()
