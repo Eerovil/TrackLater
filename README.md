@@ -11,6 +11,7 @@ The initial version supports fetching clues from
 
 Time entries can be exported to
 * Toggl
+* Clockify
 
 Issues and projects/clients can be fetched from
 * Jira
@@ -120,6 +121,7 @@ Time tracking (for billing) is done through Toggl. Also, both groups happen to h
         "thyme",
         "gitmodule",
         "toggl",
+        "clockify",
         "taiga",
         "jira",
         "slack"
@@ -158,6 +160,26 @@ Time tracking (for billing) is done through Toggl. Also, both groups happen to h
             }
         }
     },
+
+    "CLOCKIFY": {
+        "global": {
+            "API_KEY": "",
+            "WORKSPACE": "workspace-id" # This is optional. (Only one workspace is supported!)
+        },
+        "group1": {
+            "NAME": "Red",
+            "PROJECTS": {
+                "Red": "default"
+            }
+        },
+        "group2": {
+            "NAME": "Blue",
+            "PROJECTS": {
+                "Blue": "default"
+            }
+        }
+    },
+
 
     "GIT": {
         "global": {
