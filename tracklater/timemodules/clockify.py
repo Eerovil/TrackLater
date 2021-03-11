@@ -97,6 +97,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         if not new_entry.project or new_entry.project == '0':
             new_entry.project = None
+        if new_entry.end_time is None:
+            raise ValueError("No end_time")
         entry = self.provider.workspace_request(
             'time-entries',
             data=json.dumps({
@@ -118,6 +120,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         if not new_entry.project or new_entry.project == '0':
             new_entry.project = None
+        if new_entry.end_time is None:
+            raise ValueError("No end_time")
         entry = self.provider.workspace_request(
             'time-entries/{}'.format(entry_id),
             data=json.dumps({
@@ -170,7 +174,7 @@ class Provider(AbstractProvider):
             pass
         response = getattr(requests, method)(url, **kwargs)
         if method == 'delete':
-            return
+            return {}
         try:
             ret = response.json()
             return ret
