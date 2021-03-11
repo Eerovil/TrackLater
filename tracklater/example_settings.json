@@ -43,6 +43,24 @@
         }
     },
 
+    "CLOCKIFY": {
+        "global": {
+            "API_KEY": ""
+        },
+        "group1": {
+            "NAME": "Red",
+            "PROJECTS": {
+                "Red": "default"
+            }
+        },
+        "group2": {
+            "NAME": "Blue",
+            "PROJECTS": {
+                "Blue": "default"
+            }
+        }
+    },
+
     "GIT": {
         "global": {
             "EMAILS": ["firstname.lastname@email.com"]
