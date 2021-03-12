@@ -70,7 +70,8 @@ class Parser(EntryMixin, AbstractParser):
                         entries.append(Entry(
                             start_time=start_time,
                             title='',
-                            text="{} - {} \n {}".format(group, channel_info, message['text'])
+                            text="{} - {} \n {}".format(group, channel_info, message['text']),
+                            group=group
                         ))
         return entries
 
