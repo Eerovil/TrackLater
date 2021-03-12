@@ -63,7 +63,7 @@ class Parser(EntryMixin, AbstractParser):
                 start_time=entry['time'],
                 extra_data={
                     'windows': {},
-                    'category': {'work': 0, 'leisure': 0}
+                    'group': {},
                 }
             )
 
@@ -78,10 +78,13 @@ class Parser(EntryMixin, AbstractParser):
                 "{}s - {}".format(int(data['time']), data['name'])
                 for data in sorted(extra['windows'], key=lambda x: x["time"], reverse=True)
             ])
-            if extra['category']['work'] >= extra['category']['leisure']:
-                extra['category'] = 'work'
-            else:
-                extra['category'] = 'leisure'
+
+            sorted_groups = sorted(extra['group'].items(), key=lambda val: val[1], reverse=True)
+
+            session.extra_data['groups'] = sorted_groups
+            if sorted_groups:
+                session.group = sorted_groups[0][0]
+                session.text = session.group + "\n" + session.text
 
         def _add_window(session, window, seconds):
             if 'eero@eero-ThinkPad-L470' in window['Name']:
@@ -91,13 +94,14 @@ class Parser(EntryMixin, AbstractParser):
                 session.extra_data['windows'][window['Name']] = 0
             session.extra_data['windows'][window['Name']] += seconds
 
-            return session
+            for key in settings.THYME:
+                for keyword in settings.THYME[key].get('KEYWORDS', []):
+                    if keyword in window['Name']:
+                        if key not in session.extra_data['group']:
+                            session.extra_data['group'][key] = 0
+                        session.extra_data['group'][key] += seconds
 
-        def _update_category(session, category, seconds):
-            if category == 'work':
-                session.extra_data['category']['work'] += seconds * 2
-            elif category == 'leisure':
-                session.extra_data['category']['leisure'] += seconds * 2
+            return session
 
         if not entries:
             return []
@@ -108,11 +112,12 @@ class Parser(EntryMixin, AbstractParser):
             if prev_entry['active_window'] == entry['active_window']:
                 continue
 
+            # Time spent in previous window
             diff = (entry['time'] - prev_entry['time']).total_seconds()
             session_length = (prev_entry['time'] - sessions[-1].start_time).total_seconds()
 
+            # Add window name and time spent to extra data
             _add_window(sessions[-1], prev_entry['active_window'], diff)
-            _update_category(sessions[-1], prev_entry['category'], diff)
 
             _idle = get_setting('IDLE', DEFAULTS['IDLE'])
             _cutoff = get_setting('CUTOFF', DEFAULTS['CUTOFF'])
