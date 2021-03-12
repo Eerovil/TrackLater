@@ -2,7 +2,8 @@
 
 - Improved performance
 - Multiple bug fixes
-- Adds grouping & group coloring to all time modules
+- Added grouping & group coloring to all time modules
+- Added clockify as a toggl alternative
 
 1.5.0
 
