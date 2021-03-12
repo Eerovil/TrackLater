@@ -108,43 +108,6 @@ var daytimeline = Vue.component("daytimeline", {
           return row
         });
       },
-      itemArraysEqual(thisArray, thatArray) {
-        if (!thatArray)
-            return false;
-        if (thisArray.length != thatArray.length)
-            return false;
-
-        const keys = [
-          'id',
-          'group',
-          'start',
-          'className',
-          'content',
-          'title',
-          'editable',
-        ]
-
-        function itemcmp(thisItem, thatItem) {
-          if (thisItem instanceof Date) {
-            return (thisItem.getTimeUTC() === thatItem.getTimeUTC())
-          }
-          else if (thisItem instanceof Object) {
-            return true; // TODO: If this is ever needed, remember to implement
-          }
-          else {
-            return (thisItem === thatItem)
-          }
-        }
-
-        for (var i = 0, l=thisArray.length; i < l; i++) {
-          for (let key of keys) {
-            if (!itemcmp(thisArray[i][key], thatArray[i][key])) {
-              return false;
-            }
-          }
-        }
-        return true;
-      },
       generateTimeSnippet(middle_time, activeModule) {
         // Go backwards and forwards unit "not much" is happening, and return the 
         // start and end time. If nothing is happening, return an hour.
