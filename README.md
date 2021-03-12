@@ -1,6 +1,8 @@
 # TrackLater
 
-![](https://i.imgur.com/cFPdBhN.png)
+![](https://i.imgur.com/PgBb20C.png)
+
+<sub>Screenshot has green/red colors for my current two projects/clients. Commits, thyme entries and slack messages are automatically colored.</sub>
 
 Forgot to track your time for work? TrackLater helps you track time after-the-fact by combining clues and showing your day on a simple timeline view.
 
