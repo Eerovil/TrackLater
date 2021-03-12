@@ -117,7 +117,6 @@ var home = Vue.component("home", {
                 console.log(response)
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id && _entry.id !== "placeholderid");
                 updated_entries.push(response.data)
-                this.$store.commit('setSelectedEntry', response.data)
                 this.$store.commit('setInput', {title: response.data.title, issue: null})
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'updateentry', loading: false});
@@ -127,6 +126,7 @@ var home = Vue.component("home", {
             this.$store.commit('setLoading', {module_name: 'deleteentry', loading: true});
             updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
             this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
+            this.$store.commit('setSelectedEntry', null)
             if (entry.id == "placeholderid") {
                 return;
             }
@@ -136,7 +136,6 @@ var home = Vue.component("home", {
             }).then((response) => {
                 console.log("deleted entry " + entry.id + ": " + response.data);
                 updated_entries = this.$store.state.modules[entry.module].entries.filter((_entry) => _entry.id !== entry.id);
-                this.$store.commit('setSelectedEntry', null)
                 this.$store.commit('setInput', {title: null, issue: null})
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'deleteentry', loading: false});
