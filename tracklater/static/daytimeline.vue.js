@@ -164,7 +164,7 @@ var daytimeline = Vue.component("daytimeline", {
         // Find the middle time entry
         let middleIndex;
         for (let i in sorted) {
-          if ((sorted[i].end_time || sorted[i].start_time) > middle_time) {
+          if ((sorted[i].end_time || sorted[i].start_time).getTime() > (middle_time.getTime() - (cutoffSeconds * 1000))) {
             middleIndex = i;
             break;
           }
@@ -191,6 +191,9 @@ var daytimeline = Vue.component("daytimeline", {
             break;
           }
           prevTime = sorted[i].start_time
+          if (i == 0) {
+            ret.start_time = prevTime.addHours(-0.2);
+          }
         }
         // Go forward
         prevTime = sorted[middleIndex].end_time || sorted[middleIndex].start_time
@@ -205,6 +208,9 @@ var daytimeline = Vue.component("daytimeline", {
             break;
           }
           prevTime = sorted[i].end_time || sorted[i].start_time
+          if (i == (sorted.length - 1)) {
+            ret.end_time = prevTime.addHours(0.2);
+          }
         }
         return parseRet(ret);
       },
