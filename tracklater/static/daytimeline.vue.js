@@ -14,9 +14,11 @@ var daytimeline = Vue.component("daytimeline", {
     props: ["entries"],
     data() {
       return {
+        items: [],
       }
     },
     mounted() {
+      this.items = this.entriesToItems(this.entries);
     },
     methods: {
       myChangedCallback(arg1, arg2, arg3) {
@@ -70,6 +72,41 @@ var daytimeline = Vue.component("daytimeline", {
               }
               this.$emit('addEntry', entry)
           }
+      },
+      entriesToItems(entries) {
+        console.log("entriesToItems called for " + entries[0].start_time)
+        return entries.map((entry, i) => {
+          let row = {
+            id: i,
+            group: entry.module,
+            start: new Date(entry.start_time),
+            className: entry.module,
+            content: entry.title,
+            title: (entry.text || "").replace(/(?:\r\n|\r|\n)/g, '<br />'),
+            editable: {
+              updateTime: this.modules[entry.module].capabilities.includes('updateentry'),
+              remove: this.modules[entry.module].capabilities.includes('deleteentry')
+            },
+          }
+          if (entry.id && entry.id.startsWith("placeholderid")) {
+            row.editable = false
+            row.selectable = false;
+          }
+          let colorObj = this.modules[entry.module].color;
+          color = colorObj[entry.group] || colorObj.global;
+          if (entry.end_time != undefined) {
+              row.end = new Date(entry.end_time);
+              if (color != null) {
+                  row.style = `background-color: ${color}`
+              }
+          } else {
+              row.type = 'point'
+              if (color != null) {
+                  row.className += ` point-color-${color}`
+              }
+          }
+          return row
+        });
       },
       itemArraysEqual(thisArray, thatArray) {
         if (!thatArray)
@@ -253,41 +290,15 @@ var daytimeline = Vue.component("daytimeline", {
         return ret
       },
     },
+    watch: {
+      entries(entries, oldEntries) {
+          if (_.isEqual(entries, oldEntries)) {
+            return
+          }
+          this.items = this.entriesToItems(entries);
+        }
+    },
     computed: {
-      items() {
-        return this.entries.map((entry, i) => {
-          let row = {
-            id: i,
-            group: entry.module,
-            start: new Date(entry.start_time),
-            className: entry.module,
-            content: entry.title,
-            title: (entry.text || "").replace(/(?:\r\n|\r|\n)/g, '<br />'),
-            editable: {
-              updateTime: this.modules[entry.module].capabilities.includes('updateentry'),
-              remove: this.modules[entry.module].capabilities.includes('deleteentry')
-            },
-          }
-          if (entry.id == "placeholderid") {
-            row.editable = false
-            row.selectable = false
-          }
-          let colorObj = this.modules[entry.module].color;
-          color = colorObj[entry.group] || colorObj.global;
-          if (entry.end_time != undefined) {
-              row.end = new Date(entry.end_time);
-              if (color != null) {
-                  row.style = `background-color: ${color}`
-              }
-          } else {
-              row.type = 'point'
-              if (color != null) {
-                  row.className += ` point-color-${color}`
-              }
-          }
-          return row
-        });
-      },
       selection() {
         const selectedEntry = this.$store.state.selectedEntry;
         if (selectedEntry != null && selectedEntry.date_group === (this.entries[0] || {}).date_group) {
