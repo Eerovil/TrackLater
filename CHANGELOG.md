@@ -1,3 +1,9 @@
+1.6.0
+
+- Improved performance
+- Multiple bug fixes
+- Adds grouping & group coloring to all time modules
+
 1.5.0
 
 - Creating new events is improved:
