@@ -143,7 +143,7 @@ var daytimeline = Vue.component("daytimeline", {
       generateTimeSnippet(middle_time, activeModule) {
         // Go backwards and forwards unit "not much" is happening, and return the 
         // start and end time. If nothing is happening, return an hour.
-        const cutoffSeconds = 400;
+        const cutoffSeconds = 500;
         let ret = {
           start_time: middle_time.addHours(-0.5),
           end_time: middle_time.addHours(0.5),
@@ -158,7 +158,7 @@ var daytimeline = Vue.component("daytimeline", {
           return 0;
         }).map(i => {
           i.start_time = new Date(i.start_time)
-          i.end_time = new Date(i.end_time)
+          i.end_time = !!i.end_time ? (new Date(i.end_time)) : null
           return i
         })
         function parseRet(_ret) {
@@ -185,18 +185,18 @@ var daytimeline = Vue.component("daytimeline", {
         if (sorted.length == 0) {
           return parseRet(ret);
         }
-        // Special case: first thyme entry is after middle_time. Not good
+        // Special case: first time entry is after middle_time. Not good
         if (sorted[0].start_time > middle_time) {
           return parseRet(ret);
         }
-        // Special case: last thyme entry is before middle_time. Not good
-        if (sorted[sorted.length - 1].end_time < middle_time) {
+        // Special case: last time entry is before middle_time. Not good
+        if (sorted[sorted.length - 1].start_time < middle_time) {
           return parseRet(ret);
         }
-        // Find the middle thyme entry
+        // Find the middle time entry
         let middleIndex;
         for (let i in sorted) {
-          if (sorted[i].end_time > middle_time) {
+          if ((sorted[i].end_time || sorted[i].start_time) > middle_time) {
             middleIndex = i;
             break;
           }
@@ -212,22 +212,23 @@ var daytimeline = Vue.component("daytimeline", {
         // Go back
         let prevTime = sorted[middleIndex].start_time
         for (let i=middleIndex; i>=0; i--) {
-          if (prevTime.getTime() - sorted[i].end_time.getTime() > cutoffSeconds * 1000) {
-            ret.start_time = prevTime.addHours(-0.2);
+          ret.start_time = prevTime.addHours(-0.2);
+          const indexTime = sorted[i].end_time || sorted[i].start_time
+          if (prevTime.getTime() - indexTime.getTime() > cutoffSeconds * 1000) {
             break;
           }
           if (sorted[i].module == activeModule) {
             // We reached another toggl entry! Return its end_time here for no overlap
-            ret.start_time = sorted[i].end_time
+            ret.start_time = indexTime
             break;
           }
           prevTime = sorted[i].start_time
         }
         // Go forward
-        prevTime = sorted[middleIndex].end_time
+        prevTime = sorted[middleIndex].end_time || sorted[middleIndex].start_time
         for (let i=middleIndex; i<sorted.length; i++) {
+          ret.end_time = prevTime.addHours(0.2);
           if (sorted[i].start_time.getTime() - prevTime.getTime() > cutoffSeconds * 1000) {
-            ret.end_time = prevTime.addHours(0.2);
             break;
           }
           if (sorted[i].module == activeModule) {
@@ -235,7 +236,7 @@ var daytimeline = Vue.component("daytimeline", {
             ret.end_time = sorted[i].start_time
             break;
           }
-          prevTime = sorted[i].end_time
+          prevTime = sorted[i].end_time || sorted[i].start_time
         }
         return parseRet(ret);
       },
