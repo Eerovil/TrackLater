@@ -86,6 +86,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             end_time=parse_time(entry['stop']),
             title=entry['description'],
             project=entry.get('pid', None),
+            group=new_entry.group,
         )
 
     def update_entry(self, entry_id: str, new_entry: Entry, issue: Optional[Issue]) -> Entry:
@@ -105,6 +106,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             end_time=parse_time(updated_entry['stop']),
             title=updated_entry['description'],
             project=_str(updated_entry.get('pid', None)),
+            group=new_entry.group,
         )
 
     def delete_entry(self, entry_id: str) -> None:

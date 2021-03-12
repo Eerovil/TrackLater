@@ -69,15 +69,17 @@ class Parser(object):
     def parse(self) -> None:
         parsers = []
         group_to_project = {project.group: project.pid for project in Project.query.all()}
+        project_to_group = {project.pid: project.group for project in Project.query.all()}
         for module_name, parser in self.modules.items():
             set_parser_caching_data(parser, module_name)
             logger.warning("Parsing %s", module_name)
             parser.parse()
             parsers.append((module_name, parser))
             for entry in parser.entries:
-                new_project = group_to_project.get(entry.group, None)
-                if new_project:
-                    entry.project = new_project
+                if not entry.project and entry.group:
+                    entry.project = group_to_project.get(entry.group, None)
+                if not entry.group and entry.project:
+                    entry.group = project_to_group.get(str(entry.project), None)
             store_parser_to_database(self.modules[module_name], module_name,
                                      start_date=self.start_date, end_date=self.end_date)
             logger.warning("Task done %s", module_name)

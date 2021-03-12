@@ -125,6 +125,7 @@ def updateentry() -> Any:
         project = data.get('project_id', None)
         if project == "null":
             project = None
+        project_to_group = {project.pid: project.group for project in Project.query.all()}
         new_entry = Entry(
             start_time=parseTimestamp(data['start_time']),
             end_time=parseTimestamp(data.get('end_time', None)),
@@ -133,7 +134,8 @@ def updateentry() -> Any:
             project=project,
             title=data.get('title', ''),
             text=data.get('text', ""),
-            extra_data=data.get('extra_data', {})
+            extra_data=data.get('extra_data', {}),
+            group=project_to_group.get(str(project), None)
         )
         issue = None
         if new_entry.issue:
