@@ -116,7 +116,8 @@ var daytimeline = Vue.component("daytimeline", {
           start_time: middle_time.addHours(-0.5),
           end_time: middle_time.addHours(0.5),
         }
-        const sorted = this.entries.slice().filter(i => this.timeEntryModules.includes(i.module)).sort((a, b) => {
+        let spanningEntries = [];
+        let sorted = this.entries.slice().filter(i => this.timeEntryModules.includes(i.module)).sort((a, b) => {
           if (new Date(a.start_time) > new Date(b.start_time)) {
             return 1;
           }
@@ -127,7 +128,23 @@ var daytimeline = Vue.component("daytimeline", {
         }).map(i => {
           i.start_time = new Date(i.start_time)
           i.end_time = !!i.end_time ? (new Date(i.end_time)) : null
+          if (i.end_time) {
+            spanningEntries.push(i)
+          }
           return i
+        })
+        // Filter out dot-entries that overlap with spanning entries.
+        sorted = sorted.filter(i => {
+          if (!!i.end_time) {
+            return true
+          }
+          for (let entry of spanningEntries) {
+            // Could do a zip-style filter here for performance... But this is good enough
+            if (entry.start_time <= i.start_time && entry.end_time >= i.start_time) {
+              return false
+            }
+          }
+          return true
         })
         function parseRet(_ret) {
           // Update ret to fix overlapping issues
