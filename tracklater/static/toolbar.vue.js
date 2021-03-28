@@ -200,7 +200,7 @@ var toolbar = Vue.component("toolbar", {
             // I want monday as first day.
             let dayOfWeek = now.getDay() - 1;
             if (dayOfWeek == -1) {
-                dayOfWeek = 7
+                dayOfWeek = 6
             }
             let newTime = new Date();
             newTime.setTime((now.getTime() - ((24*60*60*1000) * (dayOfWeek + (count * -1) * 7))));
