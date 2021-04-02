@@ -1,3 +1,10 @@
+1.6.1
+
+- Bug fixes:
+  - Fix bug with dot-entries and generation
+  - Fix using week view on sundays.
+  - Fix missing commits from non-active branch
+
 1.6.0
 
 - Improved performance

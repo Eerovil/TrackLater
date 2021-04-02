@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='tracklater',
-    version='1.6.0',
+    version='1.6.1',
     description=('TrackLater helps you track time after-the-fact by combining clues and showing'
                  'your day on a simple timeline view.'),
     long_description=long_description,
