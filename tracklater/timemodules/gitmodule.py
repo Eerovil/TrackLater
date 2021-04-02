@@ -53,15 +53,16 @@ class Parser(EntryMixin, AbstractParser):
 class Provider(AbstractProvider):
     def get_log_entries(self, repo_path, start_date=None):
         repo = git.Repo(repo_path)
-        iterator = repo.iter_commits()
-        for commit in iterator:
-            try:
-                if start_date and git_time_to_datetime(commit.authored_datetime) < start_date:
-                    break
-            except Exception as e:
-                logger.warning(e)
-                continue
-            yield commit
+        for head in repo.heads:
+            iterator = repo.iter_commits(head)
+            for commit in iterator:
+                try:
+                    if start_date and git_time_to_datetime(commit.authored_datetime) < start_date:
+                        break
+                except Exception as e:
+                    logger.warning(e)
+                    continue
+                yield commit
 
     def test_get_log_entries(self, repo_path, start_date=None):
         with open(FIXTURE_DIR + '/git_test_data.json', 'r') as f:
