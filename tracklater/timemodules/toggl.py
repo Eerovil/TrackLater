@@ -53,17 +53,20 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         projects = []
         toggl_settings = cast(Any, settings.TOGGL)
         for client in clients:
-            group = None
+            groups = []  # Possible groups
             for project, data in toggl_settings.items():
                 if data.get('NAME', None) == client['name']:
-                    group = project
-            if not group:
+                    groups.append(project)
+            if not groups:
                 continue
             resp = self.provider.request(
                 'clients/{}/projects'.format(client['id']), method='GET'
             )
             for project in resp:
-                if project['name'] not in toggl_settings[group]['PROJECTS']:
+                for group in groups:
+                    if project['name'] in toggl_settings[group]['PROJECTS']:
+                        break
+                else:
                     continue
                 projects.append(Project(
                     pid=project['id'],
