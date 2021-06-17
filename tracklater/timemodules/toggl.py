@@ -171,7 +171,7 @@ class Provider(AbstractProvider):
         self.id_counter = 4
 
     def request(self, endpoint: str, **kwargs) -> Union[List[dict], dict]:
-        url = 'https://www.toggl.com/api/v8/{}'.format(endpoint)
+        url = 'https://api.track.toggl.com/api/v8/{}'.format(endpoint)
         kwargs['headers'] = kwargs.get('headers', {
             "Content-Type": "application/json"
         })
