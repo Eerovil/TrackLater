@@ -83,6 +83,8 @@ var home = Vue.component("home", {
                 console.log(response)
                 this.$store.commit('updateModules', response.data);
                 this.$store.commit('setLoading', {module_name, loading: false});
+            }).catch(() => {
+                this.$store.commit('setLoading', {module_name, loading: false});
             })
         },
         parseTime(time) {
@@ -182,6 +184,8 @@ var home = Vue.component("home", {
             }}).then(response => {
             console.log("fetchdata (parse: 0)", response)
             this.$store.commit('updateModules', response.data);
+            this.$store.commit('setLoading', {module_name: 'fetchdata', loading: false});
+        }).catch(() => {
             this.$store.commit('setLoading', {module_name: 'fetchdata', loading: false});
         })
     }
