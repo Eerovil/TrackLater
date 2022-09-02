@@ -37,8 +37,8 @@ var daytimeline = Vue.component("daytimeline", {
       onMove: function(item, callback) {
         if (this.modules[item.group].capabilities.includes('updateentry')) {
             let entry = this.entries[item.id];
-            if (new Date(entry.start_time).getTimeUTC() === item.start.getTimeUTC() &&
-                  new Date(entry.end_time).getTimeUTC() === item.end.getTimeUTC()) {
+            if (new Date(entry.start_time).getTime() === item.start.getTime() &&
+                  new Date(entry.end_time).getTime() === item.end.getTime()) {
               return;
             }
             entry.start_time = item.start
