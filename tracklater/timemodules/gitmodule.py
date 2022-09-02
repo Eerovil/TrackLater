@@ -53,6 +53,11 @@ class Parser(EntryMixin, AbstractParser):
 class Provider(AbstractProvider):
     def get_log_entries(self, repo_path, start_date=None):
         repo = git.Repo(repo_path)
+        for remote in repo.remotes:
+            try:
+                remote.fetch()
+            except Exception as e:
+                logger.exception("Failed to fetch repo %s remote %s", repo_path, remote.name)
         for head in repo.heads:
             iterator = repo.iter_commits(head)
             for commit in iterator:
