@@ -112,8 +112,8 @@ var home = Vue.component("home", {
             axios.post("updateentry", {
                 'module': entry.module,
                 'entry_id': entry.id,
-                'start_time': this.parseTime(entry.start_time).getTimeUTC(),
-                'end_time': this.parseTime(entry.end_time).getTimeUTC(),
+                'start_time': this.parseTime(entry.start_time).getTime(),
+                'end_time': this.parseTime(entry.end_time).getTime(),
                 'title': entry.title || "Placeholder",
                 'issue_id': (entry.issue || {}).id,
                 'project_id': entry.project || "0",

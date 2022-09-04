@@ -6,4 +6,5 @@ pdbpp
 pytest-cov
 codecov
 flake8
+types-pytz
 mypy

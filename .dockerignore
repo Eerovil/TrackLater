@@ -1,0 +1,6 @@
+.github
+
+*.pyc
+
+docker_run.sh
+Dockerfile
