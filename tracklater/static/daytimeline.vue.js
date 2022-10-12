@@ -197,7 +197,7 @@ var daytimeline = Vue.component("daytimeline", {
         // Go back
         let prevTime = sorted[middleIndex].start_time
         for (let i=middleIndex; i>=0; i--) {
-          ret.start_time = prevTime.addHours(-0.7);
+          ret.start_time = prevTime.addHours(-0.5);
           const indexTime = sorted[i].end_time || sorted[i].start_time
           if (prevTime.getTime() - indexTime.getTime() > cutoffSeconds * 1000) {
             break;
@@ -209,13 +209,13 @@ var daytimeline = Vue.component("daytimeline", {
           }
           prevTime = sorted[i].start_time
           if (i == 0) {
-            ret.start_time = prevTime.addHours(-0.7);
+            ret.start_time = prevTime.addHours(-0.5);
           }
         }
         // Go forward
         prevTime = sorted[middleIndex].end_time || sorted[middleIndex].start_time
         for (let i=middleIndex; i<sorted.length; i++) {
-          ret.end_time = prevTime.addHours(0.7);
+          ret.end_time = prevTime.addHours(0.5);
           if (sorted[i].start_time.getTime() - prevTime.getTime() > cutoffSeconds * 1000) {
             break;
           }
@@ -226,7 +226,7 @@ var daytimeline = Vue.component("daytimeline", {
           }
           prevTime = sorted[i].end_time || sorted[i].start_time
           if (i == (sorted.length - 1)) {
-            ret.end_time = prevTime.addHours(0.7);
+            ret.end_time = prevTime.addHours(0.5);
           }
         }
         return parseRet(ret);
