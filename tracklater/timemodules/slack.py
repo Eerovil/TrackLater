@@ -37,10 +37,10 @@ class Parser(EntryMixin, AbstractParser):
             if message.get('user', '') == user_id:
                 start_time = datetime.fromtimestamp(float(message['ts']))
                 # "Guess" That the timestamp has an offset equal to settings.TIMEZONE
-                if getattr(settings, 'TIMEZONE', None):
-                    start_time = pytz.timezone("Europe/Helsinki").localize(
-                        start_time
-                    ).astimezone(pytz.utc).replace(tzinfo=None)
+                # if getattr(settings, 'TIMEZONE', None):
+                #     start_time = pytz.timezone("Europe/Helsinki").localize(
+                #         start_time
+                #     ).astimezone(pytz.utc).replace(tzinfo=None)
                 # Replace @User id with the name
                 for _user_id in users.keys():
                     if _user_id in message['text']:

@@ -53,7 +53,7 @@ class Parser(EntryMixin, AbstractParser):
         return _ret
 
     def _parse_raw_event(self, entry):
-        active_window = get_window(entry)
+        active_window = get_window(entry)[:100]
         if active_window is None:
             return None
         time = parse_time(entry['timestamp'])
