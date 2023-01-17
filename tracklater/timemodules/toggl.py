@@ -62,17 +62,18 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             resp = self.provider.request(
                 'clients/{}/projects'.format(client['id']), method='GET'
             )
-            for project in resp:
-                for group in groups:
-                    if project['name'] in toggl_settings[group]['PROJECTS']:
-                        break
-                else:
-                    continue
-                projects.append(Project(
-                    pid=project['id'],
-                    title="{} - {}".format(client['name'], project['name']),
-                    group=group
-                ))
+            if resp:
+                for project in resp:
+                    for group in groups:
+                        if project['name'] in toggl_settings[group]['PROJECTS']:
+                            break
+                    else:
+                        continue
+                    projects.append(Project(
+                        pid=project['id'],
+                        title="{} - {}".format(client['name'], project['name']),
+                        group=group
+                    ))
         return projects
 
     def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:

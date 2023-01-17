@@ -3,7 +3,10 @@ from ubuntu:20.04
 RUN apt-get update && apt-get -y install \
         software-properties-common \
   && rm -rf /var/lib/apt/lists/*
-RUN add-apt-repository ppa:deadsnakes/ppa
+
+RUN apt-get update && apt-get -y install --reinstall \
+        ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/); \
     echo "arch: $arch"; \
