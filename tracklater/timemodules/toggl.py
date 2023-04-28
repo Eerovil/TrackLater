@@ -26,6 +26,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def __init__(self, *args, **kwargs):
         super(Parser, self).__init__(*args, **kwargs)
         self.provider = Provider(get_setting('API_KEY'))
+        workspaces = self.provider.request('workspaces', method='GET')
+        self.workspace_id = workspaces[0]['id']
 
     def get_entries(self) -> List[Entry]:
         if self.start_date:
@@ -34,7 +36,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         else:
             params = {}
         data = self.provider.request(
-            'time_entries', params=params, method='GET'
+            'me/time_entries', params=params, method='GET'
         )
         time_entries = []
         for entry in data:
@@ -49,7 +51,8 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         return time_entries
 
     def get_projects(self) -> List[Project]:
-        clients = self.provider.request('clients', method='GET')
+        clients = self.provider.request('me/clients', method='GET')
+        projects = self.provider.request('me/projects', method='GET')
         projects = []
         toggl_settings = cast(Any, settings.TOGGL)
         for client in clients:
@@ -59,21 +62,17 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
                     groups.append(project)
             if not groups:
                 continue
-            resp = self.provider.request(
-                'clients/{}/projects'.format(client['id']), method='GET'
-            )
-            if resp:
-                for project in resp:
-                    for group in groups:
-                        if project['name'] in toggl_settings[group]['PROJECTS']:
-                            break
-                    else:
-                        continue
-                    projects.append(Project(
-                        pid=project['id'],
-                        title="{} - {}".format(client['name'], project['name']),
-                        group=group
-                    ))
+            for project in projects:
+                for group in groups:
+                    if project['name'] in toggl_settings[group]['PROJECTS']:
+                        break
+                else:
+                    continue
+                projects.append(Project(
+                    pid=project['id'],
+                    title="{} - {}".format(client['name'], project['name']),
+                    group=group
+                ))
         return projects
 
     def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:
@@ -104,6 +103,9 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             name=new_entry.title,
             project_id=new_entry.project
         )
+        logger.warning("Updated entry: %s - %s", new_entry.end_time, parse_time(updated_entry['stop']))
+        if not updated_entry:
+            return new_entry
 
         return Entry(
             id=_str(updated_entry['id']),
@@ -127,43 +129,53 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             "Content-Type": "application/json"
         }
         data = {
-            'time_entry': {
-                "description": name,
-                "start": session['start_time'].isoformat() + "+00:00",
-                "duration": int((session['end_time'] - session['start_time']).total_seconds()),
-                "created_with": "thyme-toggl-cli"
-            }
+            "description": name,
+            "start": session['start_time'].isoformat() + "+00:00",
+            "stop": session['end_time'].isoformat() + "+00:00",
+            "created_with": "thyme-toggl-cli",
+            "workspace_id": self.workspace_id,
+            "billable": True,
         }
+        logger.warning("Pushing session: %s", data)
         if project_id:
-            data['time_entry']['pid'] = project_id
+            data['project_id'] = int(project_id) or None
+        else:
+            data['project_id'] = None
         if entry_id:
-            return self.update_time_entry(entry_id, data)
+            try:
+                return self.update_time_entry(entry_id, data)
+            except Exception:
+                logger.exception("Error updating entry")
+                return None
 
         response = self.provider.request(
-            'time_entries', data=json.dumps(data), headers=headers,
+            'workspaces/{}/time_entries'.format(self.workspace_id), data=json.dumps(data),
+            headers=headers, method='POST'
         )
-        print(u'Pushed session to toggl: {}'.format(response))
-        entry = response['data']
+        logger.warning(u'Pushed session to toggl: {}'.format(response))
+        entry = response
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
         return entry
 
     def update_time_entry(self, entry_id: str, data: dict):
         response = self.provider.request(
-            'time_entries/{}'.format(entry_id), data=json.dumps(data), method='PUT'
+            'workspaces/{}/time_entries/{}'.format(self.workspace_id, entry_id),
+            data=json.dumps(data), method='PUT'
         )
-        print(u'Updated session to toggl: {}'.format(response))
-        entry = response['data']
+        logger.warning(u'Updated session to toggl: {}'.format(response))
+        entry = response
         entry['start_time'] = parse_time(entry['start'])
         entry['end_time'] = parse_time(entry['stop'])
         return entry
 
     def delete_time_entry(self, entry_id):
-        logger.info('deleting %s', entry_id)
+        logger.warning('deleting %s', entry_id)
         response = self.provider.request(
-            'time_entries/{}'.format(entry_id), method='DELETE'
+            'workspaces/{}/time_entries/{}'.format(self.workspace_id, entry_id),
+            method='DELETE'
         )
-        return response
+        return entry_id
 
 
 class Provider(AbstractProvider):
@@ -172,7 +184,7 @@ class Provider(AbstractProvider):
         self.id_counter = 4
 
     def request(self, endpoint: str, **kwargs) -> Union[List[dict], dict]:
-        url = 'https://api.track.toggl.com/api/v8/{}'.format(endpoint)
+        url = 'https://api.track.toggl.com/api/v9/{}'.format(endpoint)
         kwargs['headers'] = kwargs.get('headers', {
             "Content-Type": "application/json"
         })
@@ -184,10 +196,18 @@ class Provider(AbstractProvider):
         except KeyError:
             pass
         response = getattr(requests, method)(url, **kwargs)
+        if not response.content:
+            return
         try:
-            return response.json()
+            ret = response.json()
+            if response.status_code >= 400:
+                if method == "delete" and "not found" in ret.lower():
+                    return  # This is ok
+                logger.exception("%s: %s, - %s", url, kwargs, response.content)
+                raise Exception(ret)
+            return ret
         except Exception as e:
-            logger.exception("%s: %s", response.content, e)
+            logger.exception("%s - %s: %s", url, response.content, e)
             raise
 
     def test_request(self, endpoint: str, **kwargs) -> Union[List[dict], dict, str]:
