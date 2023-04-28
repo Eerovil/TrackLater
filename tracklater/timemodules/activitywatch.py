@@ -53,7 +53,11 @@ class Parser(EntryMixin, AbstractParser):
         return _ret
 
     def _parse_raw_event(self, entry):
-        active_window = get_window(entry)[:100]
+        try:
+            active_window = get_window(entry)[:100]
+        except Exception as e:
+            logger.exception(e)
+            active_window = None
         if active_window is None:
             return None
         if (entry['duration'] or 0) > 1000:
