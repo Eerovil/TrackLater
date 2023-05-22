@@ -5,7 +5,7 @@ python-dateutil==2.8.0
 slack_sdk
 pytz==2019.1
 flask-sqlalchemy
-requests==2.22.0
+requests==2.31.0
 appdirs==1.4.3
 multidict
 aiohttp
