@@ -77,7 +77,7 @@ class Parser(EntryMixin, AbstractParser):
                     user['profile'].get('last_name', 'NULL')
                 )
             im_channels = provider.api_call(
-                "conversations.list", data={'types': 'mpim,im'}
+                "conversations.list", data={'types': 'mpim,im,private_channel', 'limit': 1000}
             )['channels']
             channels = im_channels + [{"id": channel_id} for channel_id in group_data.get('CHANNELS', [])]
             self.async_entries: List[Entry] = []
