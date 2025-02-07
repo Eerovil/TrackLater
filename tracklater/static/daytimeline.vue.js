@@ -66,8 +66,9 @@ var daytimeline = Vue.component("daytimeline", {
                 project: ''
               }
               let detectedIssue = this.detectIssue(timeSnippet);
+              console.log("detectedIssue: ", detectedIssue)
               if (detectedIssue) {
-                entry.title = detectedIssue.message;
+                entry.title = detectedIssue.message || detectedIssue.group;
                 entry.project = detectedIssue.project;
               }
               this.$emit('addEntry', entry)
@@ -116,6 +117,7 @@ var daytimeline = Vue.component("daytimeline", {
           start_time: middle_time.addHours(-1),
           end_time: middle_time.addHours(1),
         }
+
         let spanningEntries = [];
         let sorted = this.entries.slice().filter(i => this.timeEntryModules.includes(i.module)).sort((a, b) => {
           if (new Date(a.start_time) > new Date(b.start_time)) {
@@ -232,22 +234,42 @@ var daytimeline = Vue.component("daytimeline", {
         return parseRet(ret);
       },
       detectIssue(timeSnippet) {
+        const startTime = new Date(timeSnippet.start_time)
+        const endTime = new Date(timeSnippet.end_time)
+        const middle = new Date((startTime.getTime() + endTime.getTime()) / 2)
         const entries = this.entries.slice()
           .filter(i => ["gitmodule"]
           .includes(i.module))
           .filter(i => (new Date(i.start_time) < timeSnippet.end_time && new Date(i.start_time) > timeSnippet.start_time))
           .sort((a, b) => {
-            if (new Date(a.start_time) > new Date(b.start_time)) {
-              return 1;
+            // Sort by distance to middle
+            const aDist = Math.abs(new Date(a.start_time).getTime() - middle.getTime())
+            const bDist = Math.abs(new Date(b.start_time).getTime() - middle.getTime())
+            if (aDist > bDist) {
+              return 1
             }
-            if (new Date(a.start_time) < new Date(b.start_time)) {
-              return -1;
+            if (aDist < bDist) {
+              return -1
             }
-            return 0;
+            return 0
           })
           .reverse()
         if (entries.length == 0) {
-          return null
+          // Use activitywatch entries instead
+          for (let i in this.entries) {
+            if (!this.entries[i].group) {
+              continue
+            }
+            if (this.entries[i].module == "activitywatch") {
+              entries.push({
+                ...this.entries[i],
+                title: this.entries[i].group,
+              })
+            }
+          }
+        }
+        if (entries.length == 0) {
+          return
         }
         let ret = {
           group: entries[0].group
@@ -272,6 +294,7 @@ var daytimeline = Vue.component("daytimeline", {
             }
           }
         });
+
         ret.project = this.$store.getters.getProjectId(ret.group);
         return ret
       },

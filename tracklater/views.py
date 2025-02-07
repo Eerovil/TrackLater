@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, date
 import json
 import pytz
 from typing import Dict, Any
+from time import sleep
 
 from tracklater.database import db
 from tracklater.main import Parser
@@ -160,12 +161,19 @@ def updateentry() -> Any:
             )
         data = "error"
 
-        if new_entry:
-            Entry.query.filter(Entry.id == new_entry.id).delete()
-            new_entry.module = module
-            db.session.merge(new_entry)
-            db.session.commit()
-            data = new_entry.to_dict()
+        while True:
+            try:
+                if new_entry:
+                    Entry.query.filter(Entry.id == new_entry.id).delete()
+                    new_entry.module = module
+                    db.session.merge(new_entry)
+                    db.session.commit()
+                    data = new_entry.to_dict()
+                break
+            except Exception as e:
+                logger.exception("Error updating entry")
+                db.session.rollback()
+                sleep(1)
 
         return json.dumps(data, default=json_serial)
     return None

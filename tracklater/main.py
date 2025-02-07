@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
+from time import sleep
 
 import importlib
 from typing import Dict
@@ -80,6 +81,20 @@ class Parser(object):
                     entry.project = group_to_project.get(entry.group, None)
                 if not entry.group and entry.project:
                     entry.group = project_to_group.get(str(entry.project), None)
-            store_parser_to_database(self.modules[module_name], module_name,
-                                     start_date=self.start_date, end_date=self.end_date)
-            logger.warning("Task done %s", module_name)
+            index = 0
+            while True:
+                index += 1
+                if index > 10:
+                    logger.error("Task failed %s", module_name)
+                    break
+                try:
+                    store_parser_to_database(self.modules[module_name], module_name,
+                                            start_date=self.start_date, end_date=self.end_date)
+                    logger.warning("Task done %s", module_name)
+                    break
+                except Exception as e:
+                    logger.exception(e)
+                    db.session.rollback()
+                    logger.warning("Task retry %s", module_name)
+                    sleep(1)
+

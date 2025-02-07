@@ -31,6 +31,9 @@ def get_window(entry) -> Optional[str]:
         if entry['data'].get('url'):
             parts.append(entry['data']['url'])
         return ' - '.join(parts)
+
+    if entry['data'].get('status'):
+        return entry['data']['status']
     return None
 
 
@@ -56,12 +59,12 @@ class Parser(EntryMixin, AbstractParser):
         try:
             active_window = get_window(entry)[:100]
         except Exception as e:
-            logger.exception(e)
+            logger.exception(entry)
             active_window = None
         if active_window is None:
             return None
-        if (entry['duration'] or 0) > 1000:
-            return None
+        # if (entry['duration'] or 0) > 1000:
+        #     return None
         time = parse_time(entry['timestamp'])
         end_time = time + timedelta(seconds=(entry['duration'] or 0))
         return {
@@ -143,8 +146,6 @@ class Parser(EntryMixin, AbstractParser):
 
         _end_session(sessions[-1], next_entry)
 
-        logger.warning("sessions: %s", sessions)
-
         return sessions
 
 
@@ -152,10 +153,22 @@ class Provider(AbstractProvider):
     def fetch_events(self, start_date, end_date) -> List[dict]:
         parsed_events = []
 
-        url = get_setting('EVENTS_URL')
-        resp = requests.get(url, headers={'HOST': '127.0.0.1'})
-        for event in resp.json():
-            parsed_events.append(event)
+        urls = [get_setting('EVENTS_URL')]
+        url2 = get_setting('EVENTS_URL2', default='')
+        if url2:
+            urls.append(url2)
+
+        for url in urls:
+            if '?' not in url:
+                url += '?'
+            url += f'start={start_date.isoformat()}&end={end_date.isoformat()}'
+            logger.warning(f'Fetching events from {url}')
+            resp = requests.get(url, headers={'HOST': '127.0.0.1'})
+            data = resp.json()
+            for event in data:
+                logger.warning(event)
+                parsed_events.append(event)
+        logger.warning(f'Fetched {len(parsed_events)} events')
         return parsed_events
 
     def test_fetch_events(self, start_date=None, end_date=None):

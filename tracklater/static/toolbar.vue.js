@@ -25,6 +25,7 @@ var toolbar = Vue.component("toolbar", {
                 v-model="entryTitle"
                 :items="allIssues"
                 @change="exportEntry"
+                @keyup.enter="exportEntry(); unselectAll($event);"
                 >
                 </v-combobox>
             </v-col>
@@ -141,6 +142,10 @@ var toolbar = Vue.component("toolbar", {
         }
     },
     methods: {
+        unselectAll(event) {
+            event.target.blur();
+            this.$store.commit('setSelectedEntry', null);
+        },
         findIssue(title) {
             return this.$store.getters.findIssue(title)
         },
