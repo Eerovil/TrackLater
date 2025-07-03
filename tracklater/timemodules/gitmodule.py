@@ -52,7 +52,10 @@ class Parser(EntryMixin, AbstractParser):
 
 class Provider(AbstractProvider):
     def get_log_entries(self, repo_path, start_date=None):
-        repo = git.Repo(repo_path)
+        try:
+            repo = git.Repo(repo_path)
+        except Exception:
+            return
         for head in repo.heads:
             iterator = repo.iter_commits(head)
             for commit in iterator:
