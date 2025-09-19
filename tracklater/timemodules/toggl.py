@@ -53,6 +53,7 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
     def get_projects(self) -> List[Project]:
         clients = self.provider.request('me/clients', method='GET')
         new_projects = self.provider.request('me/projects', method='GET')
+        used_project_ids = set()
         projects = []
         toggl_settings = cast(Any, settings.TOGGL)
         for client in clients:
@@ -63,17 +64,23 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             if not groups:
                 continue
             for project in new_projects:
+                if project['id'] in used_project_ids:
+                    continue
+                if project['client_id'] != client['id']:
+                    continue
                 for group in groups:
                     if project['name'] in toggl_settings[group]['PROJECTS']:
                         break
                 else:
+                    logger.warning("Project %s not in groups %s", project['name'], groups)
                     continue
+                used_project_ids.add(project['id'])
                 projects.append(Project(
                     pid=project['id'],
                     title="{} - {}".format(client['name'], project['name']),
                     group=group
                 ))
-                logger.warning("Found project: %s - %s", project['id'], project['name'])
+                logger.warning("Found project: %s - %s - %s", client['name'], project['name'], project['id'])
 
         return projects
 

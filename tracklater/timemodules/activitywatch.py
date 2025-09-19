@@ -63,8 +63,8 @@ class Parser(EntryMixin, AbstractParser):
             active_window = None
         if active_window is None:
             return None
-        # if (entry['duration'] or 0) > 1000:
-        #     return None
+        if (entry['duration'] or 0) > 1000:
+            return None
         time = parse_time(entry['timestamp'])
         end_time = time + timedelta(seconds=(entry['duration'] or 0))
         return {
