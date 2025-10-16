@@ -126,6 +126,7 @@ var home = Vue.component("home", {
                 this.$store.commit('setInput', {title: response.data.title, issue: null})
                 this.$store.commit('setEntries', {module_name: entry.module, entries: updated_entries});
                 this.$store.commit('setLoading', {module_name: 'updateentry', loading: false});
+                this.$store.commit('setSelectedEntry', updated_entries.find((_entry) => _entry.title === response.data.title && _entry.start_time === response.data.start_time && _entry.end_time === response.data.end_time));
             }).catch(_handleFailure)
         },
         deleteEntry(entry) {

@@ -44,6 +44,7 @@ var daytimeline = Vue.component("daytimeline", {
             entry.start_time = item.start
             entry.end_time = item.end
             this.$emit('updateEntry', entry)
+            this.$store.commit('setSelectedEntry', entry);
         }
       },
       onRemove: function(item, callback) {

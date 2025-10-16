@@ -124,6 +124,9 @@ const store = new Vuex.Store({
         for (let module_name in state.modules) {
             const projects = state.modules[module_name].projects || [];
             for (let _project of projects) {
+                if ((_project.title || "").toLowerCase().includes("vika")) {
+                    continue
+                }
                 if (_project.group == group) {
                     return _project.id;
                 }
