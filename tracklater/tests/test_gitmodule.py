@@ -21,8 +21,13 @@ def parser():
 
 
 def test_get_entries(parser):
-    """
-    No real tests for gitmodule... yet.
-    """
     data = parser.get_entries()
     assert len(data) == 24
+    assert data[0].title == ''
+
+
+def test_get_entries_hover_text_only(parser):
+    data = parser.get_entries()
+    assert data[0].text.startswith('path1 [branch1] - ')
+    assert 'src/main.py' in data[0].text
+    assert 'README.md' in data[0].text

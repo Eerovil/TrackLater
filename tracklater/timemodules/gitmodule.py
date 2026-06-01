@@ -26,6 +26,34 @@ def git_time_to_datetime(_datetime):
     return _datetime.astimezone(pytz.utc).replace(tzinfo=None)
 
 
+def _all_changed_files(commit) -> List[str]:
+    if getattr(commit, 'changed_files', None):
+        return list(commit.changed_files)
+    try:
+        return list(commit.stats.files.keys())
+    except Exception:
+        logger.debug("Could not read changed files for commit", exc_info=True)
+        return []
+
+
+def format_commit_entry(
+    repo_name: str, branch: str, commit, max_files: int = 12
+) -> str:
+    message = commit.message.strip()
+    subject = message.split('\n')[0] if message else ''
+    header = "{} [{}] - {}".format(repo_name, branch, subject)
+
+    lines = [header]
+    all_files = _all_changed_files(commit)
+    shown = all_files[:max_files]
+    if shown:
+        lines.extend(shown)
+        if len(all_files) > len(shown):
+            lines.append("... and {} more".format(len(all_files) - len(shown)))
+
+    return "\n".join(lines)
+
+
 class Parser(EntryMixin, AbstractParser):
     def get_entries(self) -> List[Entry]:
         start_date = self.start_date
@@ -34,7 +62,8 @@ class Parser(EntryMixin, AbstractParser):
         provider = Provider()
         for group, data in settings.GIT.items():
             for repo_path in data.get('REPOS', []):
-                for log_entry in provider.get_log_entries(repo_path, start_date=start_date):
+                for log_entry, branch in provider.get_log_entries(
+                        repo_path, start_date=start_date):
                     logger.warning(log_entry.author.email)
                     if log_entry.author.email not in settings.GIT['global']['EMAILS']:
                         logger.warning(log_entry.author.email)
@@ -43,8 +72,10 @@ class Parser(EntryMixin, AbstractParser):
                     if time < start_date or time > end_date:
                         continue
 
+                    repo_name = repo_path.split('/')[-1]
                     log.append(Entry(
-                        text="{} - {}".format(repo_path.split('/')[-1], log_entry.message),
+                        title="",
+                        text=format_commit_entry(repo_name, branch, log_entry),
                         start_time=time,
                         group=group,
                     ))
@@ -68,11 +99,16 @@ class Provider(AbstractProvider):
                 except Exception as e:
                     logger.warning(e)
                     continue
-                yield commit
+                yield commit, head.name
 
     def test_get_log_entries(self, repo_path, start_date=None):
         with open(FIXTURE_DIR + '/git_test_data.json', 'r') as f:
             _git = obj_from_dict(json.load(f))
 
         for commit in _git.commits:
-            yield commit
+            branch = 'main'
+            if 'Branch 1' in commit.message:
+                branch = 'branch1'
+            elif 'Branch 2' in commit.message:
+                branch = 'branch2'
+            yield commit, branch
