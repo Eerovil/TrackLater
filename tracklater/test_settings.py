@@ -67,6 +67,22 @@ TAIGA = {
     }
 }
 
+LOCAL = {
+    'group1': {
+        'NAME': 'First Group',
+        'PROJECTS': {
+            'Development': 'default',
+            'Bug fixing': 'bug',
+        }
+    },
+    'group2': {
+        'NAME': 'Second Group',
+        'PROJECTS': {
+            'Development': 'default',
+        }
+    },
+}
+
 TOGGL = {
     'global': {
         'API_KEY': 'your-api-key'

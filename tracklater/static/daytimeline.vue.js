@@ -66,11 +66,12 @@ var daytimeline = Vue.component("daytimeline", {
                 module: item.group,
                 project: ''
               }
-              let detectedIssue = this.detectIssue(timeSnippet);
+              let detectedIssue = this.detectIssue(timeSnippet, item.group);
               console.log("detectedIssue: ", detectedIssue)
               if (detectedIssue) {
                 entry.title = detectedIssue.message || detectedIssue.group;
                 entry.project = detectedIssue.project;
+                entry.group = detectedIssue.group;
               }
               this.$emit('addEntry', entry)
           }
@@ -234,7 +235,7 @@ var daytimeline = Vue.component("daytimeline", {
         }
         return parseRet(ret);
       },
-      detectIssue(timeSnippet) {
+      detectIssue(timeSnippet, preferredModule) {
         const startTime = new Date(timeSnippet.start_time)
         const endTime = new Date(timeSnippet.end_time)
         const middle = new Date((startTime.getTime() + endTime.getTime()) / 2)
@@ -296,7 +297,7 @@ var daytimeline = Vue.component("daytimeline", {
           }
         });
 
-        ret.project = this.$store.getters.getProjectId(ret.group);
+        ret.project = this.$store.getters.getProjectId(ret.group, preferredModule);
         return ret
       },
     },

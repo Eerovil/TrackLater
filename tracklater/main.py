@@ -90,11 +90,17 @@ class Parser(object):
                 logger.exception("Error parsing module %s", module_name)
                 continue
             parsers.append((module_name, parser))
+            module_g2p = {project.group: project.pid for project in parser.projects}
+            module_p2g = {str(project.pid): project.group for project in parser.projects}
             for entry in parser.entries:
                 if not entry.project and entry.group:
-                    entry.project = group_to_project.get(entry.group, None)
+                    entry.project = module_g2p.get(
+                        entry.group, group_to_project.get(entry.group, None)
+                    )
                 if not entry.group and entry.project:
-                    entry.group = project_to_group.get(str(entry.project), None)
+                    entry.group = module_p2g.get(
+                        str(entry.project), project_to_group.get(str(entry.project), None)
+                    )
             index = 0
             while True:
                 index += 1

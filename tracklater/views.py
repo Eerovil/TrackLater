@@ -90,6 +90,11 @@ def fetchdata() -> Any:
         for key in settings.ENABLED_MODULES:
             if not keys or key in keys:
                 data[key] = {}
+                if key == 'local' and key in parser.modules:
+                    for project in parser.modules[key].get_projects():
+                        project.module = key
+                        db.session.merge(project)
+                    db.session.commit()
                 data[key]['entries'] = [entry.to_dict()
                                         for entry in Entry.query.filter(
                                             Entry.module == key,

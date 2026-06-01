@@ -120,8 +120,18 @@ const store = new Vuex.Store({
       myDate.setTime((new Date(Date.parse(state.currentWeek))).getTime() + ((24*60*60*1000) * 7))
       return myDate.getTime()
     },
-    getProjectId: (state) => (group) => {
-        for (let module_name in state.modules) {
+    getProjectId: (state) => (group, preferredModule) => {
+        const moduleNames = preferredModule
+            ? [preferredModule].concat(
+                Object.keys(state.modules).filter((m) => m !== preferredModule)
+              )
+            : ["local"].concat(
+                Object.keys(state.modules).filter((m) => m !== "local")
+              );
+        for (let module_name of moduleNames) {
+            if (!state.modules[module_name]) {
+                continue;
+            }
             const projects = state.modules[module_name].projects || [];
             for (let _project of projects) {
                 if ((_project.title || "").toLowerCase().includes("vika")) {

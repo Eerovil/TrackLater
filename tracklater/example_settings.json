@@ -4,6 +4,7 @@
         "thyme",
         "gitmodule",
         "toggl",
+        "local",
         "taiga",
         "jira",
         "slack"
@@ -12,6 +13,9 @@
     "UI_SETTINGS": {
         "toggl": {
             "global": "#E01A22"
+        },
+        "local": {
+            "global": "#5C6BC0"
         },
         "thyme": {
             "global": "#1aef65"
@@ -23,6 +27,22 @@
             "global": "#4A154B"
         }
     },
+    "LOCAL": {
+        "group1": {
+            "NAME": "First Group",
+            "PROJECTS": {
+                "Development": "default",
+                "Bug fixing": "bug"
+            }
+        },
+        "group2": {
+            "NAME": "Second Group",
+            "PROJECTS": {
+                "Development": "default"
+            }
+        }
+    },
+
     "TOGGL": {
         "global": {
             "API_KEY": "your-api-key"
