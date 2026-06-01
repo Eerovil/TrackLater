@@ -35,8 +35,9 @@ class Parser(EntryMixin, AbstractParser):
         for group, data in settings.GIT.items():
             for repo_path in data.get('REPOS', []):
                 for log_entry in provider.get_log_entries(repo_path, start_date=start_date):
+                    logger.warning(log_entry.author.email)
                     if log_entry.author.email not in settings.GIT['global']['EMAILS']:
-                        logger.info(log_entry.author.email)
+                        logger.warning(log_entry.author.email)
                         continue
                     time = git_time_to_datetime(log_entry.authored_datetime)
                     if time < start_date or time > end_date:
@@ -55,10 +56,12 @@ class Provider(AbstractProvider):
         try:
             repo = git.Repo(repo_path)
         except Exception:
+            logger.warning(f"Error opening repo {repo_path}")
             return
         for head in repo.heads:
             iterator = repo.iter_commits(head)
             for commit in iterator:
+                logger.warning(commit.author.email)
                 try:
                     if start_date and git_time_to_datetime(commit.authored_datetime) < start_date:
                         break

@@ -63,10 +63,11 @@ class Parser(EntryMixin, AbstractParser):
             active_window = None
         if active_window is None:
             return None
-        if (entry['duration'] or 0) > 1000:
+        if (entry.get('data', {}).get('status') == "afk"):
             return None
         time = parse_time(entry['timestamp'])
-        end_time = time + timedelta(seconds=(entry['duration'] or 0))
+        end_time = time + timedelta(seconds=(entry['duration'] or 1))
+        logger.warning(f'Adding event {entry} to entries')
         return {
             'active_window': active_window,
             'time': time,
@@ -104,6 +105,10 @@ class Parser(EntryMixin, AbstractParser):
                 session.group = sorted_groups[0][0]
                 session.text = session.group + "\n" + session.text
 
+            # if session end time and start time is not in the same day, end session to start time plus 1 hour
+            if session.end_time.date() != session.start_time.date():
+                session.end_time = session.start_time + timedelta(hours=1)
+
         def _add_window(session, window_name, seconds):
             if window_name not in session.extra_data['windows']:
                 session.extra_data['windows'][window_name] = 0
@@ -125,7 +130,7 @@ class Parser(EntryMixin, AbstractParser):
         sessions = [_init_session(next_entry)]
 
         for entry in entries[1:]:
-            if next_entry['active_window'] == entry['active_window']:
+            if entry['active_window'] != "not-afk" and next_entry['active_window'] == entry['active_window']:
                 continue
 
             # Time spent in window
@@ -155,9 +160,14 @@ class Provider(AbstractProvider):
 
         urls = [get_setting('EVENTS_URL')]
         url2 = get_setting('EVENTS_URL2', default='')
+        url3 = get_setting('EVENTS_URL3', default='')
+        url4 = get_setting('EVENTS_URL4', default='')
         if url2:
             urls.append(url2)
-
+        if url3:
+            urls.append(url3)
+        if url4:
+            urls.append(url4)
         for url in urls:
             if '?' not in url:
                 url += '?'

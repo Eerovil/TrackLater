@@ -70,8 +70,12 @@ class Parser(object):
             )
             if getattr(module, 'Parser', None) is None:
                 logger.warning('Module %s has no Parser class', module_name)
-            parser = module.Parser(self.start_date, self.end_date)  # type: ignore
-            self.modules[module_name] = parser
+            try:
+                parser = module.Parser(self.start_date, self.end_date)  # type: ignore
+                self.modules[module_name] = parser
+            except Exception as e:
+                logger.exception("Error initializing parser for module %s", module_name)
+                continue
 
     def parse(self) -> None:
         parsers = []
@@ -80,7 +84,11 @@ class Parser(object):
         for module_name, parser in self.modules.items():
             set_parser_caching_data(parser, module_name)
             logger.warning("Parsing %s", module_name)
-            parser.parse()
+            try:
+                parser.parse()
+            except Exception as e:
+                logger.exception("Error parsing module %s", module_name)
+                continue
             parsers.append((module_name, parser))
             for entry in parser.entries:
                 if not entry.project and entry.group:
