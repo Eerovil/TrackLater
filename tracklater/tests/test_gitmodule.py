@@ -1,4 +1,4 @@
-from tracklater.timemodules.gitmodule import Parser
+from tracklater.timemodules.gitmodule import Parser, _exclusive_rev
 
 import pytest
 import os
@@ -24,6 +24,12 @@ def test_get_entries(parser):
     data = parser.get_entries()
     assert len(data) == 24
     assert data[0].title == ''
+
+
+def test_exclusive_rev_excludes_other_heads():
+    assert _exclusive_rev('feature', ['main']) == ['feature', '^main']
+    assert _exclusive_rev('main', ['feature', 'dev']) == ['main', '^feature', '^dev']
+    assert _exclusive_rev('only', []) == ['only']
 
 
 def test_get_entries_hover_text_only(parser):

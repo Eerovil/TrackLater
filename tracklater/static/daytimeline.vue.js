@@ -76,9 +76,64 @@ var daytimeline = Vue.component("daytimeline", {
               this.$emit('addEntry', entry)
           }
       },
+      timelineEndForEntry(entry) {
+        // vis.js treats range end as exclusive; extend local bars by 1s so
+        // commits on the end timestamp still appear inside the block.
+        const end = new Date(entry.end_time);
+        if (entry.module === 'local') {
+          return new Date(end.getTime() + 1000);
+        }
+        return end;
+      },
+      logCommitsOutsideLocalEntries(entries) {
+        const localRows = entries.filter(
+          (e) => e.module === 'local' && e.end_time,
+        );
+        const gitRows = entries.filter((e) => e.module === 'gitmodule');
+        const orphans = [];
+        gitRows.forEach((gitEntry) => {
+          const projectId = this.$store.getters.getProjectId(
+            gitEntry.group, 'local',
+          );
+          if (!projectId) {
+            return;
+          }
+          const t = new Date(gitEntry.start_time).getTime();
+          const covering = localRows.filter((l) => l.project === projectId);
+          const insideExclusive = covering.some((l) => {
+            return (
+              new Date(l.start_time).getTime() <= t
+              && this.timelineEndForEntry(l).getTime() > t
+            );
+          });
+          if (insideExclusive) {
+            return;
+          }
+          const insideInclusive = covering.some((l) => {
+            return (
+              new Date(l.start_time).getTime() <= t
+              && new Date(l.end_time).getTime() >= t
+            );
+          });
+          orphans.push({
+            commit: gitEntry.start_time,
+            group: gitEntry.group,
+            projectId,
+            onBlockEnd: insideInclusive && !insideExclusive,
+          });
+        });
+        if (orphans.length) {
+          console.warn(
+            '[TrackLater] Git commits not inside local blocks on timeline:',
+            orphans,
+          );
+        }
+      },
       entriesToItems(entries) {
-        console.log("entriesToItems called for " + entries[0].start_time)
-        return entries.map((entry, i) => {
+        if (!entries.length) {
+          return [];
+        }
+        const items = entries.map((entry, i) => {
           let row = {
             id: i,
             group: entry.module,
@@ -98,7 +153,7 @@ var daytimeline = Vue.component("daytimeline", {
           let colorObj = this.modules[entry.module].color;
           color = colorObj[entry.group] || colorObj.global;
           if (entry.end_time != undefined) {
-              row.end = new Date(entry.end_time);
+              row.end = this.timelineEndForEntry(entry);
               if (color != null) {
                   row.style = `background-color: ${color}`
               }
@@ -110,6 +165,8 @@ var daytimeline = Vue.component("daytimeline", {
           }
           return row
         });
+        this.logCommitsOutsideLocalEntries(entries);
+        return items;
       },
       generateTimeSnippet(middle_time, activeModule) {
         // Go backwards and forwards unit "not much" is happening, and return the 

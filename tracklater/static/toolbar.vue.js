@@ -18,6 +18,12 @@ var toolbar = Vue.component("toolbar", {
             <v-btn @click="moveWeek(-1)"><</v-btn>
             <v-btn>{{ currentWeek }}</v-btn>
             <v-btn @click="moveWeek(1)">></v-btn>
+            <v-btn
+            v-if="hasLocalModule"
+            v-on:click="populateLocal()"
+            :loading="loading['populatelocal']"
+            color="primary"
+            >Fill local</v-btn>
         </v-row>
         <v-row>
             <v-col xs6>
@@ -128,6 +134,9 @@ var toolbar = Vue.component("toolbar", {
                 }
             }
             return ret;
+        },
+        hasLocalModule() {
+            return this.modules.local != null;
         }
     },
     watch: {
@@ -156,6 +165,9 @@ var toolbar = Vue.component("toolbar", {
             for (let module_name in this.modules) {
                 this.$emit('fetchModule', module_name)
             }
+        },
+        populateLocal() {
+            this.$emit('populateLocal');
         },
         getProject(issue) {
             // Get a matching project for issue

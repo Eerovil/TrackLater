@@ -11,6 +11,7 @@ from tracklater.main import Parser
 from tracklater import settings
 from tracklater.models import Entry, Issue, Project, ApiCall  # noqa
 from tracklater.timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
+from tracklater.ai_local import populate_local_entries
 
 import logging
 logger = logging.getLogger(__name__)
@@ -182,6 +183,34 @@ def updateentry() -> Any:
 
         return json.dumps(data, default=json_serial)
     return None
+
+
+@bp.route('/populatelocal', methods=['POST'])
+def populatelocal() -> Any:
+    if request.method != 'POST':
+        return None
+    data = request.get_json() or {}
+    from_date = parseTimestamp(data.get('from'))
+    to_date = parseTimestamp(data.get('to'))
+    if not from_date or not to_date:
+        return json.dumps(
+            {"error": "from and to timestamps (ms) are required"},
+            default=json_serial,
+        ), 400
+    replace_existing = data.get('replace_existing', True)
+    try:
+        created = populate_local_entries(
+            from_date, to_date, replace_existing=replace_existing
+        )
+        return json.dumps({
+            "entries": [e.to_dict() for e in created],
+            "count": len(created),
+        }, default=json_serial)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, default=json_serial), 400
+    except Exception as e:
+        logger.exception("populate local failed")
+        return json.dumps({"error": str(e)}, default=json_serial), 500
 
 
 @bp.route('/deleteentry', methods=['POST'])

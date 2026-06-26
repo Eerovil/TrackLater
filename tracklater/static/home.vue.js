@@ -6,6 +6,7 @@ var home = Vue.component("home", {
         v-on:fetchModule=fetchModule($event)
         v-on:exportEntry=updateEntry($event)
         v-on:setToolbarHeight=setToolbarHeight($event)
+        v-on:populateLocal=populateLocal($event)
         v-bind:style="{ height: toolbarHeight }"
     ></toolbar>
     <div
@@ -158,6 +159,39 @@ var home = Vue.component("home", {
             this.$store.commit('setSelectedEntry', null)
             this.$store.commit('setInput', {title: null, issue: null})
             this.fetchModule("all", 0)
+        },
+        populateLocal() {
+            if (!confirm(
+                "Replace local entries this week with entries inferred from git and ActivityWatch?"
+            )) {
+                return;
+            }
+            this.$store.commit('setLoading', {module_name: 'populatelocal', loading: true});
+            axios.post("populatelocal", {
+                from: this.$store.getters.getFrom,
+                to: this.$store.getters.getTo,
+                replace_existing: true,
+            }).then(response => {
+                console.log("populatelocal", response);
+                this.fetchModule("local", 0);
+                this.$store.commit('setLoading', {module_name: 'populatelocal', loading: false});
+            }).catch((err) => {
+                let msg = err.message;
+                if (err.response && err.response.data) {
+                    const d = err.response.data;
+                    if (typeof d === 'object' && d.error) {
+                        msg = d.error;
+                    } else if (typeof d === 'string') {
+                        try {
+                            msg = JSON.parse(d).error || d;
+                        } catch (e) {
+                            msg = d;
+                        }
+                    }
+                }
+                alert("Fill local failed: " + (msg || "unknown error"));
+                this.$store.commit('setLoading', {module_name: 'populatelocal', loading: false});
+            });
         },
     },
     watch: {

@@ -1,5 +1,6 @@
 {
     "TESTING": false,
+
     "ENABLED_MODULES": [
         "thyme",
         "gitmodule",
