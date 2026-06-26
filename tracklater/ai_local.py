@@ -35,29 +35,18 @@ def _allowed_local_projects(start_date: datetime, end_date: datetime) -> set:
     return {p.pid for p in parser.get_projects()}
 
 
-def populate_local_entries(
+def persist_local_entries(
+    entries_data: List[Dict[str, Any]],
     start_date: datetime,
     end_date: datetime,
     replace_existing: bool = True,
 ) -> List[Entry]:
     """
-    Create local entries from commit/session inference and persist them.
+    Validate a list of entry dicts and persist them as ``local`` module entries.
+
+    Each dict needs ``start_time``/``end_time`` (datetime), ``title``, ``project``.
+    Shared by the rule-based and AI-backed populate paths.
     """
-    if MODULE_NAME not in settings.ENABLED_MODULES:
-        raise ValueError("local module is not enabled")
-
-    if not _has_source_data(start_date, end_date):
-        raise ValueError(
-            "No source timemodule entries in this range. Fetch activitywatch/git/etc. first."
-        )
-
-    allowed_projects = _allowed_local_projects(start_date, end_date)
-    if not allowed_projects:
-        raise ValueError("No LOCAL projects configured")
-
-    entries_data = build_entries_from_commits(
-        start_date, end_date, allowed_projects,
-    )
     for item in entries_data:
         span = item['end_time'] - item['start_time']
         if span > MAX_LOCAL_ENTRY_DURATION:
@@ -104,3 +93,31 @@ def populate_local_entries(
     db.session.commit()
     logger.info("Created %s local entries", len(created))
     return created
+
+
+def populate_local_entries(
+    start_date: datetime,
+    end_date: datetime,
+    replace_existing: bool = True,
+) -> List[Entry]:
+    """
+    Create local entries from commit/session inference and persist them.
+    """
+    if MODULE_NAME not in settings.ENABLED_MODULES:
+        raise ValueError("local module is not enabled")
+
+    if not _has_source_data(start_date, end_date):
+        raise ValueError(
+            "No source timemodule entries in this range. Fetch activitywatch/git/etc. first."
+        )
+
+    allowed_projects = _allowed_local_projects(start_date, end_date)
+    if not allowed_projects:
+        raise ValueError("No LOCAL projects configured")
+
+    entries_data = build_entries_from_commits(
+        start_date, end_date, allowed_projects,
+    )
+    return persist_local_entries(
+        entries_data, start_date, end_date, replace_existing=replace_existing,
+    )

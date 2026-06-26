@@ -16,6 +16,7 @@ RUN sed -i 's|http://archive.ubuntu.com|ftp://mirrors.nic.funet.fi|g' /etc/apt/s
 RUN apt-get update && apt-get -y install \
         gettext \
         build-essential \
+        curl \
         git \
         libmemcached-dev \
         libmysqlclient-dev \
@@ -40,6 +41,13 @@ RUN mkdir /code
 WORKDIR /code
 COPY ./requirements.txt /code/
 RUN pip3 install -r requirements.txt
+
+# Node + Claude Code CLI (used by the AI-backed local populate, engine="claude").
+# Auth comes from the host ~/.claude mounted in docker-compose (subscription login).
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs \
+  && npm install -g @anthropic-ai/claude-code \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /root/.ssh && ln -s /root/.ssh-mount/id_rsa /root/.ssh/id_rsa && chown -R root:root /root/.ssh
 

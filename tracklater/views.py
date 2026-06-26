@@ -198,10 +198,17 @@ def populatelocal() -> Any:
             default=json_serial,
         ), 400
     replace_existing = data.get('replace_existing', True)
+    engine = (data.get('engine') or 'rules').lower()
     try:
-        created = populate_local_entries(
-            from_date, to_date, replace_existing=replace_existing
-        )
+        if engine == 'claude':
+            from tracklater.ai_local_claude import populate_local_entries_ai
+            created = populate_local_entries_ai(
+                from_date, to_date, replace_existing=replace_existing
+            )
+        else:
+            created = populate_local_entries(
+                from_date, to_date, replace_existing=replace_existing
+            )
         return json.dumps({
             "entries": [e.to_dict() for e in created],
             "count": len(created),

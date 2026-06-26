@@ -12,3 +12,12 @@ services:
       - "./:/code"
       - "~/.config/tracklater.json:/root/.config/tracklater.json"
       - "~/Documents:/home/eerovilpponen/Documents"
+    # Claude Code subscription auth for the AI-backed populate (engine="claude").
+    # macOS stores the login token in the Keychain, which a Linux container can't
+    # read — so use a long-lived OAuth token instead of mounting credential files:
+    #   1) on the host run:  claude setup-token
+    #   2) put the token in a .env file beside this compose file:
+    #        CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+    #   docker-compose auto-loads .env and injects it below (do not commit .env).
+    environment:
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
