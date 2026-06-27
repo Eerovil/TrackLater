@@ -84,6 +84,16 @@ def _to_local(dt: datetime) -> datetime:
     return dt.replace(tzinfo=ZoneInfo('UTC')).astimezone(tz).replace(tzinfo=None)
 
 
+def _to_utc(dt: datetime) -> datetime:
+    """Naive local datetime (what the model emits) -> naive UTC, how every other
+    module stores time. The frontend stamps stored times as UTC for display, so
+    local entries MUST be persisted in UTC or they render/export hours off."""
+    tz = _tz()
+    if tz is None or ZoneInfo is None:
+        return dt - timedelta(hours=3)  # EEST fallback
+    return dt.replace(tzinfo=tz).astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
+
+
 # --------------------------------------------------------------------------- #
 # Signal gathering (git commits + bridged ActivityWatch sessions)
 # --------------------------------------------------------------------------- #
@@ -275,6 +285,8 @@ def parse_entries(
         e = datetime.strptime(f"{day} {item['end']}", '%Y-%m-%d %H:%M')
         if e <= s:
             e += timedelta(days=1)  # crossed midnight
+        # Model reasons in local time; persist UTC to match every other module.
+        s, e = _to_utc(s), _to_utc(e)
         entries.append({
             'start_time': s,
             'end_time': e,
