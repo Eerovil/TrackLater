@@ -7,7 +7,10 @@ Claude Opus and asks it to produce billing entries — better judgement on title
 client selection and billable hours than the hardcoded rules or Gemini.
 
 Config (optional) in ~/.config/tracklater.json:
-    "CLAUDE": {"global": {"BIN": "claude", "MODEL": "opus", "TIMEOUT": 300}}
+    "CLAUDE": {"global": {"BIN": "claude", "MODEL": "opus",
+                          "EFFORT": "low", "TIMEOUT": 420}}
+EFFORT maps to the CLI --effort flag; opus 'low' runs ~2-5x faster than the
+default with equivalent output quality on this task.
 The container running this must have the `claude` CLI installed and authenticated.
 """
 import json
@@ -44,6 +47,7 @@ GUIDEBOOK_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.md')
 GUIDEBOOK_LOCAL_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.local.md')
 DEFAULT_MODEL = 'opus'
 DEFAULT_TIMEOUT = 420  # per single-day claude call
+DEFAULT_EFFORT = 'low'  # opus 'low' is ~2-5x faster with equivalent quality here
 
 
 # --------------------------------------------------------------------------- #
@@ -64,6 +68,10 @@ def _model() -> str:
 
 def _timeout() -> int:
     return int(_claude_cfg().get('TIMEOUT') or DEFAULT_TIMEOUT)
+
+
+def _effort() -> str:
+    return _claude_cfg().get('EFFORT') or DEFAULT_EFFORT
 
 
 def _tz():
@@ -248,6 +256,7 @@ def run_claude(prompt: str, timeout: Optional[int] = None) -> str:
     cmd = [
         _binary(), '-p', prompt,
         '--model', _model(),
+        '--effort', _effort(),
         '--output-format', 'json',
     ]
     # Run in an isolated cwd so the CLI doesn't load this repo's project context.

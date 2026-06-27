@@ -184,15 +184,15 @@ var home = Vue.component("home", {
             this.fetchModule("all", 0)
         },
         estimatePopulateSeconds() {
-            // Each weekday is a separate Opus call (~95s on busy days); weekends
-            // are mostly empty and resolve in a few seconds. Plus a little overhead.
+            // Each weekday is a separate Opus call (~45s at effort=low on busy
+            // days); weekends are mostly empty and resolve in a few seconds.
             const from = this.$store.getters.getFrom;
             const to = this.$store.getters.getTo;
             const DAY = 24 * 3600 * 1000;
             let secs = 6;
             for (let t = from; t < to; t += DAY) {
                 const dow = new Date(t).getDay(); // 0 Sun .. 6 Sat
-                secs += (dow === 0 || dow === 6) ? 8 : 95;
+                secs += (dow === 0 || dow === 6) ? 6 : 45;
             }
             return secs;
         },
