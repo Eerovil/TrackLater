@@ -68,6 +68,12 @@ Read these from your tracker config (do not bake names into this file):
   fallback.
 - Build forward. Mid-day gaps are allowed (drop non-billable lulls), but keep
   blocks back-to-back unless the log shows a clear multi-hour gap.
+- **Leave real AFK gaps empty — never bridge a billed block across one.** A window
+  with only momentary activity blips (a few sub-minute events totalling a couple of
+  minutes over an hour) *and no commits* is AFK, not work. Close the prior block at
+  the last real activity, start the next at the next real activity, and leave the
+  middle unbilled. (Bridging short pauses for the §2b hours total is fine; placing a
+  block over a dead window is not.)
 
 ---
 
@@ -130,11 +136,21 @@ summaries. Algorithm, in priority order:
    etc. Take the **most frequent** remaining slug for that client and map it to a
    title via your local vocabulary table. (Dominant branch, not first match.)
 2. **Keyword fallback** on the message text when no feature branch is present.
-3. **Per-client default** otherwise.
+3. **New feature → coin a new title from the slug.** If the dominant branch is a
+   real feature branch that doesn't match an *active* epic in your vocabulary, it's
+   new work: derive a fresh title by humanizing the slug (strip `hotfix/`/`feature/`
+   prefixes and generic suffixes like `-endpoints`/`-api`/`-fix`/`-v2`, dashes →
+   spaces). **Never force a substring match onto an old/shipped epic** — a new
+   branch that merely shares a token with a retired feature is still new work.
+4. **Per-client default** otherwise.
 
-Prefer the label used on the **nearest prior day** for the same client + theme
-(carry the epic forward) — this also covers the case where today's commits don't
-mention the epic the work is billed under.
+Carry the epic forward only while it's **still in flight**: prefer the label used on
+the nearest prior day for the same client + theme (this also covers days whose
+commits don't mention the epic the work is billed under). Do not resurrect a shipped
+epic for a different, newly-appearing branch — coin a new title (step 3) instead.
+
+> Keep your slug→title vocabulary scoped to *active* epics; prune shipped ones so a
+> stale mapping can't capture a new branch by substring.
 
 > Keep the actual slug→title vocabulary in `ENTRY_GUIDEBOOK.local.md`, not here.
 
