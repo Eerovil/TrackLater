@@ -1,5 +1,7 @@
 from flask import Flask
 import os
+import sys
+import tempfile
 from tracklater.database import db
 from tracklater.settings_utils import settings_wrapper as settings  # noqa
 
@@ -7,17 +9,28 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _database_uri():
+    """Resolve the SQLite URI, binding the engine at db.init_app() time (this
+    flask_sqlalchemy version ignores per-test config overrides made afterward).
+
+    TRACKLATER_DB_URI wins when set. As a hard safety net, create_app() called
+    during a pytest session NEVER falls back to the real database.db — the suite
+    spins up apps at import/collection time where the env var can race, and a
+    single such miss would migrate/mutate the user's live billing data."""
+    uri = os.environ.get('TRACKLATER_DB_URI')
+    if uri:
+        return uri
+    if 'pytest' in sys.modules or 'PYTEST_CURRENT_TEST' in os.environ:
+        return 'sqlite:///{}'.format(
+            os.path.join(tempfile.gettempdir(), 'tracklater_pytest_fallback.db'))
+    directory = os.path.dirname(os.path.realpath(__file__))
+    return 'sqlite:///{}/database.db'.format(directory)
+
+
 def create_app(name=__name__):
     app = Flask(name)
 
-    DIRECTORY = os.path.dirname(os.path.realpath(__file__))
-
-    # TRACKLATER_DB_URI lets the test suite point the app at a throwaway database.
-    # This flask_sqlalchemy version binds the engine at db.init_app() time, so a
-    # per-test config override comes too late; the env var is read here instead,
-    # before init_app, guaranteeing tests never touch the real database.db.
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-        'TRACKLATER_DB_URI', 'sqlite:///{}/database.db'.format(DIRECTORY))
+    app.config['SQLALCHEMY_DATABASE_URI'] = _database_uri()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     from tracklater.models import ApiCall, Project, Issue, Entry, SyncJob  # noqa

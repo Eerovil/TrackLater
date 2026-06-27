@@ -230,15 +230,19 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         data = {
             "description": entry.title,
             "start": entry.start_time.isoformat() + "+00:00",
-            "stop": entry.end_time.isoformat() + "+00:00",
-            # v9 expects a positive duration (seconds) for a completed entry;
-            # without it the entry can be treated as still running.
-            "duration": int((entry.end_time - entry.start_time).total_seconds()),
             "created_with": "tracklater",
             "workspace_id": self.workspace_id,
             "billable": True,
             "project_id": self._project_id_for(entry),
         }
+        if entry.end_time:
+            # v9 expects a positive duration (seconds) for a completed entry;
+            # without it the entry can be treated as still running.
+            data["stop"] = entry.end_time.isoformat() + "+00:00"
+            data["duration"] = int((entry.end_time - entry.start_time).total_seconds())
+        else:
+            # Running/open entry: Toggl v9 uses duration -1.
+            data["duration"] = -1
         if toggl_id:
             return self.provider.request(
                 'workspaces/{}/time_entries/{}'.format(self.workspace_id, toggl_id),

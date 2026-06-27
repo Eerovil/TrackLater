@@ -134,7 +134,9 @@ def updateentry() -> Any:
         module = data.get('module')
         entry_id = _str(data.get('entry_id', None))
         project = data.get('project_id', None)
-        if project == "null":
+        # The frontend sends "0"/"null"/"" to mean "no project"; normalise so a
+        # projectless draft is correctly skipped (not pushed) by /saveweek.
+        if project in ("null", "0", "", None):
             project = None
         project_to_group = {project.pid: project.group for project in Project.query.all()}
         new_entry = Entry(
@@ -174,7 +176,11 @@ def updateentry() -> Any:
         while True:
             try:
                 if new_entry:
-                    Entry.query.filter(Entry.id == new_entry.id).delete()
+                    # Scope by module: Entry's PK is (module, id, start_time), so
+                    # filtering on id alone could delete a same-id row in another module.
+                    Entry.query.filter(
+                        Entry.module == module, Entry.id == new_entry.id
+                    ).delete()
                     new_entry.module = module
                     db.session.merge(new_entry)
                     db.session.commit()
@@ -247,7 +253,8 @@ def deleteentry() -> Any:
             if existing is not None and existing.toggl_id:
                 enqueue(entry_id, 'delete', toggl_id=existing.toggl_id)
 
-        Entry.query.filter(Entry.id == entry_id).delete()
+        # Scope by module: id alone is not the full primary key.
+        Entry.query.filter(Entry.module == module, Entry.id == entry_id).delete()
         db.session.commit()
 
         return json.dumps(ret, default=json_serial)

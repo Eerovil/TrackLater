@@ -152,6 +152,42 @@ def client(app, monkeypatch):
     return app.test_client()
 
 
+def test_running_entry_without_end_time_pushes(app, db):
+    """A draft with no end_time (running entry) must push as duration=-1, not crash."""
+    now = datetime.utcnow()
+    db.session.add(Entry(
+        module=MODULE_NAME, id="run-1", toggl_id=None, is_draft=True,
+        start_time=now - timedelta(hours=1), end_time=None,
+        title="running", project="group1:Development", group="group1",
+    ))
+    db.session.commit()
+    sync_worker.enqueue("run-1", "create")
+    processed = sync_worker.process_pending_jobs()
+    assert processed == 1
+    synced = Entry.query.filter(Entry.module == MODULE_NAME, Entry.is_draft == False).first()  # noqa: E712
+    assert synced is not None and synced.toggl_id
+
+
+def test_projectless_zero_is_skipped_by_saveweek(client, db):
+    import json
+    now = datetime.utcnow()
+    # Frontend sends "0" for a blank project; it must be stored as no-project.
+    resp = client.post('/updateentry', json={
+        'module': MODULE_NAME, 'entry_id': None,
+        'start_time': int(time.mktime((now - timedelta(hours=2)).timetuple()) * 1000),
+        'end_time': int(time.mktime((now - timedelta(hours=1)).timetuple()) * 1000),
+        'title': 'no project', 'project_id': '0',
+    })
+    created = json.loads(resp.data)
+    assert created['project'] in (None, '')
+    resp = client.post('/saveweek', json={
+        'from': int(time.mktime((now - timedelta(days=1)).timetuple()) * 1000),
+        'to': int(time.mktime((now + timedelta(days=1)).timetuple()) * 1000),
+    })
+    assert json.loads(resp.data) == {"queued": 0, "skipped": 1}
+    assert SyncJob.query.count() == 0
+
+
 def test_http_create_save_sync_flow(client, db):
     import json
     now = datetime.utcnow()
