@@ -101,6 +101,16 @@ habits — adjust the factors to your own:
 Then **split the day's hours across the selected clients by commit share** and round
 each block to :30. (Commit share predicts the split better than activity share.)
 
+**Placement — anchor each block to the window where that client's commits cluster.**
+Commit-share only sets each client's *total* hours, not where the block sits. Walk
+the day in time order: the client billed for a block is the one whose commits (and
+activity) dominate *that window*, **not** the day's overall commit leader. A client
+whose commits are all in the evening gets an evening block — never pull it into a
+midday window where it had no commits just because it leads the day total. Likewise,
+**title each block from the commits inside its own hours**, not the client's
+day-dominant theme (a block can belong to a client yet not to that client's headline
+epic).
+
 ---
 
 ## 3. Which projects to bill (selection)
@@ -121,8 +131,14 @@ signal and take the top few.
 
 - **Do not assume bill ∝ activity.** Sometimes a high-signal client is omitted
   entirely (judgement / fixed-price / not-yet-billable). Those days are out of scope.
-- Residual misses are inherent: a client billed off a *single* commit, or < the
-  activity threshold, can't be recovered without tanking precision. Accept the floor.
+- **Minor-client cluster exception.** The threshold targets *scattered* stray
+  commits. If a sub-threshold client instead has a **tight cluster of commits in one
+  window** with little competing activity there, bill it a small block (~0.5–1 h) for
+  that window rather than dropping it. Keep this to *clustered* (not scattered)
+  sub-threshold clients — it trades a little precision for the small clients you do
+  bill.
+- Residual misses are inherent: a client billed off a *single* scattered commit
+  can't be recovered without tanking precision. Accept the floor.
 
 ---
 
