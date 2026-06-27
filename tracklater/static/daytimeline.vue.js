@@ -80,20 +80,20 @@ var daytimeline = Vue.component("daytimeline", {
         // vis.js treats range end as exclusive; extend local bars by 1s so
         // commits on the end timestamp still appear inside the block.
         const end = new Date(entry.end_time);
-        if (entry.module === 'local') {
+        if (entry.module === 'toggl') {
           return new Date(end.getTime() + 1000);
         }
         return end;
       },
       logCommitsOutsideLocalEntries(entries) {
         const localRows = entries.filter(
-          (e) => e.module === 'local' && e.end_time,
+          (e) => e.module === 'toggl' && e.end_time,
         );
         const gitRows = entries.filter((e) => e.module === 'gitmodule');
         const orphans = [];
         gitRows.forEach((gitEntry) => {
           const projectId = this.$store.getters.getProjectId(
-            gitEntry.group, 'local',
+            gitEntry.group, 'toggl',
           );
           if (!projectId) {
             return;
@@ -149,6 +149,9 @@ var daytimeline = Vue.component("daytimeline", {
           if (entry.id && entry.id.startsWith("placeholderid")) {
             row.editable = false
             row.selectable = false;
+          }
+          if (entry.is_draft) {
+            row.className += ' draft';
           }
           let colorObj = this.modules[entry.module].color;
           color = colorObj[entry.group] || colorObj.global;

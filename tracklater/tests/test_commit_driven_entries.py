@@ -26,7 +26,7 @@ def client(db):
 
 def test_build_entries_splits_metso(client, monkeypatch):
     from tracklater import settings as app_settings
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'TOGGL', {
         'outdoor': {'NAME': 'O', 'PROJECTS': {'Verkkokauppakehitys': 'default'}},
         'metso': {'NAME': 'M', 'PROJECTS': {'Metso-ostojärjestelmäkehitys': 'default'}},
     })
@@ -67,7 +67,7 @@ def test_build_entries_splits_metso(client, monkeypatch):
 def test_sparse_commits_do_not_fill_inactive_gap(client, monkeypatch):
     """Same project commits days apart must not produce 10h blocks across the gap."""
     from tracklater import settings as app_settings
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'TOGGL', {
         'outdoor': {'NAME': 'O', 'PROJECTS': {'Verkkokauppakehitys': 'default'}},
     })
     allowed = {'outdoor:Verkkokauppakehitys'}
@@ -99,7 +99,7 @@ def test_sparse_commits_do_not_fill_inactive_gap(client, monkeypatch):
 
 def test_build_entries_one_per_commit_same_group(client, monkeypatch):
     from tracklater import settings as app_settings
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'TOGGL', {
         'outdoor': {'NAME': 'O', 'PROJECTS': {'Verkkokauppakehitys': 'default'}},
     })
     allowed = {'outdoor:Verkkokauppakehitys'}
@@ -130,7 +130,7 @@ def test_aw_skipped_when_spanning_other_project_commits(client, monkeypatch):
         _DATA,
         _parse_db_time,
     )
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'TOGGL', {
         'outdoor': {'NAME': 'O', 'PROJECTS': {'Verkkokauppakehitys': 'default'}},
         'metso': {'NAME': 'M', 'PROJECTS': {'Metso-ostojärjestelmäkehitys': 'default'}},
     })
@@ -162,7 +162,7 @@ def test_session_blocks_outdoor_then_metso(client, monkeypatch):
         build_entries_from_commits,
     )
 
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'TOGGL', {
         'outdoor': {'NAME': 'O', 'PROJECTS': {'Verkkokauppakehitys': 'default'}},
         'metso': {'NAME': 'M', 'PROJECTS': {'Metso-ostojärjestelmäkehitys': 'default'}},
     })

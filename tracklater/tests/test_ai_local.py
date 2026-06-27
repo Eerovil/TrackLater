@@ -26,8 +26,9 @@ def test_populate_local_from_git_commit(client, monkeypatch):
     from tracklater import settings as app_settings
     from tracklater.database import db
 
-    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['gitmodule', 'local'])
-    monkeypatch.setattr(app_settings, 'LOCAL', {
+    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['gitmodule', 'toggl'])
+    monkeypatch.setattr(app_settings, 'TOGGL', {
+        'global': {'API_KEY': 'x'},
         'group1': {
             'NAME': 'First',
             'PROJECTS': {'Development': 'default'},

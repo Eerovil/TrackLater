@@ -51,7 +51,7 @@ def client(db):
 def test_last_week_entries_no_inactive_span_over_30_minutes(client, monkeypatch):
     from tracklater import settings as app_settings
 
-    monkeypatch.setattr(app_settings, 'LOCAL', LOCAL_GROUPS)
+    monkeypatch.setattr(app_settings, 'TOGGL', LOCAL_GROUPS)
     start, end = last_week_range()
     allowed = allowed_projects()
 
@@ -87,7 +87,7 @@ def test_may_26_commits_inside_local_entries(client, monkeypatch):
 
     from tracklater import settings as app_settings
 
-    monkeypatch.setattr(app_settings, 'LOCAL', LOCAL_GROUPS)
+    monkeypatch.setattr(app_settings, 'TOGGL', LOCAL_GROUPS)
     start, end = last_week_range()
     allowed = allowed_projects()
     day_start = datetime(2026, 5, 26)

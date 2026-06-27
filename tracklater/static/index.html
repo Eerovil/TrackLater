@@ -38,6 +38,19 @@
     .point-color-green * {
       border-color: green !important;
     }
+    /* Unsynced/edited toggl drafts: dashed outline + a draft dot so it is clear
+       at a glance which entries still need a "Save week" push to Toggl. */
+    .vis-item.draft {
+      border-style: dashed !important;
+      border-width: 2px !important;
+      opacity: 0.82;
+    }
+    .vis-item.draft .vis-item-content::after {
+      content: " ●";
+      opacity: 0.7;
+      font-size: 9px;
+      vertical-align: super;
+    }
     </style>
 </head>
 
@@ -125,8 +138,8 @@ const store = new Vuex.Store({
             ? [preferredModule].concat(
                 Object.keys(state.modules).filter((m) => m !== preferredModule)
               )
-            : ["local"].concat(
-                Object.keys(state.modules).filter((m) => m !== "local")
+            : ["toggl"].concat(
+                Object.keys(state.modules).filter((m) => m !== "toggl")
               );
         for (let module_name of moduleNames) {
             if (!state.modules[module_name]) {

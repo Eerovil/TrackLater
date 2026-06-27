@@ -1,3 +1,13 @@
+import os
+import tempfile
+
+# Point every create_app() at a throwaway database BEFORE any test module is
+# imported (test_app/test_ai_local call create_app() at import time). Without
+# this, the engine binds to the real tracklater/database.db and tests mutate it.
+os.environ.setdefault(
+    'TRACKLATER_DB_URI',
+    'sqlite:///{}'.format(os.path.join(tempfile.gettempdir(), 'tracklater_pytest.db')),
+)
 
 import pytest
 from tracklater import settings

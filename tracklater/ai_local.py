@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 from tracklater import settings
 from tracklater.database import db
 from tracklater.models import Entry
-from tracklater.timemodules.local import MODULE_NAME, Parser, resolve_entry_group_project
+from tracklater.timemodules.toggl import MODULE_NAME, Parser, resolve_entry_group_project
 from tracklater.work_inference import (
     MIN_LOCAL_ENTRY_DURATION,
     MAX_LOCAL_ENTRY_DURATION,
@@ -69,8 +69,10 @@ def persist_local_entries(
         )
 
     if replace_existing:
+        # Only clear unsynced drafts; never wipe entries already pushed to Toggl.
         Entry.query.filter(
             Entry.module == MODULE_NAME,
+            Entry.is_draft == True,  # noqa: E712
             Entry.start_time >= start_date,
             Entry.start_time <= end_date,
         ).delete()

@@ -24,9 +24,12 @@ def integration_db(integration_app, monkeypatch):
 
     monkeypatch.setattr(
         app_settings, 'ENABLED_MODULES',
-        ['activitywatch', 'gitmodule', 'local'],
+        ['activitywatch', 'gitmodule', 'toggl'],
         raising=False,
     )
+    # The toggl module now owns local drafts; default_project_pid reads TOGGL.
+    monkeypatch.setattr(app_settings, 'TOGGL', dict(
+        LOCAL_GROUPS, **{'global': {'API_KEY': 'x'}}), raising=False)
     monkeypatch.setattr(app_settings, 'LOCAL', LOCAL_GROUPS, raising=False)
 
     with integration_app.app_context():

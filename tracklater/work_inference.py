@@ -501,7 +501,7 @@ def _entry_for_anchor_run(
     allowed_projects: set,
     not_before: Optional[datetime] = None,
 ) -> Optional[Dict[str, Any]]:
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     group = run[0].group
     if not group:
@@ -871,7 +871,7 @@ def commits_outside_entries(
     exclusive_end_padding: timedelta = timedelta(0),
 ) -> List[Tuple[datetime, str, str]]:
     """Return (commit_time, group, project) for commits not inside any same-project entry."""
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     uncovered: List[Tuple[datetime, str, str]] = []
     for commit_time, group in commits:
@@ -925,7 +925,7 @@ def commits_in_same_project_gaps(
 
     Returns (commit_time, group, project, gap_start, gap_end).
     """
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     in_gap: List[Tuple[datetime, str, str, datetime, datetime]] = []
     by_project: Dict[str, List[Dict[str, Any]]] = {}
@@ -993,7 +993,7 @@ def assert_pre_commit_windows(
     tolerance: timedelta = timedelta(seconds=2),
 ) -> None:
     """Each commit has a same-project entry spanning 30 min before through commit time."""
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     failures: List[str] = []
     for index, (commit_time, group) in enumerate(commits):
@@ -1171,7 +1171,7 @@ def _prev_processed_commit(
     allowed_projects: set,
 ) -> Optional[WorkAnchor]:
     """Previous commit that actually produces a local entry."""
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     for j in range(index - 1, -1, -1):
         candidate = commits[j]
@@ -1293,7 +1293,7 @@ def _build_commit_session_entries(
     - Same project on next commit: end when next commit starts (contiguous).
     - After each commit: at least 15 minutes, then until activity stops (up to ~1h45 cap).
     """
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     commits = sorted(commit_anchors, key=lambda a: a.start)
     entries: List[Dict[str, Any]] = []
@@ -1492,7 +1492,7 @@ def _ensure_commits_inside_entries(
     allowed_projects: set,
 ) -> List[Dict[str, Any]]:
     """Extend or add entries so every allowed-project commit lies inside one."""
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     commit_list: List[CommitTimeGroup] = [
         (c.start, c.group)
@@ -1558,7 +1558,7 @@ def _bridge_same_project_gaps_with_commits(
     tolerance: timedelta = timedelta(seconds=2),
 ) -> List[Dict[str, Any]]:
     """Close gaps between same-project blocks when commits fall in the gap."""
-    from tracklater.timemodules.local import default_project_pid
+    from tracklater.timemodules.toggl import default_project_pid
 
     by_project: Dict[str, List[Dict[str, Any]]] = {}
     for entry in entries:

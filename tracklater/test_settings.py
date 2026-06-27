@@ -1,7 +1,7 @@
 
 TESTING = True
 
-ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme', 'local']
+ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
 
 from datetime import datetime, timedelta
 

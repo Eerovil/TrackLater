@@ -19,11 +19,18 @@ var toolbar = Vue.component("toolbar", {
             <v-btn>{{ currentWeek }}</v-btn>
             <v-btn @click="moveWeek(1)">></v-btn>
             <v-btn
-            v-if="hasLocalModule"
+            v-if="hasToggl"
             v-on:click="populateLocal()"
             :loading="loading['populatelocal']"
             color="primary"
-            >Fill local</v-btn>
+            >Fill</v-btn>
+            <v-btn
+            v-if="hasToggl"
+            v-on:click="saveWeek()"
+            :loading="loading['saveweek']"
+            :disabled="!hasDrafts"
+            color="success"
+            >Save week<span v-if="draftCount"> ({{ draftCount }})</span></v-btn>
         </v-row>
         <v-row>
             <v-col xs6>
@@ -135,8 +142,18 @@ var toolbar = Vue.component("toolbar", {
             }
             return ret;
         },
-        hasLocalModule() {
-            return this.modules.local != null;
+        hasToggl() {
+            return this.modules.toggl != null;
+        },
+        draftCount() {
+            const toggl = this.modules.toggl;
+            if (!toggl || !toggl.entries) {
+                return 0;
+            }
+            return toggl.entries.filter((e) => e.is_draft).length;
+        },
+        hasDrafts() {
+            return this.draftCount > 0;
         }
     },
     watch: {
@@ -168,6 +185,9 @@ var toolbar = Vue.component("toolbar", {
         },
         populateLocal() {
             this.$emit('populateLocal');
+        },
+        saveWeek() {
+            this.$emit('saveWeek');
         },
         getProject(issue) {
             // Get a matching project for issue
