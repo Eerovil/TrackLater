@@ -43,7 +43,7 @@ GUIDEBOOK_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.md')
 # Appended to the generic guidebook at runtime when present.
 GUIDEBOOK_LOCAL_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.local.md')
 DEFAULT_MODEL = 'opus'
-DEFAULT_TIMEOUT = 300
+DEFAULT_TIMEOUT = 420  # per single-day claude call
 
 
 # --------------------------------------------------------------------------- #
@@ -122,17 +122,24 @@ def _bridge(sessions: List[tuple], gap=timedelta(minutes=15)) -> List[tuple]:
     return [(s, e) for s, e in out]
 
 
-def gather_signal(start_date: datetime, end_date: datetime) -> str:
-    """Build a compact, per-day text digest of git + bridged AW activity (local time)."""
+def gather_signal(start_date: datetime, end_date: datetime) -> Dict[str, str]:
+    """Per-LOCAL-day text digest of git + bridged AW activity.
+
+    Returns {`YYYY-MM-DD`: digest}. We widen the query window so a local day's
+    late-evening / early-morning activity (which lands on an adjacent UTC date)
+    is still bucketed onto the right local day before slicing.
+    """
+    win_start = start_date - timedelta(hours=12)
+    win_end = end_date + timedelta(hours=12)
     git_rows = Entry.query.filter(
         Entry.module == 'gitmodule',
-        Entry.start_time >= start_date,
-        Entry.start_time <= end_date,
+        Entry.start_time >= win_start,
+        Entry.start_time <= win_end,
     ).order_by(Entry.start_time).all()
     aw_rows = Entry.query.filter(
         Entry.module == 'activitywatch',
-        Entry.start_time >= start_date,
-        Entry.start_time <= end_date,
+        Entry.start_time >= win_start,
+        Entry.start_time <= win_end,
     ).order_by(Entry.start_time).all()
 
     by_day_commits: Dict[str, list] = defaultdict(list)
@@ -152,11 +159,12 @@ def gather_signal(start_date: datetime, end_date: datetime) -> str:
         ls, le = _to_local(row.start_time), _to_local(row.end_time)
         by_day_aw[ls.strftime('%Y-%m-%d')][row.group].append((ls, le))
 
-    days = sorted(set(by_day_commits) | set(by_day_aw))
-    lines: List[str] = []
+    lo, hi = start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
+    days = sorted(d for d in (set(by_day_commits) | set(by_day_aw)) if lo <= d <= hi)
+    digests: Dict[str, str] = {}
     for day in days:
         dow = datetime.strptime(day, '%Y-%m-%d').strftime('%a')
-        lines.append(f'\n## {day} ({dow})')
+        lines = [f'## {day} ({dow})']
         aw = by_day_aw.get(day, {})
         if aw:
             lines.append('  ActivityWatch (bridged 15min, grouped):')
@@ -171,7 +179,8 @@ def gather_signal(start_date: datetime, end_date: datetime) -> str:
             for local, group, branch, msg in commits:
                 br = f' ({branch})' if branch else ''
                 lines.append(f'    {local.strftime("%H:%M")} {group}{br}: {msg}')
-    return '\n'.join(lines)
+        digests[day] = '\n'.join(lines)
+    return digests
 
 
 # --------------------------------------------------------------------------- #
@@ -196,12 +205,19 @@ def _read_guidebook() -> str:
     return '\n'.join(parts) if parts else '(guidebook unavailable)'
 
 
-def build_prompt(
-    start_date: datetime, end_date: datetime, allowed_projects: set,
+def build_day_prompt(
+    day: str, day_signal: str, allowed_projects: set, prior_titles: List[str],
 ) -> str:
+    """Prompt Claude for a SINGLE day's entries. Small prompts keep each call
+    fast and well under the CLI timeout, and isolate failures to one day."""
     guidebook = _read_guidebook()
-    signal = gather_signal(start_date, end_date)
     projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
+    carry = (
+        '\nEpic titles already used earlier this week (reuse the matching one to '
+        'carry an epic forward, per the guidebook):\n  '
+        + '\n  '.join(prior_titles)
+        if prior_titles else ''
+    )
     return f"""You reconstruct manual billing time entries from git + ActivityWatch data.
 Follow the guidebook below EXACTLY — it encodes the user's real billing behaviour.
 
@@ -211,19 +227,20 @@ Follow the guidebook below EXACTLY — it encodes the user's real billing behavi
 
 Allowed projects (use these exact `group:Project` strings, nothing else):
 {projects}
+{carry}
 
-Source signal for {start_date.date()} .. {end_date.date()} (LOCAL time already):
-{signal}
+Source signal for {day} ONLY (LOCAL time already):
+{day_signal}
 
-TASK: produce the billing entries by applying every rule in the guidebook —
-sub-project folding, client selection thresholds, branch-slug titles, bridged
-billable hours with the weekday-daytime / evening / weekend rules, and blocks
-snapped to :00/:30.
+TASK: produce the billing entries for {day} by applying every rule in the
+guidebook — sub-project folding, client selection thresholds, branch-slug titles,
+bridged billable hours with the weekday-daytime / evening / weekend rules, and
+blocks snapped to :00/:30.
 
 Output ONLY a JSON array, no prose, no code fence. Each item:
-{{"date":"YYYY-MM-DD","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"..."}}
-Times are LOCAL 24h. Entries must not overlap. If a day is unbillable (leave / no
-work), omit it."""
+{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"..."}}
+Times are LOCAL 24h. Entries must not overlap. If the day is unbillable (leave /
+no work), output an empty array []."""
 
 
 def run_claude(prompt: str, timeout: Optional[int] = None) -> str:
@@ -313,11 +330,39 @@ def populate_local_entries_ai(
     if not allowed_projects:
         raise ValueError("No LOCAL projects configured")
 
-    prompt = build_prompt(start_date, end_date, allowed_projects)
-    logger.info("Calling claude (%s) for local entries %s..%s",
-                _model(), start_date.date(), end_date.date())
-    raw = run_claude(prompt)
-    entries_data = parse_entries(raw, allowed_projects)
+    digests = gather_signal(start_date, end_date)
+    if not digests:
+        raise ValueError(
+            "No git/ActivityWatch signal in this range to reconstruct from."
+        )
+
+    # One claude call per day: small prompts stay under the CLI timeout and a
+    # slow/failed day can't sink the whole week. Titles carry forward across days.
+    entries_data: List[Dict[str, Any]] = []
+    prior_titles: List[str] = []
+    errors: List[str] = []
+    for day in sorted(digests):
+        prompt = build_day_prompt(day, digests[day], allowed_projects, prior_titles)
+        logger.info("Calling claude (%s) for local entries %s", _model(), day)
+        try:
+            raw = run_claude(prompt)
+            day_entries = parse_entries(raw, allowed_projects)
+        except ValueError as exc:
+            logger.warning("claude failed for %s: %s", day, exc)
+            errors.append(f"{day}: {exc}")
+            continue
+        entries_data.extend(day_entries)
+        for e in day_entries:
+            if e['title'] not in prior_titles:
+                prior_titles.append(e['title'])
+
+    if not entries_data:
+        raise ValueError(
+            "claude produced no entries"
+            + (" (" + "; ".join(errors) + ")" if errors else "")
+        )
+    if errors:
+        logger.warning("Some days failed and were skipped: %s", "; ".join(errors))
     return persist_local_entries(
         entries_data, start_date, end_date, replace_existing=replace_existing,
     )
