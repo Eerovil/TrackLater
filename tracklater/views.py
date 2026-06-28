@@ -1,4 +1,4 @@
-from flask import request, Blueprint
+from flask import request, Blueprint, Response, stream_with_context
 from tracklater.utils import _str
 from datetime import datetime, timedelta, date
 import json
@@ -227,6 +227,79 @@ def populatelocal() -> Any:
         return json.dumps({"error": str(e)}, default=json_serial), 400
     except Exception as e:
         logger.exception("populate local failed")
+        return json.dumps({"error": str(e)}, default=json_serial), 500
+
+
+@bp.route('/populatelocalstream', methods=['POST'])
+def populatelocalstream() -> Any:
+    """Streaming week-fill: emits one ndjson line per day as it completes, so the
+    UI can show truthful progress and cancel (closing the stream stops the loop,
+    keeping days already persisted)."""
+    data = request.get_json() or {}
+    from_date = parseTimestamp(data.get('from'))
+    to_date = parseTimestamp(data.get('to'))
+    replace_existing = data.get('replace_existing', True)
+    if not from_date or not to_date:
+        return json.dumps({"error": "from and to timestamps (ms) are required"}), 400
+
+    from tracklater.ai_local_claude import stream_populate_local_entries_ai
+
+    @stream_with_context
+    def generate():
+        try:
+            for event in stream_populate_local_entries_ai(
+                from_date, to_date, replace_existing=replace_existing
+            ):
+                yield json.dumps(event, default=json_serial) + "\n"
+        except GeneratorExit:
+            # Client disconnected (cancel). The in-flight day already persisted;
+            # just stop. Re-raise so Flask tears the generator down cleanly.
+            logger.info("populatelocalstream cancelled by client")
+            raise
+        except Exception as e:  # noqa
+            logger.exception("populatelocalstream failed")
+            yield json.dumps({"type": "error", "error": str(e)}) + "\n"
+
+    return Response(generate(), mimetype='application/x-ndjson')
+
+
+@bp.route('/suggestions', methods=['GET'])
+def suggestions() -> Any:
+    """Opus-precomputed project/title hints in a window, for the editor dropdown."""
+    from tracklater.models import EntrySuggestion
+    from_date = parseTimestamp(request.args.get('from'))
+    to_date = parseTimestamp(request.args.get('to'))
+    q = EntrySuggestion.query
+    if from_date and to_date:
+        q = q.filter(
+            EntrySuggestion.start_time >= from_date,
+            EntrySuggestion.start_time <= to_date,
+        )
+    rows = q.order_by(EntrySuggestion.start_time).all()
+    return json.dumps([r.to_dict() for r in rows], default=json_serial)
+
+
+@bp.route('/populateentry', methods=['POST'])
+def populateentry() -> Any:
+    """Create a single local entry grown from a double-click at `click` (ms),
+    bounded by the neighbouring entries `prev_end`/`next_start` (ms, optional)."""
+    data = request.get_json() or {}
+    click = parseTimestamp(data.get('click'))
+    if not click:
+        return json.dumps({"error": "click timestamp (ms) is required"}), 400
+    prev_end = parseTimestamp(data.get('prev_end')) if data.get('prev_end') else None
+    next_start = parseTimestamp(data.get('next_start')) if data.get('next_start') else None
+    try:
+        from tracklater.ai_local_claude import populate_entry_at
+        created = populate_entry_at(click, prev_end=prev_end, next_start=next_start)
+        return json.dumps({
+            "entries": [e.to_dict() for e in created],
+            "count": len(created),
+        }, default=json_serial)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, default=json_serial), 400
+    except Exception as e:
+        logger.exception("populate entry failed")
         return json.dumps({"error": str(e)}, default=json_serial), 500
 
 

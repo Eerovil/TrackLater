@@ -244,10 +244,21 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
             # Running/open entry: Toggl v9 uses duration -1.
             data["duration"] = -1
         if toggl_id:
-            return self.provider.request(
-                'workspaces/{}/time_entries/{}'.format(self.workspace_id, toggl_id),
-                data=json.dumps(data), headers=headers, method='PUT'
-            )
+            try:
+                return self.provider.request(
+                    'workspaces/{}/time_entries/{}'.format(self.workspace_id, toggl_id),
+                    data=json.dumps(data), headers=headers, method='PUT'
+                )
+            except QuotaExceeded:
+                raise
+            except Exception as exc:
+                if 'not found' not in str(exc).lower():
+                    raise
+                # The entry was deleted in Toggl since we last synced; fall through
+                # and recreate it (the caller updates the stored toggl_id).
+                logger.warning(
+                    "Toggl entry %s not found on update; creating a new one", toggl_id
+                )
         return self.provider.request(
             'workspaces/{}/time_entries'.format(self.workspace_id),
             data=json.dumps(data), headers=headers, method='POST'

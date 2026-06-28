@@ -1,6 +1,11 @@
 var daytimeline = Vue.component("daytimeline", {
     template: `
     <div>
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        padding:2px 10px; font-size:13px; font-weight:600; color:#555;">
+        <span>{{ dayDate }}</span>
+        <span>{{ dayHours }} h</span>
+    </div>
     <vuetimeline ref="timeline"
     :items="items"
     :groups="groups"
@@ -35,17 +40,37 @@ var daytimeline = Vue.component("daytimeline", {
         return this.$store.getters.findIssue(title)
       },
       onMove: function(item, callback) {
-        if (this.modules[item.group].capabilities.includes('updateentry')) {
-            let entry = this.entries[item.id];
-            if (new Date(entry.start_time).getTime() === item.start.getTime() &&
-                  new Date(entry.end_time).getTime() === item.end.getTime()) {
-              return;
-            }
-            entry.start_time = item.start
-            entry.end_time = item.end
-            this.$emit('updateEntry', entry)
-            this.$store.commit('setSelectedEntry', entry);
+        if (!this.modules[item.group].capabilities.includes('updateentry')) {
+            if (callback) callback(null);
+            return;
         }
+        const MS30 = 30 * 60 * 1000;
+        const snap = (d) => Math.round(d.getTime() / MS30) * MS30;
+        const entry = this.entries[item.id];
+        const oldStart = new Date(entry.start_time).getTime();
+        const oldEnd = new Date(entry.end_time).getTime();
+        const movedStart = item.start.getTime() !== oldStart;
+        const movedEnd = item.end.getTime() !== oldEnd;
+        let s = snap(item.start);
+        let e = snap(item.end);
+        if (movedStart && movedEnd) {
+            // Whole-item move: keep the (snapped) duration, never below 30 min.
+            e = s + Math.max(MS30, oldEnd - oldStart);
+        } else if (e - s < MS30) {
+            // Resize that collapsed below the minimum: hold the edge not dragged.
+            if (movedStart) { s = e - MS30; } else { e = s + MS30; }
+        }
+        if (s === oldStart && e === oldEnd) {
+            if (callback) callback(null);
+            return;
+        }
+        item.start = new Date(s);
+        item.end = new Date(e);
+        if (callback) callback(item); // reflect the snapped position immediately
+        entry.start_time = item.start;
+        entry.end_time = item.end;
+        this.$emit('updateEntry', entry);
+        this.$store.commit('setSelectedEntry', entry);
       },
       onRemove: function(item, callback) {
           if (this.modules[item.group].capabilities.includes('deleteentry')) {
@@ -54,27 +79,30 @@ var daytimeline = Vue.component("daytimeline", {
           }
       },
       onAdd: function(item, callback) {
-          if (this.modules[item.group].capabilities.includes('addentry')) {
-              let timeSnippet = this.generateTimeSnippet(item.start, item.group);
-              if (!timeSnippet) {
-                return;
-              }
-              let entry = {
-                start_time: timeSnippet.start_time,
-                end_time: timeSnippet.end_time,
-                title: "Unnamed Entry",
-                module: item.group,
-                project: ''
-              }
-              let detectedIssue = this.detectIssue(timeSnippet, item.group);
-              console.log("detectedIssue: ", detectedIssue)
-              if (detectedIssue) {
-                entry.title = detectedIssue.message || detectedIssue.group;
-                entry.project = detectedIssue.project;
-                entry.group = detectedIssue.group;
-              }
-              this.$emit('addEntry', entry)
+          // Double-click → ask Claude Opus to grow a single entry from the click
+          // seed (replaces the old generateTimeSnippet/detectIssue heuristic).
+          if (!this.modules[item.group].capabilities.includes('addentry')) {
+              if (callback) callback(null);
+              return;
           }
+          const click = item.start.getTime();
+          // Bound the new entry by the neighbouring entries of the SAME module so
+          // it can't overlap them.
+          let prevEnd = null, nextStart = null;
+          this.entries.forEach((e) => {
+              if (e.module !== item.group || !e.end_time) return;
+              const s = new Date(e.start_time).getTime();
+              const en = new Date(e.end_time).getTime();
+              if (en <= click && (prevEnd === null || en > prevEnd)) prevEnd = en;
+              if (s >= click && (nextStart === null || s < nextStart)) nextStart = s;
+          });
+          if (callback) callback(null); // cancel vis's default item; Opus creates it
+          this.$emit('opusEntry', {
+              click: click,
+              prev_end: prevEnd,
+              next_start: nextStart,
+              group: item.group,
+          });
       },
       timelineEndForEntry(entry) {
         // vis.js treats range end as exclusive; extend local bars by 1s so
@@ -385,6 +413,17 @@ var daytimeline = Vue.component("daytimeline", {
       modules() {
           return this.$store.state.modules;
       },
+      dayDate() {
+        return (this.entries[0] || {}).date_group || '';
+      },
+      dayHours() {
+        // Billed hours for the day = sum of toggl (manual billing) entry spans.
+        const secs = (this.entries || [])
+          .filter((e) => e.module === 'toggl' && e.end_time)
+          .reduce((acc, e) =>
+            acc + (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000, 0);
+        return Math.round((secs / 3600) * 10) / 10;
+      },
       timeEntryModules() {
         return Object.keys(this.modules).filter(key => this.modules[key].capabilities.includes("entries"));
       },
@@ -417,7 +456,11 @@ var daytimeline = Vue.component("daytimeline", {
           margin: {
               item: 0
           },
-          snap: null,
+          snap: function(date, scale, step) {
+            // Live-snap dragging/resizing to 30-minute increments.
+            const MS30 = 30 * 60 * 1000;
+            return new Date(Math.round(date.getTime() / MS30) * MS30);
+          },
           onMove: self.onMove,
           onRemove: self.onRemove,
           onAdd:self.onAdd,

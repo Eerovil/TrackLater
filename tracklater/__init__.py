@@ -33,7 +33,9 @@ def create_app(name=__name__):
     app.config['SQLALCHEMY_DATABASE_URI'] = _database_uri()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    from tracklater.models import ApiCall, Project, Issue, Entry, SyncJob  # noqa
+    from tracklater.models import (  # noqa
+        ApiCall, Project, Issue, Entry, SyncJob, EntrySuggestion,
+    )
 
     db.init_app(app)
     with app.app_context():

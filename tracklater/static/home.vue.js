@@ -18,9 +18,15 @@ var home = Vue.component("home", {
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
         background: #1e1e2e; color: #fff; padding: 8px 14px;
         box-shadow: 0 -2px 8px rgba(0,0,0,0.3); font-size: 13px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <span>Generating local entries with Claude Opus…</span>
-            <span>{{ fmtTime(populate.elapsedSec) }} / ~{{ fmtTime(populate.etaSec) }}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <span>Generating local entries with Claude Opus…<span v-if="populate.total"> (day {{ populate.done }}/{{ populate.total }})</span></span>
+            <span style="display:flex; align-items:center; gap:10px;">
+                <span>{{ fmtTime(populate.elapsedSec) }} / ~{{ fmtTime(populate.etaSec) }}</span>
+                <button v-if="!populate.cancelling" @click="cancelPopulate"
+                    style="background:#5a3a4e; color:#fff; border:none; border-radius:4px;
+                           padding:3px 10px; cursor:pointer; font-size:12px;">Cancel</button>
+                <span v-else style="color:#caa;">cancelling…</span>
+            </span>
         </div>
         <div style="height:8px; background:#3a3a4e; border-radius:4px; overflow:hidden;">
             <div v-bind:style="{
@@ -38,6 +44,7 @@ var home = Vue.component("home", {
       @addEntry="updateEntry"
       @updateEntry="updateEntry"
       @deleteEntry="deleteEntry"
+      @opusEntry="opusEntry"
     ></daytimeline>
     </div>
     `,
@@ -51,6 +58,11 @@ var home = Vue.component("home", {
                 elapsedSec: 0,
                 etaSec: 0,
                 timer: null,
+                done: 0,
+                total: 0,
+                dayStartedAt: 0,
+                controller: null,
+                cancelling: false,
             },
         }
     },
@@ -183,6 +195,15 @@ var home = Vue.component("home", {
             this.$store.commit('setSelectedEntry', null)
             this.$store.commit('setInput', {title: null, issue: null})
             this.fetchModule("all", 0)
+            this.fetchSuggestions()
+        },
+        fetchSuggestions() {
+            axios.get("suggestions", {params: {
+                from: this.$store.getters.getFrom,
+                to: this.$store.getters.getTo,
+            }}).then(response => {
+                this.$store.commit('setSuggestions', response.data || []);
+            }).catch(() => {});
         },
         estimatePopulateSeconds() {
             // Each weekday is a separate Opus call (~45s at effort=low on busy
@@ -208,18 +229,25 @@ var home = Vue.component("home", {
             const eta = this.estimatePopulateSeconds();
             const startedAt = Date.now();
             this.populate.active = true;
+            this.populate.cancelling = false;
             this.populate.progress = 0;
             this.populate.elapsedSec = 0;
             this.populate.etaSec = eta;
+            this.populate.done = 0;
+            this.populate.total = 0;
+            this.populate.dayStartedAt = startedAt;
             this.populate.timer = setInterval(() => {
-                const elapsed = (Date.now() - startedAt) / 1000;
-                this.populate.elapsedSec = elapsed;
-                // Approach but never reach 100% until the response lands; ease off
-                // past the estimate so an over-running call still creeps forward.
-                const frac = elapsed / eta;
-                this.populate.progress = frac < 1
-                    ? Math.min(95, frac * 95)
-                    : Math.min(99, 95 + (1 - Math.exp(-(frac - 1))) * 4);
+                this.populate.elapsedSec = (Date.now() - startedAt) / 1000;
+                // Real floor from completed days; smooth creep within the current
+                // day toward the next day's floor, so the bar is anchored to truth
+                // (per-day completions) but never visibly stalls between them.
+                const total = this.populate.total || Math.max(1, eta / 45);
+                const floor = (this.populate.done / total) * 100;
+                const ceil = ((this.populate.done + 1) / total) * 100;
+                const perDay = Math.max(8, eta / total);
+                const inDay = (Date.now() - this.populate.dayStartedAt) / 1000;
+                const frac = Math.min(0.95, inDay / perDay);
+                this.populate.progress = Math.min(99, floor + (ceil - floor) * frac);
             }, 250);
         },
         stopPopulateProgress(done) {
@@ -227,12 +255,85 @@ var home = Vue.component("home", {
                 clearInterval(this.populate.timer);
                 this.populate.timer = null;
             }
+            this.populate.controller = null;
             if (done) {
                 this.populate.progress = 100;
                 setTimeout(() => { this.populate.active = false; }, 700);
             } else {
                 this.populate.active = false;
             }
+        },
+        cancelPopulate() {
+            this.populate.cancelling = true;
+            if (this.populate.controller) {
+                this.populate.controller.abort();
+            }
+        },
+        opusEntry(req) {
+            // req: {click(ms), prev_end(ms|null), next_start(ms|null), group}
+            const group = req.group;
+            const HALF = 30 * 60 * 1000; // placeholder = click ±30min (1h), clamped
+            let startMs = req.click - HALF;
+            let endMs = req.click + HALF;
+            if (req.prev_end) startMs = Math.max(startMs, req.prev_end);
+            if (req.next_start) endMs = Math.min(endMs, req.next_start);
+            const start = new Date(startMs);
+            const end = new Date(endMs);
+            const placeholderid = "opus-pending-" + Math.random();
+            const removePlaceholder = () => {
+                const kept = (this.$store.state.modules[group].entries || [])
+                    .filter((x) => x.id !== placeholderid);
+                this.$store.commit('setEntries', {module_name: group, entries: kept});
+            };
+            // Optimistic placeholder bar in the clicked slot while Opus works.
+            const optimistic = (this.$store.state.modules[group].entries || []).concat([{
+                id: placeholderid,
+                start_time: start,
+                end_time: end,
+                title: "⏳ Generating…",
+                module: group,
+                project: '',
+                date_group: start.toISOString().split('T')[0],
+            }]);
+            this.$store.commit('setEntries', {module_name: group, entries: optimistic});
+            this.$store.commit('setLoading', {module_name: 'populateentry', loading: true});
+
+            axios.post("populateentry", {
+                click: req.click,
+                prev_end: req.prev_end,
+                next_start: req.next_start,
+            }).then(response => {
+                const data = response.data || {};
+                this.$store.commit('setLoading', {module_name: 'populateentry', loading: false});
+                if (data.count > 0) {
+                    // Real entry persisted server-side; reload to replace placeholder.
+                    this.fetchModule(group, 0);
+                    this.fetchSuggestions();
+                } else {
+                    // No signal near the click → blank manual entry to fill by hand.
+                    removePlaceholder();
+                    this.updateEntry({
+                        module: group,
+                        start_time: start,
+                        end_time: end,
+                        title: "Unnamed Entry",
+                        project: '',
+                    });
+                }
+            }).catch(err => {
+                removePlaceholder();
+                this.$store.commit('setLoading', {module_name: 'populateentry', loading: false});
+                let msg = err.message;
+                if (err.response && err.response.data) {
+                    const d = err.response.data;
+                    if (typeof d === 'object' && d.error) {
+                        msg = d.error;
+                    } else if (typeof d === 'string') {
+                        try { msg = JSON.parse(d).error || d; } catch (e) { msg = d; }
+                    }
+                }
+                alert("Create entry failed: " + (msg || "unknown error"));
+            });
         },
         saveWeek() {
             const drafts = ((this.modules.toggl || {}).entries || []).filter((e) => e.is_draft);
@@ -269,39 +370,80 @@ var home = Vue.component("home", {
             if (!confirm(
                 "Replace local entries this week with entries generated by Claude Opus " +
                 "from git and ActivityWatch? (takes about " +
-                this.fmtTime(this.estimatePopulateSeconds()) + ")"
+                this.fmtTime(this.estimatePopulateSeconds()) +
+                "; you can Cancel and keep finished days.)"
             )) {
                 return;
             }
             this.$store.commit('setLoading', {module_name: 'populatelocal', loading: true});
             this.startPopulateProgress();
-            axios.post("populatelocal", {
-                from: this.$store.getters.getFrom,
-                to: this.$store.getters.getTo,
-                replace_existing: true,
-                engine: "claude",
-            }).then(response => {
-                console.log("populatelocal", response);
-                this.stopPopulateProgress(true);
-                this.fetchModule("toggl", 0);
+            const controller = new AbortController();
+            this.populate.controller = controller;
+            const clearLoading = () =>
                 this.$store.commit('setLoading', {module_name: 'populatelocal', loading: false});
-            }).catch((err) => {
-                let msg = err.message;
-                if (err.response && err.response.data) {
-                    const d = err.response.data;
-                    if (typeof d === 'object' && d.error) {
-                        msg = d.error;
-                    } else if (typeof d === 'string') {
-                        try {
-                            msg = JSON.parse(d).error || d;
-                        } catch (e) {
-                            msg = d;
+
+            fetch("populatelocalstream", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    from: this.$store.getters.getFrom,
+                    to: this.$store.getters.getTo,
+                    replace_existing: true,
+                }),
+                signal: controller.signal,
+            }).then(response => {
+                if (!response.ok || !response.body) {
+                    throw new Error("HTTP " + response.status);
+                }
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = "";
+                let fatal = null;
+                const pump = () => reader.read().then(({done, value}) => {
+                    if (done) {
+                        this.stopPopulateProgress(true);
+                        this.fetchModule("toggl", 0);
+                        this.fetchSuggestions();
+                        clearLoading();
+                        if (fatal) {
+                            alert("Fill local failed: " + fatal);
+                        }
+                        return;
+                    }
+                    buf += decoder.decode(value, {stream: true});
+                    let nl;
+                    while ((nl = buf.indexOf("\n")) >= 0) {
+                        const line = buf.slice(0, nl).trim();
+                        buf = buf.slice(nl + 1);
+                        if (!line) continue;
+                        let ev;
+                        try { ev = JSON.parse(line); } catch (e) { continue; }
+                        console.log("populate stream", ev);
+                        if (ev.type === "progress") {
+                            this.populate.total = ev.total;
+                            this.populate.done = ev.done;
+                            this.populate.dayStartedAt = Date.now();
+                            this.fetchModule("toggl", 0); // surface each finished day live
+                        } else if (ev.type === "day_error") {
+                            console.warn("day failed", ev.day, ev.error);
+                        } else if (ev.type === "error") {
+                            fatal = ev.error;
                         }
                     }
+                    return pump();
+                });
+                return pump();
+            }).catch(err => {
+                if (err.name === "AbortError") {
+                    // Cancelled: backend stops after the in-flight day; keep finished days.
+                    this.stopPopulateProgress(false);
+                    this.fetchModule("toggl", 0);
+                    clearLoading();
+                    return;
                 }
                 this.stopPopulateProgress(false);
-                alert("Fill local failed: " + (msg || "unknown error"));
-                this.$store.commit('setLoading', {module_name: 'populatelocal', loading: false});
+                alert("Fill local failed: " + (err.message || "unknown error"));
+                clearLoading();
             });
         },
     },
@@ -322,6 +464,7 @@ var home = Vue.component("home", {
             console.log(response)
             this.$store.commit('setSettings', response.data);
         })
+        this.fetchSuggestions();
         this.$store.commit('setLoading', {module_name: 'fetchdata', loading: true});
         axios.get("fetchdata", {params: {
                 parse: "0",

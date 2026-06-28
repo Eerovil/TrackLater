@@ -104,11 +104,18 @@ def _process_job(parser, job: SyncJob) -> None:
         db.session.commit()
         _rekey_to_toggl_id(entry, new_id)  # best-effort cosmetic re-key
     else:  # update
-        parser.push_entry(entry, toggl_id=job.toggl_id)
+        response = parser.push_entry(entry, toggl_id=job.toggl_id)
+        # If the remote entry was gone, push_entry recreated it with a new id.
+        new_id = _str(response['id']) if response and 'id' in response else None
+        recreated = new_id is not None and new_id != _str(job.toggl_id)
+        if recreated:
+            entry.toggl_id = new_id
         entry.is_draft = False
         db.session.merge(entry)
         db.session.delete(job)
         db.session.commit()
+        if recreated:
+            _rekey_to_toggl_id(entry, new_id)  # best-effort cosmetic re-key
 
 
 def process_pending_jobs(parser=None, pace: bool = False) -> int:

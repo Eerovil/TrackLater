@@ -99,6 +99,7 @@ const store = new Vuex.Store({
     loading: {},
     currentWeek: null,
     settings: {},
+    suggestions: [],
   },
   mutations: {
     updateModules(state, value) {
@@ -106,6 +107,9 @@ const store = new Vuex.Store({
     },
     setSettings(state, value) {
       state.settings = value;
+    },
+    setSuggestions(state, value) {
+      state.suggestions = value || [];
     },
     setSelectedEntry(state, value) {
       state.selectedEntry = value

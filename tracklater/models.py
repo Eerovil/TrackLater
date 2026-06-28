@@ -107,6 +107,32 @@ class Entry(db.Model):
         }
 
 
+class EntrySuggestion(db.Model):
+    """Opus-precomputed project/title hints for a time window, produced during the
+    Fill (and double-click) so the editor can offer ranked picks with no live call.
+    Non-authoritative: matched to an entry by time-window overlap and never
+    auto-applied. Left stale if the entry is later moved (it's only a hint)."""
+    __tablename__ = 'entry_suggestions'
+    pk: int = Column(Integer, primary_key=True)
+    start_time: datetime = Column(DateTime, nullable=False)  # UTC, like every module
+    end_time: Optional[datetime] = Column(DateTime)
+    date_group: Optional[str] = Column(String(50))
+    # Ranked lists; project strings are Project.pid ("group:Project"), the exact
+    # value the editor dropdown binds to, so no resolution is needed client-side.
+    projects: list = Column(PickleType)
+    titles: list = Column(PickleType)
+    created = Column(DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "date_group": self.date_group,
+            "projects": list(self.projects or []),
+            "titles": list(self.titles or []),
+        }
+
+
 class SyncJob(db.Model):
     """
     A pending push of a toggl-module entry to the Toggl API. The background

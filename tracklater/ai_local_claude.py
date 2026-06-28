@@ -29,7 +29,8 @@ except ImportError:  # pragma: no cover - py<3.9
     ZoneInfo = None  # type: ignore
 
 from tracklater import settings
-from tracklater.models import Entry
+from tracklater.database import db
+from tracklater.models import Entry, EntrySuggestion
 from tracklater.ai_local import (
     MODULE_NAME,
     _allowed_local_projects,
@@ -245,8 +246,14 @@ guidebook — sub-project folding, client selection thresholds, branch-slug titl
 bridged billable hours with the weekday-daytime / evening / weekend rules, and
 blocks snapped to :00/:30.
 
+For EACH entry also provide ranked alternatives the user might pick instead when
+editing: `project_options` (2-4 plausible `group:Project` for this block, BEST
+first — the first MUST equal `project`) and `title_options` (2-4 plausible titles,
+BEST first — the first MUST equal `title`). These are hints for a dropdown.
+
 Output ONLY a JSON array, no prose, no code fence. Each item:
-{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"..."}}
+{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
+  "project_options":["group:Project", ...],"title_options":["...", ...]}}
 Times are LOCAL 24h. Entries must not overlap. If the day is unbillable (leave /
 no work), output an empty array []."""
 
@@ -313,14 +320,48 @@ def parse_entries(
             e += timedelta(days=1)  # crossed midnight
         # Model reasons in local time; persist UTC to match every other module.
         s, e = _to_utc(s), _to_utc(e)
+        title = str(item.get('title') or 'Work')[:255]
+        # Ranked editor hints: keep only allowed projects, ensure the chosen one
+        # leads, dedupe, cap at 4. Fall back to the single chosen value.
+        popts = [p for p in (item.get('project_options') or []) if p in allowed_projects]
+        popts = [project] + [p for p in popts if p != project]
+        topts = [str(t)[:255] for t in (item.get('title_options') or []) if t]
+        topts = [title] + [t for t in topts if t != title]
         entries.append({
             'start_time': s,
             'end_time': e,
-            'title': str(item.get('title') or 'Work')[:255],
+            'title': title,
             'project': project,
+            'project_options': list(dict.fromkeys(popts))[:4],
+            'title_options': list(dict.fromkeys(topts))[:4],
         })
     entries.sort(key=lambda x: x['start_time'])
     return entries
+
+
+def _write_suggestions(
+    entries_data: List[Dict[str, Any]],
+    win_start: Optional[datetime] = None,
+    win_end: Optional[datetime] = None,
+    replace: bool = True,
+) -> None:
+    """Persist per-entry project/title hints (EntrySuggestion rows). When replace
+    and a window is given, clear existing hints starting in [win_start, win_end]
+    first so a re-fill doesn't accumulate stale rows."""
+    if replace and win_start is not None and win_end is not None:
+        EntrySuggestion.query.filter(
+            EntrySuggestion.start_time >= win_start,
+            EntrySuggestion.start_time <= win_end,
+        ).delete()
+    for item in entries_data:
+        db.session.add(EntrySuggestion(
+            start_time=item['start_time'],
+            end_time=item['end_time'],
+            date_group=item['start_time'].strftime('%Y-%m-%d'),
+            projects=item.get('project_options') or [item['project']],
+            titles=item.get('title_options') or [item['title']],
+        ))
+    db.session.commit()
 
 
 def populate_local_entries_ai(
@@ -372,6 +413,200 @@ def populate_local_entries_ai(
         )
     if errors:
         logger.warning("Some days failed and were skipped: %s", "; ".join(errors))
-    return persist_local_entries(
+    created = persist_local_entries(
         entries_data, start_date, end_date, replace_existing=replace_existing,
     )
+    _write_suggestions(entries_data, start_date, end_date, replace=replace_existing)
+    return created
+
+
+# --------------------------------------------------------------------------- #
+# Feature 2: streaming week-fill (per-day, cancellable, keeps finished days)
+# --------------------------------------------------------------------------- #
+def _local_day_utc_bounds(day: str) -> (datetime, datetime):
+    """UTC [start, end) covering one LOCAL calendar day, for scoping the
+    per-day draft-delete in persist_local_entries to just that day."""
+    local_start = datetime.strptime(day, '%Y-%m-%d')
+    local_end = local_start + timedelta(days=1)
+    return _to_utc(local_start), _to_utc(local_end)
+
+
+def stream_populate_local_entries_ai(
+    start_date: datetime,
+    end_date: datetime,
+    replace_existing: bool = True,
+):
+    """Generator variant of populate_local_entries_ai for streaming.
+
+    Yields progress dicts as each day completes and persists that day's entries
+    immediately (per-day), so a cancellation (the consumer stops iterating) keeps
+    the days already finished and leaves untouched days alone. Each yielded dict:
+        {'type': 'progress', 'day', 'done', 'total', 'count'}
+        {'type': 'day_error', 'day', 'error'}
+        {'type': 'done', 'count', 'errors'}
+        {'type': 'error', 'error'}   (fatal, before any day ran)
+    """
+    if MODULE_NAME not in settings.ENABLED_MODULES:
+        yield {'type': 'error', 'error': 'local module is not enabled'}
+        return
+    if not _has_source_data(start_date, end_date):
+        yield {'type': 'error', 'error':
+               'No source timemodule entries in this range. '
+               'Fetch activitywatch/git/etc. first.'}
+        return
+    allowed_projects = _allowed_local_projects(start_date, end_date)
+    if not allowed_projects:
+        yield {'type': 'error', 'error': 'No LOCAL projects configured'}
+        return
+    digests = gather_signal(start_date, end_date)
+    if not digests:
+        yield {'type': 'error', 'error':
+               'No git/ActivityWatch signal in this range to reconstruct from.'}
+        return
+
+    days = sorted(digests)
+    total = len(days)
+    prior_titles: List[str] = []
+    errors: List[str] = []
+    total_count = 0
+    for idx, day in enumerate(days):
+        prompt = build_day_prompt(day, digests[day], allowed_projects, prior_titles)
+        logger.info("Streaming claude (%s) for local entries %s", _model(), day)
+        try:
+            raw = run_claude(prompt)
+            day_entries = parse_entries(raw, allowed_projects)
+        except ValueError as exc:
+            logger.warning("claude failed for %s: %s", day, exc)
+            errors.append(f"{day}: {exc}")
+            yield {'type': 'day_error', 'day': day, 'error': str(exc)}
+            continue
+        # Persist THIS day now, scoping the draft-delete to the local day so a
+        # later cancel can't roll it back and untouched days keep their entries.
+        d_start, d_end = _local_day_utc_bounds(day)
+        try:
+            if day_entries:
+                persist_local_entries(
+                    day_entries, d_start, d_end, replace_existing=replace_existing,
+                )
+                _write_suggestions(day_entries, d_start, d_end, replace=replace_existing)
+            total_count += len(day_entries)
+        except ValueError as exc:
+            logger.warning("persist failed for %s: %s", day, exc)
+            errors.append(f"{day}: {exc}")
+            yield {'type': 'day_error', 'day': day, 'error': str(exc)}
+            continue
+        for e in day_entries:
+            if e['title'] not in prior_titles:
+                prior_titles.append(e['title'])
+        yield {'type': 'progress', 'day': day, 'done': idx + 1,
+               'total': total, 'count': len(day_entries)}
+    yield {'type': 'done', 'count': total_count, 'errors': errors}
+
+
+# --------------------------------------------------------------------------- #
+# Feature 1: single entry from a double-click (grow a block from the click seed)
+# --------------------------------------------------------------------------- #
+def build_click_prompt(
+    day: str, day_signal: str, allowed_projects: set, prior_titles: List[str],
+    click_local: datetime, gap_lo_local: Optional[datetime],
+    gap_hi_local: Optional[datetime],
+) -> str:
+    """Prompt Claude for ONE entry grown outward from the click point."""
+    guidebook = _read_guidebook()
+    projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
+    carry = (
+        '\nEpic titles already in use this week (reuse the matching one to carry an '
+        'epic forward, per the guidebook):\n  ' + '\n  '.join(prior_titles)
+        if prior_titles else ''
+    )
+    bounds = ''
+    if gap_lo_local is not None:
+        bounds += f"\n- The entry MUST NOT start before {gap_lo_local.strftime('%H:%M')} (previous entry)."
+    if gap_hi_local is not None:
+        bounds += f"\n- The entry MUST NOT end after {gap_hi_local.strftime('%H:%M')} (next entry)."
+    return f"""You reconstruct ONE manual billing time entry from git + ActivityWatch data.
+Follow the guidebook below EXACTLY for client/project selection, titles and the
+billable-hours model.
+
+================ GUIDEBOOK ================
+{guidebook}
+================ END GUIDEBOOK ================
+
+Allowed projects (use these exact `group:Project` strings, nothing else):
+{projects}
+{carry}
+
+Source signal for {day} (LOCAL time already):
+{day_signal}
+
+TASK: the user double-clicked the timeline at {click_local.strftime('%H:%M')} to create
+a SINGLE entry there. Build exactly ONE entry:
+1. SEED: within ±30 min of {click_local.strftime('%H:%M')}, find the single dominant
+   project/component (its commits + ActivityWatch activity). That is this entry's
+   project. Fold sub-projects into their parent per the guidebook.
+2. GROW: extend the block earlier and later from the click. Keep extending each side
+   while the SAME project/component's commits/activity continue. STOP a side as soon
+   as the focus clearly switches to a different project/component, or at a real AFK
+   gap.{bounds}
+3. Snap start/end to :00/:30. Title per the guidebook (branch slug first).
+4. If there is NO meaningful signal within ±30 min of the click, output an empty
+   array [] (the UI will create a blank entry to fill in by hand).
+
+Also provide ranked alternatives for the editor dropdown: `project_options` (2-4
+plausible `group:Project`, BEST first — first MUST equal `project`) and
+`title_options` (2-4 plausible titles, BEST first — first MUST equal `title`).
+
+Output ONLY a JSON array with AT MOST ONE item, no prose, no code fence:
+[{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
+  "project_options":["group:Project", ...],"title_options":["...", ...]}}]
+Times are LOCAL 24h."""
+
+
+def populate_entry_at(
+    click: datetime,
+    prev_end: Optional[datetime] = None,
+    next_start: Optional[datetime] = None,
+) -> List[Entry]:
+    """Create a single local entry grown from a double-click at `click` (naive UTC).
+
+    `prev_end`/`next_start` (naive UTC) bound the free gap so the result can't
+    overlap neighbours. Returns the created entries (0 or 1); an empty list means
+    'no signal near the click' — the caller drops a blank manual entry instead.
+    """
+    if MODULE_NAME not in settings.ENABLED_MODULES:
+        raise ValueError("local module is not enabled")
+    click_local = _to_local(click)
+    day = click_local.strftime('%Y-%m-%d')
+    day_start = datetime.strptime(day, '%Y-%m-%d')
+    day_end = day_start + timedelta(days=1)
+    # _to_utc the local day bounds to gather that whole local day's signal.
+    digests = gather_signal(_to_utc(day_start), _to_utc(day_end) - timedelta(seconds=1))
+    if day not in digests:
+        return []  # no signal that day at all -> blank manual entry
+    allowed_projects = _allowed_local_projects(_to_utc(day_start), _to_utc(day_end))
+    if not allowed_projects:
+        raise ValueError("No LOCAL projects configured")
+    prompt = build_click_prompt(
+        day, digests[day], allowed_projects, [], click_local,
+        _to_local(prev_end) if prev_end else None,
+        _to_local(next_start) if next_start else None,
+    )
+    logger.info("Calling claude (%s) for click entry at %s", _model(), click_local)
+    raw = run_claude(prompt)
+    entries_data = parse_entries(raw, allowed_projects)
+    if not entries_data:
+        return []
+    entries_data = entries_data[:1]  # exactly one entry from a click
+    # Hard clamp to the free gap so a stray model end can never overlap neighbours.
+    e = entries_data[0]
+    if prev_end is not None and e['start_time'] < prev_end:
+        e['start_time'] = prev_end
+    if next_start is not None and e['end_time'] > next_start:
+        e['end_time'] = next_start
+    if e['end_time'] <= e['start_time']:
+        return []
+    created = persist_local_entries(
+        entries_data, e['start_time'], e['end_time'], replace_existing=False,
+    )
+    _write_suggestions(entries_data, e['start_time'], e['end_time'], replace=True)
+    return created
