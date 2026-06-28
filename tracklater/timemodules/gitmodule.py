@@ -3,6 +3,7 @@ import git
 import pytz
 import os
 import json
+import subprocess
 from datetime import datetime
 
 from tracklater.utils import obj_from_dict
@@ -19,6 +20,41 @@ def get_setting(key, default=None, group='global'):
 
 
 FIXTURE_DIR = os.path.dirname(os.path.realpath(__file__)) + "/fixture"
+FETCH_TIMEOUT = 60  # seconds, per repo
+
+
+def _sync_repo(repo_path: str) -> None:
+    """Refresh a clone before reading so commits pushed elsewhere are seen.
+
+    Runs `git fetch --all` (or the configured GIT.FETCH_COMMAND) — fetch only,
+    never a merge or working-tree change, so there is no conflict risk. Runs
+    non-interactively (GIT_TERMINAL_PROMPT=0) so a missing credential can't hang
+    the parse, and any failure is logged and ignored so one unreachable remote
+    doesn't sink the whole run. Gate with GIT.global.FETCH (default off; needs the
+    container to have a usable SSH credential — e.g. a forwarded agent)."""
+    command = get_setting('FETCH_COMMAND', default='')
+    env = dict(os.environ, GIT_TERMINAL_PROMPT='0')
+    # Use the mounted key and trust-on-first-use for host keys, so a container
+    # without a pre-seeded known_hosts can still fetch over SSH. Overridable.
+    env.setdefault('GIT_SSH_COMMAND', 'ssh -o StrictHostKeyChecking=accept-new')
+    try:
+        if command:
+            proc = subprocess.run(
+                command, cwd=repo_path, env=env, shell=True,
+                timeout=FETCH_TIMEOUT, capture_output=True,
+            )
+        else:
+            proc = subprocess.run(
+                ['git', 'fetch', '--all', '--quiet'], cwd=repo_path, env=env,
+                timeout=FETCH_TIMEOUT, capture_output=True,
+            )
+        if proc.returncode != 0:
+            logger.warning(
+                "git sync for %s exited %s: %s", repo_path, proc.returncode,
+                (proc.stderr or b'')[:300],
+            )
+    except Exception as e:  # noqa: BLE001 - sync is best-effort
+        logger.warning("git sync failed for %s: %s", repo_path, e)
 
 
 def git_time_to_datetime(_datetime):
@@ -139,6 +175,8 @@ class Parser(EntryMixin, AbstractParser):
 
 class Provider(AbstractProvider):
     def get_log_entries(self, repo_path, start_date=None):
+        if get_setting('FETCH', default=False):
+            _sync_repo(repo_path)
         try:
             repo = git.Repo(repo_path)
         except Exception:
