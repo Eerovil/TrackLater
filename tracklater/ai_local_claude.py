@@ -347,21 +347,28 @@ def _write_suggestions(
 ) -> None:
     """Persist per-entry project/title hints (EntrySuggestion rows). When replace
     and a window is given, clear existing hints starting in [win_start, win_end]
-    first so a re-fill doesn't accumulate stale rows."""
-    if replace and win_start is not None and win_end is not None:
-        EntrySuggestion.query.filter(
-            EntrySuggestion.start_time >= win_start,
-            EntrySuggestion.start_time <= win_end,
-        ).delete()
-    for item in entries_data:
-        db.session.add(EntrySuggestion(
-            start_time=item['start_time'],
-            end_time=item['end_time'],
-            date_group=item['start_time'].strftime('%Y-%m-%d'),
-            projects=item.get('project_options') or [item['project']],
-            titles=item.get('title_options') or [item['title']],
-        ))
-    db.session.commit()
+    first so a re-fill doesn't accumulate stale rows.
+
+    Best-effort: suggestions are a convenience layer, so a failure here must never
+    break the (already-committed) entry persistence — log and move on."""
+    try:
+        if replace and win_start is not None and win_end is not None:
+            EntrySuggestion.query.filter(
+                EntrySuggestion.start_time >= win_start,
+                EntrySuggestion.start_time <= win_end,
+            ).delete()
+        for item in entries_data:
+            db.session.add(EntrySuggestion(
+                start_time=item['start_time'],
+                end_time=item['end_time'],
+                date_group=item['start_time'].strftime('%Y-%m-%d'),
+                projects=item.get('project_options') or [item['project']],
+                titles=item.get('title_options') or [item['title']],
+            ))
+        db.session.commit()
+    except Exception:  # noqa: BLE001 - hints are non-critical
+        logger.exception("Failed to write entry suggestions (ignored)")
+        db.session.rollback()
 
 
 def populate_local_entries_ai(
@@ -579,8 +586,9 @@ def populate_entry_at(
     day = click_local.strftime('%Y-%m-%d')
     day_start = datetime.strptime(day, '%Y-%m-%d')
     day_end = day_start + timedelta(days=1)
-    # _to_utc the local day bounds to gather that whole local day's signal.
-    digests = gather_signal(_to_utc(day_start), _to_utc(day_end) - timedelta(seconds=1))
+    # gather_signal labels days by the LOCAL date of its bounds, so pass the naive
+    # local day window (its ±12h widening still covers the UTC source rows).
+    digests = gather_signal(day_start, day_end - timedelta(seconds=1))
     if day not in digests:
         return []  # no signal that day at all -> blank manual entry
     allowed_projects = _allowed_local_projects(_to_utc(day_start), _to_utc(day_end))

@@ -306,7 +306,9 @@ class Provider(AbstractProvider):
             if response.status_code >= 400:
                 if method == "delete" and "not found" in str(ret).lower():
                     return  # This is ok
-                logger.exception("%s: %s, - %s", url, kwargs, response.content)
+                # Redact auth so the API token never lands in the logs.
+                safe = {k: ('<redacted>' if k == 'auth' else v) for k, v in kwargs.items()}
+                logger.exception("%s: %s, - %s", url, safe, response.content)
                 raise Exception(ret)
             return ret
         except QuotaExceeded:
