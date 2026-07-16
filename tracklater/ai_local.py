@@ -74,7 +74,7 @@ def persist_local_entries(
             Entry.module == MODULE_NAME,
             Entry.is_draft == True,  # noqa: E712
             Entry.start_time >= start_date,
-            Entry.start_time <= end_date,
+            Entry.start_time < end_date,
         ).delete()
         db.session.commit()
 

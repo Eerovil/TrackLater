@@ -127,6 +127,13 @@ def parseTimestamp(stamp):
     return date
 
 
+def parseUtcTimestamp(stamp):
+    """Epoch milliseconds as a naive UTC datetime, independent of server TZ."""
+    if not stamp:
+        return None
+    return datetime.utcfromtimestamp(int(stamp) / 1e3)
+
+
 @bp.route('/updateentry', methods=['POST'])
 def updateentry() -> Any:
     if request.method == 'POST':
@@ -232,23 +239,38 @@ def populatelocal() -> Any:
 
 @bp.route('/populatelocalstream', methods=['POST'])
 def populatelocalstream() -> Any:
-    """Streaming week-fill: emits one ndjson line per day as it completes, so the
-    UI can show truthful progress and cancel (closing the stream stops the loop,
-    keeping days already persisted)."""
+    """Streaming week/day fill, emitting one ndjson line per completed day.
+
+    A request with ``single_day: true`` must use exact local-midnight bounds and
+    is pinned to that calendar date. Closing the stream keeps completed days.
+    """
     data = request.get_json() or {}
-    from_date = parseTimestamp(data.get('from'))
-    to_date = parseTimestamp(data.get('to'))
+    single_day = data.get('single_day') is True
+    timestamp_parser = parseUtcTimestamp if single_day else parseTimestamp
+    from_date = timestamp_parser(data.get('from'))
+    to_date = timestamp_parser(data.get('to'))
     replace_existing = data.get('replace_existing', True)
     if not from_date or not to_date:
         return json.dumps({"error": "from and to timestamps (ms) are required"}), 400
 
-    from tracklater.ai_local_claude import stream_populate_local_entries_ai
+    from tracklater.ai_local_claude import (
+        stream_populate_local_entries_ai,
+        validate_single_local_day_range,
+    )
+
+    only_day = None
+    if single_day:
+        try:
+            only_day = validate_single_local_day_range(from_date, to_date)
+        except ValueError as e:
+            return json.dumps({"error": str(e)}), 400
 
     @stream_with_context
     def generate():
         try:
             for event in stream_populate_local_entries_ai(
-                from_date, to_date, replace_existing=replace_existing
+                from_date, to_date, replace_existing=replace_existing,
+                only_day=only_day,
             ):
                 yield json.dumps(event, default=json_serial) + "\n"
         except GeneratorExit:

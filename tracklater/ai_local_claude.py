@@ -326,7 +326,7 @@ def run_claude(prompt: str, timeout: Optional[int] = None) -> str:
 
 
 def parse_entries(
-    result_text: str, allowed_projects: set,
+    result_text: str, allowed_projects: set, expected_day: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Parse the model's JSON array into entry dicts with naive-local datetimes."""
     text = result_text.strip()
@@ -344,6 +344,12 @@ def parse_entries(
             logger.warning("Skipping entry with unknown project %r", project)
             continue
         day = item['date']
+        if expected_day is not None and day != expected_day:
+            raise ValueError(
+                "claude returned an entry for {} while filling {}".format(
+                    day, expected_day,
+                )
+            )
         s = datetime.strptime(f"{day} {item['start']}", '%Y-%m-%d %H:%M')
         e = datetime.strptime(f"{day} {item['end']}", '%Y-%m-%d %H:%M')
         if e <= s:
@@ -385,7 +391,7 @@ def _write_suggestions(
         if replace and win_start is not None and win_end is not None:
             EntrySuggestion.query.filter(
                 EntrySuggestion.start_time >= win_start,
-                EntrySuggestion.start_time <= win_end,
+                EntrySuggestion.start_time < win_end,
             ).delete()
         for item in entries_data:
             db.session.add(EntrySuggestion(
@@ -433,7 +439,7 @@ def populate_local_entries_ai(
         logger.info("Calling claude (%s) for local entries %s", _model(), day)
         try:
             raw = run_claude(prompt)
-            day_entries = parse_entries(raw, allowed_projects)
+            day_entries = parse_entries(raw, allowed_projects, expected_day=day)
         except ValueError as exc:
             logger.warning("claude failed for %s: %s", day, exc)
             errors.append(f"{day}: {exc}")
@@ -468,10 +474,33 @@ def _local_day_utc_bounds(day: str) -> (datetime, datetime):
     return _to_utc(local_start), _to_utc(local_end)
 
 
+def validate_single_local_day_range(
+    start_date: datetime, end_date: datetime,
+) -> str:
+    """Validate UTC bounds for exactly one configured-timezone calendar day.
+
+    Returns the local ``YYYY-MM-DD`` used to pin signal gathering and persistence.
+    Comparing local wall-clock midnights (instead of requiring a 24-hour UTC
+    duration) correctly accepts Helsinki's 23/25-hour DST transition days.
+    """
+    local_start = _to_local(start_date)
+    local_end = _to_local(end_date)
+    expected_end = local_start + timedelta(days=1)
+    if (
+        local_start.time() != datetime.min.time()
+        or local_end != expected_end
+    ):
+        raise ValueError(
+            "single-day fill requires local midnight-to-midnight bounds"
+        )
+    return local_start.strftime('%Y-%m-%d')
+
+
 def stream_populate_local_entries_ai(
     start_date: datetime,
     end_date: datetime,
     replace_existing: bool = True,
+    only_day: Optional[str] = None,
 ):
     """Generator variant of populate_local_entries_ai for streaming.
 
@@ -496,6 +525,9 @@ def stream_populate_local_entries_ai(
         yield {'type': 'error', 'error': 'No LOCAL projects configured'}
         return
     digests = gather_signal(start_date, end_date)
+    if only_day is not None:
+        day_signal = digests.get(only_day)
+        digests = {only_day: day_signal} if day_signal else {}
     if not digests:
         yield {'type': 'error', 'error':
                'No git/ActivityWatch signal in this range to reconstruct from.'}
@@ -511,11 +543,16 @@ def stream_populate_local_entries_ai(
         logger.info("Streaming claude (%s) for local entries %s", _model(), day)
         try:
             raw = run_claude(prompt)
-            day_entries = parse_entries(raw, allowed_projects)
+            day_entries = parse_entries(raw, allowed_projects, expected_day=day)
         except ValueError as exc:
             logger.warning("claude failed for %s: %s", day, exc)
             errors.append(f"{day}: {exc}")
             yield {'type': 'day_error', 'day': day, 'error': str(exc)}
+            continue
+        if not day_entries:
+            message = 'claude produced no entries; existing entries were preserved'
+            errors.append(f"{day}: {message}")
+            yield {'type': 'day_error', 'day': day, 'error': message}
             continue
         # Persist THIS day now, scoping the draft-delete to the local day so a
         # later cancel can't roll it back and untouched days keep their entries.
@@ -635,7 +672,7 @@ def populate_entry_at(
     )
     logger.info("Calling claude (%s) for click entry at %s", _model(), click_local)
     raw = run_claude(prompt)
-    entries_data = parse_entries(raw, allowed_projects)
+    entries_data = parse_entries(raw, allowed_projects, expected_day=day)
     if not entries_data:
         return []
     entries_data = entries_data[:1]  # exactly one entry from a click

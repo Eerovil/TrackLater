@@ -4,7 +4,17 @@ var daytimeline = Vue.component("daytimeline", {
     <div style="display:flex; justify-content:space-between; align-items:center;
         padding:2px 10px; font-size:13px; font-weight:600; color:#555;">
         <span>{{ dayDate }}</span>
-        <span>{{ dayHours }} h</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span>{{ dayHours }} h</span>
+          <v-btn
+            v-if="modules.toggl"
+            x-small
+            color="primary"
+            :loading="populateLoading"
+            :disabled="populateLoading"
+            @click="fillDay"
+          >Fill day</v-btn>
+        </span>
     </div>
     <vuetimeline ref="timeline"
     :items="items"
@@ -26,6 +36,14 @@ var daytimeline = Vue.component("daytimeline", {
       this.items = this.entriesToItems(this.entries);
     },
     methods: {
+      fillDay() {
+        this.$emit('fillDay', {
+          day: this.dayDate,
+          existingCount: (this.entries || []).filter(
+            (e) => e.module === 'toggl' && e.is_draft,
+          ).length,
+        });
+      },
       myChangedCallback(arg1, arg2, arg3) {
         console.log(arg1, arg2, arg3)
       },
@@ -234,6 +252,9 @@ var daytimeline = Vue.component("daytimeline", {
           .reduce((acc, e) =>
             acc + (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000, 0);
         return Math.round((secs / 3600) * 10) / 10;
+      },
+      populateLoading() {
+        return Boolean(this.$store.state.loading.populatelocal);
       },
       timeEntryModules() {
         return Object.keys(this.modules).filter(key => this.modules[key].capabilities.includes("entries"));
