@@ -117,6 +117,24 @@ def _branch_slug(text: str) -> str:
     return '' if slug.lower() in ('undefined', 'master', 'main', 'origin', 'head') else slug
 
 
+def _file_hint(text: str, cap: int = 3) -> str:
+    """Compact changed-file hint from a gitmodule entry's multi-line text.
+
+    Lines after the first are file paths (possibly ending with '... and N more').
+    Reduce each to the last 2 components of its directory (dusty/dusty/kco/utils.py
+    -> dusty/kco), dedupe preserving order, cap, and render as ' [a/b, c/d]'."""
+    prefixes: List[str] = []
+    for line in (text or '').split('\n')[1:]:
+        line = line.strip()
+        if not line or line.startswith('...'):
+            continue
+        parts = os.path.dirname(line).split('/')
+        prefix = '/'.join(p for p in parts[-2:] if p)
+        if prefix and prefix not in prefixes:
+            prefixes.append(prefix)
+    return f' [{", ".join(prefixes[:cap])}]' if prefixes else ''
+
+
 def _bridge(sessions: List[tuple], gap=timedelta(minutes=15)) -> List[tuple]:
     """Merge (start,end) pairs whose gap <= gap; bridged gaps count as work."""
     if not sessions:
@@ -158,7 +176,8 @@ def gather_signal(start_date: datetime, end_date: datetime) -> Dict[str, str]:
         # strip "<group> [branch] - " prefix to get the message
         msg_clean = re.sub(r'^\S+\s+\[[^\]]*\]\s*-\s*', '', msg)
         by_day_commits[local.strftime('%Y-%m-%d')].append(
-            (local, row.group or '?', _branch_slug(msg), msg_clean[:80])
+            (local, row.group or '?', _branch_slug(msg), msg_clean[:80],
+             _file_hint(row.text or ''))
         )
 
     by_day_aw: Dict[str, Dict[str, list]] = defaultdict(lambda: defaultdict(list))
@@ -185,9 +204,9 @@ def gather_signal(start_date: datetime, end_date: datetime) -> Dict[str, str]:
         commits = by_day_commits.get(day, [])
         if commits:
             lines.append(f'  Git commits ({len(commits)}):')
-            for local, group, branch, msg in commits:
+            for local, group, branch, msg, files in commits:
                 br = f' ({branch})' if branch else ''
-                lines.append(f'    {local.strftime("%H:%M")} {group}{br}: {msg}')
+                lines.append(f'    {local.strftime("%H:%M")} {group}{br}: {msg}{files}')
         digests[day] = '\n'.join(lines)
     return digests
 
@@ -222,8 +241,9 @@ def build_day_prompt(
     guidebook = _read_guidebook()
     projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
     carry = (
-        '\nEpic titles already used earlier this week (reuse the matching one to '
-        'carry an epic forward, per the guidebook):\n  '
+        '\nEpic titles used earlier this week — reuse one of these ONLY if this '
+        "day's commits/activity for that client actually continue that epic; "
+        'otherwise coin a new specific title:\n  '
         + '\n  '.join(prior_titles)
         if prior_titles else ''
     )
@@ -245,6 +265,16 @@ TASK: produce the billing entries for {day} by applying every rule in the
 guidebook — sub-project folding, client selection thresholds, branch-slug titles,
 bridged billable hours with the weekday-daytime / evening / weekend rules, and
 blocks snapped to :00/:30.
+- MANDATORY SPLIT: first enumerate, per client, the distinct components in the
+  day's commits (component = commit-subject prefix like `orders:`/`emails:`/
+  `kanban:`, or branch slug, or file-path area). If a client has 2+ components
+  with >=2 commits each (or >=45 min of activity in its own window), you MUST
+  emit a separate entry per component, each titled from ITS OWN component and
+  covering ITS OWN commit window. One blended entry for such a client is WRONG.
+- Every title must be supported by commits/activity inside that entry's own
+  window — never emit an epic title without same-day evidence in that block. A
+  carried-forward epic title may only cover the window where THAT component's
+  commits actually fall — not the whole client block.
 
 For EACH entry also provide ranked alternatives the user might pick instead when
 editing: `project_options` (2-4 plausible `group:Project` for this block, BEST
@@ -522,8 +552,9 @@ def build_click_prompt(
     guidebook = _read_guidebook()
     projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
     carry = (
-        '\nEpic titles already in use this week (reuse the matching one to carry an '
-        'epic forward, per the guidebook):\n  ' + '\n  '.join(prior_titles)
+        '\nEpic titles used earlier this week — reuse one of these ONLY if this '
+        "day's commits/activity for that client actually continue that epic; "
+        'otherwise coin a new specific title:\n  ' + '\n  '.join(prior_titles)
         if prior_titles else ''
     )
     bounds = ''
@@ -556,6 +587,9 @@ a SINGLE entry there. Build exactly ONE entry:
    as the focus clearly switches to a different project/component, or at a real AFK
    gap.{bounds}
 3. Snap start/end to :00/:30. Title per the guidebook (branch slug first).
+   The title MUST come from the DOMINANT component inside the grown window
+   (commit-subject prefix, branch slug or file-path area) — never a generic
+   blend or an epic title without evidence inside that window.
 4. If there is NO meaningful signal within ±30 min of the click, output an empty
    array [] (the UI will create a blank entry to fill in by hand).
 

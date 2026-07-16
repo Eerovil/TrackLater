@@ -119,7 +119,7 @@ def _branch_for_commit(repo: git.Repo, commit) -> str:
             '--name-only',
             '--refs=refs/heads/*',
         ).strip()
-        if name:
+        if name and name != 'undefined':
             return name.split('~')[0].split('^')[0]
     except Exception:
         logger.debug('name-rev failed for %s', commit.hexsha, exc_info=True)

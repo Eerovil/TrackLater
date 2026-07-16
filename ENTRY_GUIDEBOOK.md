@@ -151,19 +151,40 @@ summaries. Algorithm, in priority order:
    `[hotfix/xyz]` *and* inline "merge … into xyz"). Drop `master`/`main`/`origin`/
    etc. Take the **most frequent** remaining slug for that client and map it to a
    title via your local vocabulary table. (Dominant branch, not first match.)
-2. **Keyword fallback** on the message text when no feature branch is present.
-3. **New feature → coin a new title from the slug.** If the dominant branch is a
-   real feature branch that doesn't match an *active* epic in your vocabulary, it's
-   new work: derive a fresh title by humanizing the slug (strip `hotfix/`/`feature/`
+2. **Component prefix when branch slugs are missing/`undefined`.** Many workflows
+   commit straight to the default branch, so rule 1 never fires — but commit
+   subjects often follow a **`component: message`** convention, and top-level
+   changed-file paths name the component too. These are **first-class title
+   sources**: take the dominant component prefix among the block's commits and
+   treat it exactly like a branch slug (map it, or coin a new title from it per
+   rule 4).
+3. **Keyword fallback** on the message text when no feature branch or component
+   prefix is present.
+4. **New feature → coin a new title from the slug/prefix.** If the dominant
+   branch or component prefix doesn't match an *active* epic in your vocabulary,
+   it's new work: derive a fresh title by humanizing it (strip `hotfix/`/`feature/`
    prefixes and generic suffixes like `-endpoints`/`-api`/`-fix`/`-v2`, dashes →
    spaces). **Never force a substring match onto an old/shipped epic** — a new
    branch that merely shares a token with a retired feature is still new work.
-4. **Per-client default** otherwise.
+5. **Per-client default** otherwise — derived from the block's dominant component
+   prefix, never a stale epic name.
+
+**Evidence rule.** A title/epic may only be used if commits or activity **inside
+that block's window** support it. Carried-forward epics require **same-day evidence
+for that client**; a stale vocabulary entry must never capture an evidence-free
+block.
 
 Carry the epic forward only while it's **still in flight**: prefer the label used on
 the nearest prior day for the same client + theme (this also covers days whose
 commits don't mention the epic the work is billed under). Do not resurrect a shipped
-epic for a different, newly-appearing branch — coin a new title (step 3) instead.
+epic for a different, newly-appearing branch — coin a new title (step 4) instead.
+
+**Specificity beats consolidation.** When one client's day has **2+ distinct
+components each with meaningful work** (≥2 commits or ≥45 min activity inside its
+own window), emit **separate entries with specific titles** — more smaller
+same-client entries beat one generic blend. Use a generic label only when the
+signal is truly mixed or absent. (Consolidate interleaved work only within the
+*same* component; distinct components each carrying work split.)
 
 > Keep your slug→title vocabulary scoped to *active* epics; prune shipped ones so a
 > stale mapping can't capture a new branch by substring.
