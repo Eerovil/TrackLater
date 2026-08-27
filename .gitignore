@@ -128,3 +128,4 @@ TogglTrack_Report_*.csv
 reconstruct_score.py
 hours_accuracy.py
 billable_hours.py
+tracklater/database.db.bak-*

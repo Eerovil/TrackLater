@@ -123,7 +123,7 @@ var toolbar = Vue.component("toolbar", {
             return this.modules[this.selectedModule].projects;
         },
         entrySuggestion() {
-            // The Opus-precomputed hint whose time window best overlaps the
+            // The Codex-precomputed hint whose time window best overlaps the
             // selected entry (matched by overlap, since the entry may have moved).
             const e = this.selectedEntry;
             const sugs = this.$store.state.suggestions || [];

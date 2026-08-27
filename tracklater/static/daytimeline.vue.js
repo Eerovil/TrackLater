@@ -97,7 +97,7 @@ var daytimeline = Vue.component("daytimeline", {
           }
       },
       onAdd: function(item, callback) {
-          // Double-click → ask Claude Opus to grow a single entry from the click
+          // Double-click → ask Codex to grow a single entry from the click
           // seed (replaces the old generateTimeSnippet/detectIssue heuristic).
           if (!this.modules[item.group].capabilities.includes('addentry')) {
               if (callback) callback(null);
@@ -114,8 +114,8 @@ var daytimeline = Vue.component("daytimeline", {
               if (en <= click && (prevEnd === null || en > prevEnd)) prevEnd = en;
               if (s >= click && (nextStart === null || s < nextStart)) nextStart = s;
           });
-          if (callback) callback(null); // cancel vis's default item; Opus creates it
-          this.$emit('opusEntry', {
+          if (callback) callback(null); // cancel vis's default item; Codex creates it
+          this.$emit('codexEntry', {
               click: click,
               prev_end: prevEnd,
               next_start: nextStart,

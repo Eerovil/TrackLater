@@ -1,4 +1,8 @@
-from ubuntu:20.04
+FROM node:20-bullseye-slim AS codex_cli
+
+RUN npm install -g @openai/codex
+
+FROM ubuntu:20.04
 
 RUN apt-get update && apt-get -y install \
         software-properties-common \
@@ -42,12 +46,12 @@ WORKDIR /code
 COPY ./requirements.txt /code/
 RUN pip3 install -r requirements.txt
 
-# Node + Claude Code CLI (used by the AI-backed local populate, engine="claude").
-# Auth comes from the host ~/.claude mounted in docker-compose (subscription login).
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get install -y nodejs \
-  && npm install -g @anthropic-ai/claude-code \
-  && rm -rf /var/lib/apt/lists/*
+# Node + Codex CLI (used by the AI-backed local populate, engine="codex").
+# Copying the official Node image's /usr/local tree avoids relying on Ubuntu's
+# obsolete Node package or the NodeSource apt repository during this build.
+# Auth comes from the host Codex auth cache mounted in docker-compose.
+COPY --from=codex_cli /usr/local/ /usr/local/
+RUN mkdir -p /root/.codex
 
 RUN mkdir /root/.ssh && ln -s /root/.ssh-mount/id_rsa /root/.ssh/id_rsa && chown -R root:root /root/.ssh
 

@@ -11,19 +11,14 @@ services:
       - "~/.ssh:/root/.ssh-mount"
       - "./:/code"
       - "~/.config/tracklater.json:/root/.config/tracklater.json"
+      # Codex CLI login cache. Run `codex login` on the host first. The mount is
+      # writable so Codex can refresh expiring ChatGPT access tokens.
+      - "~/.codex/auth.json:/root/.codex/auth.json"
       - "~/Documents:/home/eerovilpponen/Documents"
       # SSH agent forwarding via the Docker Desktop bridge, so the git module's
       # auto-fetch (GIT.FETCH in tracklater.json) can authenticate over SSH with
       # the host's agent. For 1Password, the host's SSH_AUTH_SOCK must point at the
       # 1Password agent (~/.1password/agent.sock) for the bridge to forward it.
       - "/Users/eerovilpponen/.1password/agent.sock:/ssh-agent"
-    # Claude Code subscription auth for the AI-backed populate (engine="claude").
-    # macOS stores the login token in the Keychain, which a Linux container can't
-    # read — so use a long-lived OAuth token instead of mounting credential files:
-    #   1) on the host run:  claude setup-token
-    #   2) put the token in a .env file beside this compose file:
-    #        CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
-    #   docker-compose auto-loads .env and injects it below (do not commit .env).
     environment:
-      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - SSH_AUTH_SOCK=/ssh-agent

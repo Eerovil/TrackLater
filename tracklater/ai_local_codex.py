@@ -1,17 +1,15 @@
 """
-AI-backed local billing entries via the `claude` CLI (Opus).
+AI-backed local billing entries via the Codex CLI (GPT-5.6 Sol).
 
 The rule-based path (ai_local.populate_local_entries) is fast and deterministic.
 This path hands the same git + ActivityWatch signal, plus ENTRY_GUIDEBOOK.md, to
-Claude Opus and asks it to produce billing entries — better judgement on titles,
-client selection and billable hours than the hardcoded rules or Gemini.
+Codex and asks it to produce billing entries with structured output.
 
 Config (optional) in ~/.config/tracklater.json:
-    "CLAUDE": {"global": {"BIN": "claude", "MODEL": "opus",
-                          "EFFORT": "low", "TIMEOUT": 420}}
-EFFORT maps to the CLI --effort flag; opus 'low' runs ~2-5x faster than the
-default with equivalent output quality on this task.
-The container running this must have the `claude` CLI installed and authenticated.
+    "CODEX": {"global": {"BIN": "codex", "MODEL": "gpt-5.6-sol",
+                         "EFFORT": "low", "TIMEOUT": 420}}
+EFFORT maps to Codex's model_reasoning_effort setting.
+The container running this must have the `codex` CLI installed and authenticated.
 """
 import json
 import os
@@ -46,33 +44,67 @@ GUIDEBOOK_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.md')
 # Optional, gitignored: client-specific vocabulary/branch-title tables and examples.
 # Appended to the generic guidebook at runtime when present.
 GUIDEBOOK_LOCAL_PATH = os.path.join(REPO_ROOT, 'ENTRY_GUIDEBOOK.local.md')
-DEFAULT_MODEL = 'opus'
-DEFAULT_TIMEOUT = 420  # per single-day claude call
-DEFAULT_EFFORT = 'low'  # opus 'low' is ~2-5x faster with equivalent quality here
+DEFAULT_MODEL = 'gpt-5.6-sol'
+DEFAULT_TIMEOUT = 420  # per single-day Codex call
+DEFAULT_EFFORT = 'low'
+
+OUTPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'entries': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'date': {'type': 'string'},
+                    'start': {'type': 'string'},
+                    'end': {'type': 'string'},
+                    'project': {'type': 'string'},
+                    'title': {'type': 'string'},
+                    'project_options': {
+                        'type': 'array', 'items': {'type': 'string'},
+                        'minItems': 1, 'maxItems': 4,
+                    },
+                    'title_options': {
+                        'type': 'array', 'items': {'type': 'string'},
+                        'minItems': 1, 'maxItems': 4,
+                    },
+                },
+                'required': [
+                    'date', 'start', 'end', 'project', 'title',
+                    'project_options', 'title_options',
+                ],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['entries'],
+    'additionalProperties': False,
+}
 
 
 # --------------------------------------------------------------------------- #
 # Config helpers
 # --------------------------------------------------------------------------- #
-def _claude_cfg() -> Dict[str, Any]:
-    cfg = getattr(settings, 'CLAUDE', None) or {}
+def _codex_cfg() -> Dict[str, Any]:
+    cfg = getattr(settings, 'CODEX', None) or {}
     return cfg.get('global', {}) if isinstance(cfg, dict) else {}
 
 
 def _binary() -> str:
-    return _claude_cfg().get('BIN') or shutil.which('claude') or 'claude'
+    return _codex_cfg().get('BIN') or shutil.which('codex') or 'codex'
 
 
 def _model() -> str:
-    return _claude_cfg().get('MODEL') or DEFAULT_MODEL
+    return _codex_cfg().get('MODEL') or DEFAULT_MODEL
 
 
 def _timeout() -> int:
-    return int(_claude_cfg().get('TIMEOUT') or DEFAULT_TIMEOUT)
+    return int(_codex_cfg().get('TIMEOUT') or DEFAULT_TIMEOUT)
 
 
 def _effort() -> str:
-    return _claude_cfg().get('EFFORT') or DEFAULT_EFFORT
+    return _codex_cfg().get('EFFORT') or DEFAULT_EFFORT
 
 
 def _tz():
@@ -236,7 +268,7 @@ def _read_guidebook() -> str:
 def build_day_prompt(
     day: str, day_signal: str, allowed_projects: set, prior_titles: List[str],
 ) -> str:
-    """Prompt Claude for a SINGLE day's entries. Small prompts keep each call
+    """Prompt Codex for a SINGLE day's entries. Small prompts keep each call
     fast and well under the CLI timeout, and isolate failures to one day."""
     guidebook = _read_guidebook()
     projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
@@ -281,61 +313,78 @@ editing: `project_options` (2-4 plausible `group:Project` for this block, BEST
 first — the first MUST equal `project`) and `title_options` (2-4 plausible titles,
 BEST first — the first MUST equal `title`). These are hints for a dropdown.
 
-Output ONLY a JSON array, no prose, no code fence. Each item:
-{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
-  "project_options":["group:Project", ...],"title_options":["...", ...]}}
+Output ONLY this JSON object, no prose, no code fence:
+{{"entries":[{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
+  "project_options":["group:Project", ...],"title_options":["...", ...]}}]}}
 Times are LOCAL 24h. Entries must not overlap. If the day is unbillable (leave /
-no work), output an empty array []."""
+no work), output {{"entries":[]}}."""
 
 
-def run_claude(prompt: str, timeout: Optional[int] = None) -> str:
-    """Invoke the claude CLI headlessly and return the model's text result."""
-    cmd = [
-        _binary(), '-p', prompt,
-        '--model', _model(),
-        '--effort', _effort(),
-        '--output-format', 'json',
-    ]
-    # Run in an isolated cwd so the CLI doesn't load this repo's project context.
+def run_codex(prompt: str, timeout: Optional[int] = None) -> str:
+    """Invoke Codex headlessly and return its schema-validated final message."""
+    # Run in an isolated cwd and ignore user config/rules so billing inference is
+    # controlled only by this prompt and cannot inspect or modify the repository.
     with tempfile.TemporaryDirectory() as tmp:
+        schema_path = os.path.join(tmp, 'output-schema.json')
+        output_path = os.path.join(tmp, 'final-output.json')
+        with open(schema_path, 'w', encoding='utf-8') as f:
+            json.dump(OUTPUT_SCHEMA, f)
+        cmd = [
+            _binary(), 'exec',
+            '--model', _model(),
+            '--config', 'model_reasoning_effort="{}"'.format(_effort()),
+            '--sandbox', 'read-only',
+            '--ephemeral',
+            '--ignore-user-config',
+            '--ignore-rules',
+            '--skip-git-repo-check',
+            '--color', 'never',
+            '--output-schema', schema_path,
+            '--output-last-message', output_path,
+            '-',
+        ]
         try:
             proc = subprocess.run(
-                cmd, capture_output=True, text=True,
+                cmd, input=prompt, capture_output=True, text=True,
                 timeout=timeout or _timeout(), cwd=tmp,
             )
         except FileNotFoundError:
             raise ValueError(
-                "`claude` CLI not found. Install it in this environment or set "
-                "CLAUDE.global.BIN in settings."
+                "`codex` CLI not found. Install it in this environment or set "
+                "CODEX.global.BIN in settings."
             )
         except subprocess.TimeoutExpired:
-            raise ValueError("claude CLI timed out")
-    if proc.returncode != 0:
-        raise ValueError(
-            "claude CLI failed (exit {}): {}".format(
-                proc.returncode, (proc.stderr or proc.stdout or '')[:500]
+            raise ValueError("Codex CLI timed out")
+        if proc.returncode != 0:
+            raise ValueError(
+                "Codex CLI failed (exit {}): {}".format(
+                    proc.returncode, (proc.stderr or proc.stdout or '')[:500]
+                )
             )
-        )
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        raise ValueError("claude CLI returned non-JSON envelope: " + proc.stdout[:300])
-    if payload.get('is_error'):
-        raise ValueError("claude reported an error: " + str(payload.get('result'))[:300])
-    return payload.get('result', '')
+        try:
+            with open(output_path, 'r', encoding='utf-8') as f:
+                result = f.read()
+        except OSError:
+            raise ValueError(
+                "Codex CLI did not write a final response: "
+                + (proc.stderr or proc.stdout or '')[:300]
+            )
+    return result
 
 
 def parse_entries(
     result_text: str, allowed_projects: set, expected_day: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Parse the model's JSON array into entry dicts with naive-local datetimes."""
+    """Parse Codex's structured response into naive-local entry dicts."""
     text = result_text.strip()
     text = re.sub(r'^```(?:json)?\s*|\s*```$', '', text).strip()
-    start = text.find('[')
-    end = text.rfind(']')
-    if start == -1 or end == -1:
-        raise ValueError("No JSON array in claude output: " + text[:200])
-    items = json.loads(text[start:end + 1])
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        raise ValueError("Codex returned invalid JSON: " + text[:200])
+    items = payload.get('entries') if isinstance(payload, dict) else payload
+    if not isinstance(items, list):
+        raise ValueError("Codex output did not contain an entries array")
 
     entries: List[Dict[str, Any]] = []
     for item in items:
@@ -346,7 +395,7 @@ def parse_entries(
         day = item['date']
         if expected_day is not None and day != expected_day:
             raise ValueError(
-                "claude returned an entry for {} while filling {}".format(
+                "codex returned an entry for {} while filling {}".format(
                     day, expected_day,
                 )
             )
@@ -412,7 +461,7 @@ def populate_local_entries_ai(
     end_date: datetime,
     replace_existing: bool = True,
 ) -> List[Entry]:
-    """Create local entries by asking Claude Opus, then persist them."""
+    """Create local entries with Codex GPT-5.6 Sol, then persist them."""
     if MODULE_NAME not in settings.ENABLED_MODULES:
         raise ValueError("local module is not enabled")
     if not _has_source_data(start_date, end_date):
@@ -429,19 +478,19 @@ def populate_local_entries_ai(
             "No git/ActivityWatch signal in this range to reconstruct from."
         )
 
-    # One claude call per day: small prompts stay under the CLI timeout and a
+    # One Codex call per day: small prompts stay under the CLI timeout and a
     # slow/failed day can't sink the whole week. Titles carry forward across days.
     entries_data: List[Dict[str, Any]] = []
     prior_titles: List[str] = []
     errors: List[str] = []
     for day in sorted(digests):
         prompt = build_day_prompt(day, digests[day], allowed_projects, prior_titles)
-        logger.info("Calling claude (%s) for local entries %s", _model(), day)
+        logger.info("Calling Codex (%s) for local entries %s", _model(), day)
         try:
-            raw = run_claude(prompt)
+            raw = run_codex(prompt)
             day_entries = parse_entries(raw, allowed_projects, expected_day=day)
         except ValueError as exc:
-            logger.warning("claude failed for %s: %s", day, exc)
+            logger.warning("Codex failed for %s: %s", day, exc)
             errors.append(f"{day}: {exc}")
             continue
         entries_data.extend(day_entries)
@@ -451,7 +500,7 @@ def populate_local_entries_ai(
 
     if not entries_data:
         raise ValueError(
-            "claude produced no entries"
+            "Codex produced no entries"
             + (" (" + "; ".join(errors) + ")" if errors else "")
         )
     if errors:
@@ -540,17 +589,17 @@ def stream_populate_local_entries_ai(
     total_count = 0
     for idx, day in enumerate(days):
         prompt = build_day_prompt(day, digests[day], allowed_projects, prior_titles)
-        logger.info("Streaming claude (%s) for local entries %s", _model(), day)
+        logger.info("Streaming Codex (%s) for local entries %s", _model(), day)
         try:
-            raw = run_claude(prompt)
+            raw = run_codex(prompt)
             day_entries = parse_entries(raw, allowed_projects, expected_day=day)
         except ValueError as exc:
-            logger.warning("claude failed for %s: %s", day, exc)
+            logger.warning("Codex failed for %s: %s", day, exc)
             errors.append(f"{day}: {exc}")
             yield {'type': 'day_error', 'day': day, 'error': str(exc)}
             continue
         if not day_entries:
-            message = 'claude produced no entries; existing entries were preserved'
+            message = 'Codex produced no entries; existing entries were preserved'
             errors.append(f"{day}: {message}")
             yield {'type': 'day_error', 'day': day, 'error': message}
             continue
@@ -585,7 +634,7 @@ def build_click_prompt(
     click_local: datetime, gap_lo_local: Optional[datetime],
     gap_hi_local: Optional[datetime],
 ) -> str:
-    """Prompt Claude for ONE entry grown outward from the click point."""
+    """Prompt Codex for ONE entry grown outward from the click point."""
     guidebook = _read_guidebook()
     projects = '\n'.join(f'  - {p}' for p in sorted(allowed_projects))
     carry = (
@@ -627,16 +676,16 @@ a SINGLE entry there. Build exactly ONE entry:
    The title MUST come from the DOMINANT component inside the grown window
    (commit-subject prefix, branch slug or file-path area) — never a generic
    blend or an epic title without evidence inside that window.
-4. If there is NO meaningful signal within ±30 min of the click, output an empty
-   array [] (the UI will create a blank entry to fill in by hand).
+4. If there is NO meaningful signal within ±30 min of the click, output
+   {{"entries":[]}} (the UI will create a blank entry to fill in by hand).
 
 Also provide ranked alternatives for the editor dropdown: `project_options` (2-4
 plausible `group:Project`, BEST first — first MUST equal `project`) and
 `title_options` (2-4 plausible titles, BEST first — first MUST equal `title`).
 
-Output ONLY a JSON array with AT MOST ONE item, no prose, no code fence:
-[{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
-  "project_options":["group:Project", ...],"title_options":["...", ...]}}]
+Output ONLY this JSON object with AT MOST ONE entry, no prose, no code fence:
+{{"entries":[{{"date":"{day}","start":"HH:MM","end":"HH:MM","project":"group:Project","title":"...",
+  "project_options":["group:Project", ...],"title_options":["...", ...]}}]}}
 Times are LOCAL 24h."""
 
 
@@ -670,8 +719,8 @@ def populate_entry_at(
         _to_local(prev_end) if prev_end else None,
         _to_local(next_start) if next_start else None,
     )
-    logger.info("Calling claude (%s) for click entry at %s", _model(), click_local)
-    raw = run_claude(prompt)
+    logger.info("Calling Codex (%s) for click entry at %s", _model(), click_local)
+    raw = run_codex(prompt)
     entries_data = parse_entries(raw, allowed_projects, expected_day=day)
     if not entries_data:
         return []

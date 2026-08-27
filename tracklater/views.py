@@ -217,15 +217,17 @@ def populatelocal() -> Any:
     replace_existing = data.get('replace_existing', True)
     engine = (data.get('engine') or 'rules').lower()
     try:
-        if engine == 'claude':
-            from tracklater.ai_local_claude import populate_local_entries_ai
+        if engine == 'codex':
+            from tracklater.ai_local_codex import populate_local_entries_ai
             created = populate_local_entries_ai(
                 from_date, to_date, replace_existing=replace_existing
             )
-        else:
+        elif engine == 'rules':
             created = populate_local_entries(
                 from_date, to_date, replace_existing=replace_existing
             )
+        else:
+            raise ValueError("Unsupported populate engine: {}".format(engine))
         return json.dumps({
             "entries": [e.to_dict() for e in created],
             "count": len(created),
@@ -253,7 +255,7 @@ def populatelocalstream() -> Any:
     if not from_date or not to_date:
         return json.dumps({"error": "from and to timestamps (ms) are required"}), 400
 
-    from tracklater.ai_local_claude import (
+    from tracklater.ai_local_codex import (
         stream_populate_local_entries_ai,
         validate_single_local_day_range,
     )
@@ -287,7 +289,7 @@ def populatelocalstream() -> Any:
 
 @bp.route('/suggestions', methods=['GET'])
 def suggestions() -> Any:
-    """Opus-precomputed project/title hints in a window, for the editor dropdown."""
+    """Codex-precomputed project/title hints in a window, for the editor dropdown."""
     from tracklater.models import EntrySuggestion
     from_date = parseTimestamp(request.args.get('from'))
     to_date = parseTimestamp(request.args.get('to'))
@@ -312,7 +314,7 @@ def populateentry() -> Any:
     prev_end = parseTimestamp(data.get('prev_end')) if data.get('prev_end') else None
     next_start = parseTimestamp(data.get('next_start')) if data.get('next_start') else None
     try:
-        from tracklater.ai_local_claude import populate_entry_at
+        from tracklater.ai_local_codex import populate_entry_at
         created = populate_entry_at(click, prev_end=prev_end, next_start=next_start)
         return json.dumps({
             "entries": [e.to_dict() for e in created],

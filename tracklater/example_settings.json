@@ -44,6 +44,15 @@
         }
     },
 
+    "CODEX": {
+        "global": {
+            "BIN": "codex",
+            "MODEL": "gpt-5.6-sol",
+            "EFFORT": "low",
+            "TIMEOUT": 420
+        }
+    },
+
     "TOGGL": {
         "global": {
             "API_KEY": "your-api-key"

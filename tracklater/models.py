@@ -108,7 +108,7 @@ class Entry(db.Model):
 
 
 class EntrySuggestion(db.Model):
-    """Opus-precomputed project/title hints for a time window, produced during the
+    """Codex-precomputed project/title hints for a time window, produced during the
     Fill (and double-click) so the editor can offer ranked picks with no live call.
     Non-authoritative: matched to an entry by time-window overlap and never
     auto-applied. Left stale if the entry is later moved (it's only a hint)."""
