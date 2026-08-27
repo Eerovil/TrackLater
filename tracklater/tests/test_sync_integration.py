@@ -1,7 +1,7 @@
 """
 Integration coverage for the lazy Toggl sync that the unit tests don't reach:
 the threaded background worker, HTTP 429 back-off, Toggl->app reconciliation,
-and the full HTTP path (/updateentry -> /saveweek -> worker -> /fetchdata).
+and the worker path (enqueue -> worker -> entry re-keyed to its Toggl id).
 
 Uses the mock Toggl provider (settings.TESTING is True in test_settings).
 """
@@ -166,55 +166,3 @@ def test_running_entry_without_end_time_pushes(app, db):
     assert processed == 1
     synced = Entry.query.filter(Entry.module == MODULE_NAME, Entry.is_draft == False).first()  # noqa: E712
     assert synced is not None and synced.toggl_id
-
-
-def test_projectless_zero_is_skipped_by_saveweek(client, db):
-    import json
-    now = datetime.utcnow()
-    # Frontend sends "0" for a blank project; it must be stored as no-project.
-    resp = client.post('/updateentry', json={
-        'module': MODULE_NAME, 'entry_id': None,
-        'start_time': int(time.mktime((now - timedelta(hours=2)).timetuple()) * 1000),
-        'end_time': int(time.mktime((now - timedelta(hours=1)).timetuple()) * 1000),
-        'title': 'no project', 'project_id': '0',
-    })
-    created = json.loads(resp.data)
-    assert created['project'] in (None, '')
-    resp = client.post('/saveweek', json={
-        'from': int(time.mktime((now - timedelta(days=1)).timetuple()) * 1000),
-        'to': int(time.mktime((now + timedelta(days=1)).timetuple()) * 1000),
-    })
-    assert json.loads(resp.data) == {"queued": 0, "skipped": 1}
-    assert SyncJob.query.count() == 0
-
-
-def test_http_create_save_sync_flow(client, db):
-    import json
-    now = datetime.utcnow()
-    # Create a draft via the real endpoint.
-    resp = client.post('/updateentry', json={
-        'module': MODULE_NAME,
-        'entry_id': None,
-        'start_time': int(time.mktime((now - timedelta(hours=2)).timetuple()) * 1000),
-        'end_time': int(time.mktime((now - timedelta(hours=1)).timetuple()) * 1000),
-        'title': 'http flow entry',
-        'project_id': 'group1:Development',
-    })
-    created = json.loads(resp.data)
-    assert created['is_draft'] is True and created['toggl_id'] is None
-    entry_id = created['id']
-
-    # Save the week -> should queue exactly this draft.
-    resp = client.post('/saveweek', json={
-        'from': int(time.mktime((now - timedelta(days=1)).timetuple()) * 1000),
-        'to': int(time.mktime((now + timedelta(days=1)).timetuple()) * 1000),
-    })
-    assert json.loads(resp.data) == {"queued": 1, "skipped": 0}
-    assert SyncJob.query.count() == 1
-
-    # Drain the queue (synchronously, mock provider) and confirm sync.
-    sync_worker.process_pending_jobs()
-    assert SyncJob.query.count() == 0
-    assert Entry.query.filter(Entry.id == entry_id).first() is None  # re-keyed
-    synced = Entry.query.filter(Entry.module == MODULE_NAME, Entry.is_draft == False).all()  # noqa: E712
-    assert len(synced) == 1 and synced[0].toggl_id == synced[0].id

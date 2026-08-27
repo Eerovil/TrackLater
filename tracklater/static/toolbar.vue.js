@@ -20,18 +20,11 @@ var toolbar = Vue.component("toolbar", {
             <v-btn>{{ currentWeek }}</v-btn>
             <v-btn @click="moveWeek(1)">></v-btn>
             <v-btn
-            v-if="hasToggl"
+            v-if="hasBilling"
             v-on:click="populateLocal()"
             :loading="loading['populatelocal']"
             color="primary"
             >Fill</v-btn>
-            <v-btn
-            v-if="hasToggl"
-            v-on:click="saveWeek()"
-            :loading="loading['saveweek']"
-            :disabled="!hasDrafts"
-            color="success"
-            >Save week<span v-if="draftCount"> ({{ draftCount }})</span></v-btn>
         </v-row>
         <v-row>
             <v-col xs6>
@@ -199,26 +192,16 @@ var toolbar = Vue.component("toolbar", {
             }
             return ret;
         },
-        hasToggl() {
-            return this.modules.toggl != null;
-        },
-        draftCount() {
-            const toggl = this.modules.toggl;
-            if (!toggl || !toggl.entries) {
-                return 0;
-            }
-            return toggl.entries.filter((e) => e.is_draft).length;
-        },
-        hasDrafts() {
-            return this.draftCount > 0;
+        hasBilling() {
+            return this.modules.kimai != null;
         },
         totalHours() {
-            // Week total of billed (toggl) hours, matching the per-day counters.
-            const toggl = this.modules.toggl;
-            if (!toggl || !toggl.entries) {
+            // Week total of billed (kimai) hours, matching the per-day counters.
+            const kimai = this.modules.kimai;
+            if (!kimai || !kimai.entries) {
                 return 0;
             }
-            const secs = toggl.entries
+            const secs = kimai.entries
                 .filter((e) => e.end_time)
                 .reduce((acc, e) =>
                     acc + (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000, 0);
@@ -254,9 +237,6 @@ var toolbar = Vue.component("toolbar", {
         },
         populateLocal() {
             this.$emit('populateLocal');
-        },
-        saveWeek() {
-            this.$emit('saveWeek');
         },
         getProject(issue) {
             // Get a matching project for issue

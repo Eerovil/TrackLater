@@ -19,12 +19,18 @@ def mock_settings(monkeypatch):
     """
     Replace settings completely with test_settings
     """
-    for module_setting in [item for item in dir(settings) if not item.startswith("__")]:
+    # Union both sides: keys the developer's real config happens to carry get
+    # blanked, and keys only test_settings defines get created. Iterating just
+    # dir(settings) made the test settings depend on whatever ~/.config held.
+    names = {item for item in dir(settings) if not item.startswith("__")}
+    names |= {item for item in dir(test_settings) if not item.startswith("__")}
+    for module_setting in sorted(names):
         if module_setting == 'helper':
             continue
         monkeypatch.setattr(
             'tracklater.settings.{}'.format(module_setting),
-            getattr(test_settings, module_setting, {})
+            getattr(test_settings, module_setting, {}),
+            raising=False,
         )
 
 

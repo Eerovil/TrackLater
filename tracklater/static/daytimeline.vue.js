@@ -7,7 +7,7 @@ var daytimeline = Vue.component("daytimeline", {
         <span style="display:flex; align-items:center; gap:8px;">
           <span>{{ dayHours }} h</span>
           <v-btn
-            v-if="modules.toggl"
+            v-if="modules.kimai"
             x-small
             color="primary"
             :loading="populateLoading"
@@ -40,7 +40,7 @@ var daytimeline = Vue.component("daytimeline", {
         this.$emit('fillDay', {
           day: this.dayDate,
           existingCount: (this.entries || []).filter(
-            (e) => e.module === 'toggl' && e.is_draft,
+            (e) => e.module === 'kimai',
           ).length,
         });
       },
@@ -126,20 +126,20 @@ var daytimeline = Vue.component("daytimeline", {
         // vis.js treats range end as exclusive; extend local bars by 1s so
         // commits on the end timestamp still appear inside the block.
         const end = new Date(entry.end_time);
-        if (entry.module === 'toggl') {
+        if (entry.module === 'kimai') {
           return new Date(end.getTime() + 1000);
         }
         return end;
       },
       logCommitsOutsideLocalEntries(entries) {
         const localRows = entries.filter(
-          (e) => e.module === 'toggl' && e.end_time,
+          (e) => e.module === 'kimai' && e.end_time,
         );
         const gitRows = entries.filter((e) => e.module === 'gitmodule');
         const orphans = [];
         gitRows.forEach((gitEntry) => {
           const projectId = this.$store.getters.getProjectId(
-            gitEntry.group, 'toggl',
+            gitEntry.group, 'kimai',
           );
           if (!projectId) {
             return;
@@ -246,9 +246,9 @@ var daytimeline = Vue.component("daytimeline", {
         return (this.entries[0] || {}).date_group || '';
       },
       dayHours() {
-        // Billed hours for the day = sum of toggl (manual billing) entry spans.
+        // Billed hours for the day = sum of kimai (manual billing) entry spans.
         const secs = (this.entries || [])
-          .filter((e) => e.module === 'toggl' && e.end_time)
+          .filter((e) => e.module === 'kimai' && e.end_time)
           .reduce((acc, e) =>
             acc + (new Date(e.end_time).getTime() - new Date(e.start_time).getTime()) / 1000, 0);
         return Math.round((secs / 3600) * 10) / 10;

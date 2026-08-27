@@ -24,12 +24,12 @@ def integration_db(integration_app, monkeypatch):
 
     monkeypatch.setattr(
         app_settings, 'ENABLED_MODULES',
-        ['activitywatch', 'gitmodule', 'toggl'],
+        ['activitywatch', 'gitmodule', 'kimai'],
         raising=False,
     )
-    # The toggl module now owns local drafts; default_project_pid reads TOGGL.
-    monkeypatch.setattr(app_settings, 'TOGGL', dict(
-        LOCAL_GROUPS, **{'global': {'API_KEY': 'x'}}), raising=False)
+    # The kimai module is the billing module; default_project_pid reads KIMAI.
+    monkeypatch.setattr(app_settings, 'KIMAI', dict(
+        LOCAL_GROUPS, **{'global': {'API_KEY': 'x', 'URL': 'https://kimai.test'}}), raising=False)
     monkeypatch.setattr(app_settings, 'LOCAL', LOCAL_GROUPS, raising=False)
 
     with integration_app.app_context():

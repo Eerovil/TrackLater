@@ -12,6 +12,7 @@ The initial version supports fetching clues from
 * Slack
 
 Time entries can be exported to
+* Kimai
 * Toggl
 * Clockify
 
@@ -20,6 +21,7 @@ Issues and projects/clients can be fetched from
 * Taiga
 * GitHub
 * Toggl (projects/clients)
+* Kimai (customers/projects)
 
 # Background
 

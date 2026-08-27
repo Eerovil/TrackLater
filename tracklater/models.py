@@ -66,7 +66,8 @@ class Entry(db.Model):
     title: str = Column(String(255), default="")  # Title to show in timeline
     text: str = Column(Text())  # Text to show in timeline hover
     extra_data: dict = Column(PickleType)  # For custom js
-    # Lazy Toggl sync: the id this entry has in Toggl (None until first pushed).
+    # Toggl-only (see tracklater.billing): the id this entry has in Toggl, None
+    # until first pushed. Rows from every other module leave it NULL.
     toggl_id: Optional[str] = Column(String(50), nullable=True)
     # True when the entry has local changes not yet pushed to Toggl. Only the
     # toggl module ever sets this; every other module's rows stay False so the

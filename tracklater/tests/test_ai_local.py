@@ -26,9 +26,9 @@ def test_populate_local_from_git_commit(client, monkeypatch):
     from tracklater import settings as app_settings
     from tracklater.database import db
 
-    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['gitmodule', 'toggl'])
-    monkeypatch.setattr(app_settings, 'TOGGL', {
-        'global': {'API_KEY': 'x'},
+    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['gitmodule', 'kimai'])
+    monkeypatch.setattr(app_settings, 'KIMAI', {
+        'global': {'API_KEY': 'x', 'URL': 'https://kimai.test'},
         'group1': {
             'NAME': 'First',
             'PROJECTS': {'Development': 'default'},
@@ -58,9 +58,9 @@ def test_persist_replaces_selected_day_without_touching_next_day(client, monkeyp
     from tracklater import settings as app_settings
     from tracklater.database import db
 
-    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['toggl'])
-    monkeypatch.setattr(app_settings, 'TOGGL', {
-        'global': {'API_KEY': 'x'},
+    monkeypatch.setattr(app_settings, 'ENABLED_MODULES', ['kimai'])
+    monkeypatch.setattr(app_settings, 'KIMAI', {
+        'global': {'API_KEY': 'x', 'URL': 'https://kimai.test'},
         'group1': {
             'NAME': 'First',
             'PROJECTS': {'Development': 'default'},
@@ -71,11 +71,11 @@ def test_persist_replaces_selected_day_without_touching_next_day(client, monkeyp
     with app.app_context():
         db.session.query(Entry).delete()
         db.session.add(Entry(
-            module='toggl', id='old-selected-day', start_time=day_start,
+            module='kimai', id='old-selected-day', start_time=day_start,
             end_time=day_start + timedelta(hours=1), is_draft=True,
         ))
         db.session.add(Entry(
-            module='toggl', id='next-day', start_time=next_day_start,
+            module='kimai', id='next-day', start_time=next_day_start,
             end_time=next_day_start + timedelta(hours=1), is_draft=True,
         ))
         db.session.commit()

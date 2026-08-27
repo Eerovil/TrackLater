@@ -248,6 +248,7 @@ class Provider(AbstractProvider):
     def __init__(self, api_key, url):
         self.api_key = api_key
         self.url = (url or '').rstrip('/')
+        self.id_counter = 100  # only used by the test double
 
     def paged(self, endpoint: str, params: Optional[dict] = None) -> List[dict]:
         """Walk a paginated GET collection. Kimai answers 404 once the requested
@@ -290,8 +291,62 @@ class Provider(AbstractProvider):
             logger.exception("%s: %s", response.content[:500], e)
             raise
 
+    # --- test doubles -------------------------------------------------------
+    # Mirrored on settings.KIMAI so project_maps() resolves the same synthetic
+    # ids a real instance would, and writes echo the payload back the way the
+    # API does (offset-bearing timestamps included).
+
+    @staticmethod
+    def _test_fixtures() -> Tuple[List[dict], List[dict]]:
+        kimai_settings = cast(Any, getattr(settings, 'KIMAI', {}))
+        customers: List[dict] = []
+        projects: List[dict] = []
+        for group, data in kimai_settings.items():
+            if group == 'global' or not isinstance(data, dict):
+                continue
+            name = data.get('NAME', group)
+            customer = next((c for c in customers if c['name'] == name), None)
+            if customer is None:
+                customer = {'id': len(customers) + 1, 'name': name}
+                customers.append(customer)
+            for project_name in data.get('PROJECTS', {}):
+                projects.append({
+                    'id': len(projects) + 10,
+                    'name': project_name,
+                    'customer': customer['id'],
+                })
+        return customers, projects
+
     def test_paged(self, endpoint: str, params: Optional[dict] = None) -> List[dict]:
+        customers, projects = self._test_fixtures()
+        if endpoint == 'customers':
+            return customers
+        if endpoint == 'projects':
+            return projects
+        if endpoint == 'activities':
+            return [{'id': 1, 'name': 'Test activity'}]
         return []
 
     def test_request(self, endpoint: str, **kwargs) -> Union[List[dict], dict, str]:
-        return [{}]
+        method = kwargs.get('method', 'POST').lower()
+        if endpoint == 'timesheets' and method == 'post':
+            self.id_counter += 1
+            return self._test_timesheet(kwargs, self.id_counter)
+        if endpoint.startswith('timesheets/') and method == 'patch':
+            return self._test_timesheet(kwargs, endpoint.rsplit('/', 1)[1])
+        if endpoint.startswith('timesheets/') and method == 'delete':
+            return {}
+        return []
+
+    @staticmethod
+    def _test_timesheet(kwargs: dict, entry_id) -> dict:
+        payload = json.loads(kwargs['data'])
+        payload['id'] = entry_id
+        # The API answers with offsets; to_kimai_time strips them on the way out.
+        for key in ('begin', 'end'):
+            if payload.get(key):
+                naive = datetime.strptime(payload[key], KIMAI_TIME_FORMAT)
+                payload[key] = local_timezone().localize(naive).strftime(
+                    KIMAI_TIME_FORMAT + '%z'
+                )
+        return payload

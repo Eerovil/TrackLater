@@ -66,7 +66,7 @@ def _configure_stream(monkeypatch, result):
     from tracklater import settings
 
     target = '2026-07-16'
-    monkeypatch.setattr(settings, 'ENABLED_MODULES', ['gitmodule', 'toggl'])
+    monkeypatch.setattr(settings, 'ENABLED_MODULES', ['gitmodule', 'kimai'])
     monkeypatch.setattr(settings, 'TIMEZONE', 'Europe/Helsinki', raising=False)
     monkeypatch.setattr(codex, '_has_source_data', lambda *_: True)
     monkeypatch.setattr(

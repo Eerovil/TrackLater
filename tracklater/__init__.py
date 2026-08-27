@@ -47,8 +47,13 @@ def create_app(name=__name__):
 
     app.register_blueprint(views.bp)
 
-    from tracklater.sync_worker import start_worker
-    start_worker(app)
+    # The sync worker only serves the toggl module's draft push queue; billing
+    # now writes straight through (tracklater.billing), so skip it unless toggl
+    # is explicitly enabled.
+    from tracklater.timemodules.toggl import MODULE_NAME as TOGGL_MODULE
+    if TOGGL_MODULE in settings.ENABLED_MODULES:
+        from tracklater.sync_worker import start_worker
+        start_worker(app)
 
     return app
 

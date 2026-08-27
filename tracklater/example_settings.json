@@ -4,7 +4,7 @@
     "ENABLED_MODULES": [
         "thyme",
         "gitmodule",
-        "toggl",
+        "kimai",
         "local",
         "taiga",
         "jira",

@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 from tracklater import settings
 from tracklater.database import db
 from tracklater.models import Entry
-from tracklater.timemodules.toggl import MODULE_NAME, Parser, resolve_entry_group_project
+from tracklater.billing import MODULE_NAME, Parser, resolve_entry_group_project
 from tracklater.work_inference import (
     MIN_LOCAL_ENTRY_DURATION,
     MAX_LOCAL_ENTRY_DURATION,
@@ -33,6 +33,33 @@ def _has_source_data(start_date: datetime, end_date: datetime) -> bool:
 def _allowed_local_projects(start_date: datetime, end_date: datetime) -> set:
     parser = Parser(start_date, end_date)
     return {p.pid for p in parser.get_projects()}
+
+
+def _delete_existing_entries(parser, start_date: datetime, end_date: datetime) -> None:
+    """Clear the billing entries already covering this range before refilling it.
+
+    Billing writes go straight to the remote, so "replace" has to reach the
+    remote too -- otherwise a second populate of the same day stacks a duplicate
+    set on top of the first. Each delete is best-effort: one rejected row must
+    not abandon the rest half-deleted.
+    """
+    existing = Entry.query.filter(
+        Entry.module == MODULE_NAME,
+        Entry.start_time >= start_date,
+        Entry.start_time < end_date,
+    ).all()
+    for entry in existing:
+        try:
+            parser.delete_entry(entry.id)
+        except Exception:
+            logger.exception("Could not delete %s entry %s remotely", MODULE_NAME, entry.id)
+    Entry.query.filter(
+        Entry.module == MODULE_NAME,
+        Entry.start_time >= start_date,
+        Entry.start_time < end_date,
+    ).delete()
+    db.session.commit()
+    logger.info("Replaced %s existing %s entries", len(existing), MODULE_NAME)
 
 
 def persist_local_entries(
@@ -68,27 +95,21 @@ def persist_local_entries(
             "No local entries could be inferred (need git commits or long ActivityWatch sessions)."
         )
 
-    if replace_existing:
-        # Only clear unsynced drafts; never wipe entries already pushed to Toggl.
-        Entry.query.filter(
-            Entry.module == MODULE_NAME,
-            Entry.is_draft == True,  # noqa: E712
-            Entry.start_time >= start_date,
-            Entry.start_time < end_date,
-        ).delete()
-        db.session.commit()
-
     parser = Parser(start_date, end_date)
+
+    if replace_existing:
+        _delete_existing_entries(parser, start_date, end_date)
+
     created: List[Entry] = []
     for item in entries_data:
-        draft = Entry(
+        entry = Entry(
             start_time=item["start_time"],
             end_time=item["end_time"],
             title=item["title"],
             project=item["project"],
         )
-        resolve_entry_group_project(draft)
-        saved = parser.create_entry(draft, None)
+        resolve_entry_group_project(entry)
+        saved = parser.create_entry(entry, None)
         saved.module = MODULE_NAME
         db.session.merge(saved)
         created.append(saved)
@@ -106,7 +127,7 @@ def populate_local_entries(
     Create local entries from commit/session inference and persist them.
     """
     if MODULE_NAME not in settings.ENABLED_MODULES:
-        raise ValueError("local module is not enabled")
+        raise ValueError("{} module is not enabled".format(MODULE_NAME))
 
     if not _has_source_data(start_date, end_date):
         raise ValueError(

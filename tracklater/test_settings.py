@@ -1,7 +1,7 @@
 
 TESTING = True
 
-ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'toggl', 'thyme']
+ENABLED_MODULES = ['jira', 'gitmodule', 'slack', 'taiga', 'kimai', 'thyme']
 
 from datetime import datetime, timedelta
 
@@ -13,6 +13,9 @@ OVERRIDE_END = datetime.fromtimestamp(
 ) + timedelta(days=4)
 
 UI_SETTINGS = {
+    'kimai': {
+        'global': '#FF7043'
+    },
     'toggl': {
         'global': '#E01A22'
     },

@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def store_parser_to_database(parser, module_name, start_date, end_date):
-    # Preserve local drafts (toggl module): a fetch refreshes synced entries but
-    # must not clobber unsynced/edited drafts. Non-toggl rows are never drafts.
+    # Drafts are a toggl-only concept (see tracklater.billing); a fetch refreshes
+    # synced rows but must not clobber toggl drafts that were never pushed. Every
+    # other module's rows have is_draft False, so they refresh normally.
     Entry.query.filter(
         Entry.module == module_name, Entry.start_time >= start_date,
         Entry.start_time <= end_date, Entry.is_draft == False  # noqa: E712

@@ -12,8 +12,7 @@ from tracklater import settings
 from tracklater.models import Entry, Issue, Project, ApiCall  # noqa
 from tracklater.timemodules.interfaces import AddEntryMixin, UpdateEntryMixin
 from tracklater.ai_local import populate_local_entries
-from tracklater.sync_worker import enqueue
-from tracklater.timemodules.toggl import MODULE_NAME as TOGGL_MODULE
+from tracklater.billing import BILLING_MODULE
 
 import logging
 logger = logging.getLogger(__name__)
@@ -93,7 +92,7 @@ def fetchdata() -> Any:
         for key in settings.ENABLED_MODULES:
             if not keys or key in keys:
                 data[key] = {}
-                if key == TOGGL_MODULE and key in parser.modules:
+                if key == BILLING_MODULE and key in parser.modules:
                     # Synthetic group:name projects need no API call; ensure they
                     # exist in the DB so the project dropdown works without a parse.
                     for project in parser.modules[key].get_projects():
@@ -141,8 +140,8 @@ def updateentry() -> Any:
         module = data.get('module')
         entry_id = _str(data.get('entry_id', None))
         project = data.get('project_id', None)
-        # The frontend sends "0"/"null"/"" to mean "no project"; normalise so a
-        # projectless draft is correctly skipped (not pushed) by /saveweek.
+        # The frontend sends "0"/"null"/"" to mean "no project"; normalise so an
+        # unassigned entry reaches the module as project=None.
         if project in ("null", "0", "", None):
             project = None
         project_to_group = {project.pid: project.group for project in Project.query.all()}
@@ -341,51 +340,9 @@ def deleteentry() -> Any:
             entry_id=entry_id
         )
 
-        # For toggl, an entry that was previously pushed must also be removed
-        # from Toggl. Capture its toggl_id before deleting the local row.
-        if module == TOGGL_MODULE:
-            existing = Entry.query.filter(
-                Entry.module == TOGGL_MODULE, Entry.id == entry_id
-            ).first()
-            if existing is not None and existing.toggl_id:
-                enqueue(entry_id, 'delete', toggl_id=existing.toggl_id)
-
         # Scope by module: id alone is not the full primary key.
         Entry.query.filter(Entry.module == module, Entry.id == entry_id).delete()
         db.session.commit()
 
         return json.dumps(ret, default=json_serial)
     return None
-
-
-@bp.route('/saveweek', methods=['POST'])
-def saveweek() -> Any:
-    """Queue all toggl drafts in a date range for push to Toggl. Drafts without
-    a project are skipped silently (still drafts). Deduplicated per entry."""
-    if request.method != 'POST':
-        return None
-    data = request.get_json() or {}
-    from_date = parseTimestamp(data.get('from'))
-    to_date = parseTimestamp(data.get('to'))
-    if not from_date or not to_date:
-        return json.dumps(
-            {"error": "from and to timestamps (ms) are required"},
-            default=json_serial,
-        ), 400
-
-    drafts = Entry.query.filter(
-        Entry.module == TOGGL_MODULE,
-        Entry.is_draft == True,  # noqa: E712
-        Entry.start_time >= from_date,
-        Entry.start_time <= to_date,
-    ).all()
-    queued = 0
-    skipped = 0
-    for entry in drafts:
-        if not entry.project:
-            skipped += 1
-            continue
-        action = 'update' if entry.toggl_id else 'create'
-        enqueue(entry.id, action, toggl_id=entry.toggl_id)
-        queued += 1
-    return json.dumps({"queued": queued, "skipped": skipped}, default=json_serial)
