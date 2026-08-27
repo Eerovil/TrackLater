@@ -167,7 +167,18 @@ def _file_hint(text: str, cap: int = 3) -> str:
     return f' [{", ".join(prefixes[:cap])}]' if prefixes else ''
 
 
-def _bridge(sessions: List[tuple], gap=timedelta(minutes=15)) -> List[tuple]:
+# Per-group AW bridging: matches the tracker's idle setting.
+GROUP_BRIDGE = timedelta(minutes=15)
+# Whole-day session bridging, across every group and including commits. Commits
+# are instants, so a tighter gap would shred a continuous stretch of work into
+# one "session" per commit; 30 min is short enough to still expose a real break.
+SESSION_BRIDGE = timedelta(minutes=30)
+# A commit is an instant, but it evidences work either side of it. Giving it a
+# nominal width keeps an isolated commit from showing as a zero-length session.
+COMMIT_SPAN = timedelta(minutes=5)
+
+
+def _bridge(sessions: List[tuple], gap=GROUP_BRIDGE) -> List[tuple]:
     """Merge (start,end) pairs whose gap <= gap; bridged gaps count as work."""
     if not sessions:
         return []
@@ -226,14 +237,39 @@ def gather_signal(start_date: datetime, end_date: datetime) -> Dict[str, str]:
         dow = datetime.strptime(day, '%Y-%m-%d').strftime('%a')
         lines = [f'## {day} ({dow})']
         aw = by_day_aw.get(day, {})
+        commits = by_day_commits.get(day, [])
+        # The union first: per-group spans have holes wherever the work moved to
+        # another client, and reading those holes as breaks is what makes a fill
+        # too conservative. Commits count as activity here -- a stretch of
+        # commits with no window activity is still work.
+        union = [span for spans in aw.values() for span in spans]
+        union += [
+            (local - COMMIT_SPAN, local + COMMIT_SPAN)
+            for local, _, _, _, _ in commits
+        ]
+        work_sessions = _bridge(union, gap=SESSION_BRIDGE)
+        if work_sessions:
+            total = sum((e - s).total_seconds() for s, e in work_sessions) / 3600
+            spans = ', '.join(
+                f'{s.strftime("%H:%M")}-{e.strftime("%H:%M")}' for s, e in work_sessions
+            )
+            lines.append(
+                f'  WORK SESSIONS (all groups + commits, bridged '
+                f'{int(SESSION_BRIDGE.total_seconds() // 60)}min): '
+                f'{total:.1f}h  [{spans}]'
+            )
+            lines.append(
+                '    ^ These are the day\'s real work spans. Bill them contiguously; '
+                'the gaps BETWEEN them are the only real breaks.'
+            )
         if aw:
-            lines.append('  ActivityWatch (bridged 15min, grouped):')
+            lines.append('  ActivityWatch per group (bridged 15min) '
+                         '-- for WHICH client, not whether you were working:')
             for group, sessions in sorted(aw.items()):
                 merged = _bridge(sessions)
                 hours = sum((e - s).total_seconds() for s, e in merged) / 3600
                 spans = ', '.join(f'{s.strftime("%H:%M")}-{e.strftime("%H:%M")}' for s, e in merged)
                 lines.append(f'    {group}: {hours:.1f}h  [{spans}]')
-        commits = by_day_commits.get(day, [])
         if commits:
             lines.append(f'  Git commits ({len(commits)}):')
             for local, group, branch, msg, files in commits:
@@ -297,6 +333,15 @@ TASK: produce the billing entries for {day} by applying every rule in the
 guidebook — sub-project folding, client selection thresholds, branch-slug titles,
 bridged billable hours with the weekday-daytime / evening / weekend rules, and
 blocks snapped to :00/:30.
+- MANDATORY CONTIGUITY: start from the `WORK SESSIONS` line — it is the union of
+  every group's activity plus every commit, already bridged, and it is the day's
+  real shape. Round each session outward to :30 (start down, end up) and TILE it
+  end to end with entries: consecutive entries inside one session MUST touch
+  (one's end == the next's start). Leaving 30 or 60 min unbilled between two
+  entries of the same session is WRONG — that time belongs to one of them.
+  Unbilled time appears ONLY between sessions. Do NOT use one group's
+  ActivityWatch spans to decide whether you were working: their holes are client
+  switches, not breaks. They decide WHICH client a block belongs to, nothing else.
 - MANDATORY SPLIT: first enumerate, per client, the distinct components in the
   day's commits (component = commit-subject prefix like `orders:`/`emails:`/
   `kanban:`, or branch slug, or file-path area). If a client has 2+ components

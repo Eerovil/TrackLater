@@ -128,3 +128,76 @@ def test_empty_single_day_result_preserves_existing_entries(monkeypatch):
     assert events[0]['type'] == 'day_error'
     assert 'preserved' in events[0]['error']
     assert events[-1]['type'] == 'done'
+
+
+@pytest.fixture()
+def app_db_with_signal(monkeypatch, db):
+    """A day whose per-group activity is holey but whose work is continuous."""
+    import os
+    import tempfile
+    from flask import Flask
+    from tracklater import settings
+    from tracklater.models import Entry
+
+    monkeypatch.setattr(settings, 'TIMEZONE', 'Europe/Helsinki', raising=False)
+    app = Flask(__name__)
+    path = os.path.join(tempfile.gettempdir(), 'tracklater_codex_signal.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(path)
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+
+    def utc(h, m, day=12):
+        # Helsinki is UTC+3 in August; the digest buckets by local time.
+        return datetime(2026, 8, day, h - 3, m)
+
+    with app.app_context():
+        db.create_all()
+        db.session.query(Entry).delete()
+        db.session.add_all([
+            Entry(module='activitywatch', id='aw-1', group='outdoor',
+                  start_time=utc(8, 0), end_time=utc(9, 0)),
+            Entry(module='activitywatch', id='aw-2', group='outdoor',
+                  start_time=utc(11, 0), end_time=utc(12, 0)),
+            Entry(module='activitywatch', id='aw-3', group='storm',
+                  start_time=utc(9, 20), end_time=utc(10, 0)),
+            Entry(module='gitmodule', id='c-1', group='outdoor',
+                  start_time=utc(10, 30), text='outdoor [master] - orders: fix'),
+            Entry(module='gitmodule', id='c-2', group='outdoor',
+                  start_time=utc(20, 0, day=13), text='outdoor [master] - late one'),
+        ])
+        db.session.commit()
+        yield codex.gather_signal(
+            datetime(2026, 8, 12), datetime(2026, 8, 13, 23, 59),
+        )
+        db.session.remove()
+        db.drop_all()
+    if os.path.exists(path):
+        os.remove(path)
+
+
+def test_work_sessions_bridge_across_groups_and_commits(app_db_with_signal):
+    """A hole in one group's spans that another group's work fills is a client
+    switch, not a break -- reading it as a break is what under-bills a day."""
+    digests = app_db_with_signal
+    line = next(
+        line for line in digests['2026-08-12'].splitlines()
+        if 'WORK SESSIONS' in line
+    )
+    # outdoor alone reads as 08:00-09:00 + 11:00-12:00 with an hour missing; the
+    # gap holds storm activity and a commit, so the day is one 08:00-12:00 span.
+    assert '08:00-12:00' in line
+    assert '09:00-11:00' not in line
+
+    per_group = [
+        line for line in digests['2026-08-12'].splitlines()
+        if line.strip().startswith('outdoor:')
+    ]
+    assert per_group and '08:00-09:00' in per_group[0]  # per-group spans unchanged
+
+
+def test_isolated_commit_is_not_a_zero_length_session(app_db_with_signal):
+    line = next(
+        line for line in app_db_with_signal['2026-08-13'].splitlines()
+        if 'WORK SESSIONS' in line
+    )
+    assert '19:55-20:05' in line  # nominal width, not 20:00-20:00

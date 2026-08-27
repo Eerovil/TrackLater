@@ -53,7 +53,8 @@ Read these from your tracker config (do not bake names into this file):
 ## 1. Output shape
 
 - A handful of entries/day (often ~3), each a different client/project.
-- Blocks are **contiguous, non-overlapping**, snapped to **:00 / :30**.
+- Blocks are **contiguous, non-overlapping**, snapped to **:00 / :30** — and they
+  **tile each work session end to end** (§2), leaving no gaps inside one.
 - Block length typically 0.5–4 h.
 - **Daily total rounds to a whole/half hour.**
 - Fields: `group`, `project = group:ProjectName`, `title` (epic label, §4),
@@ -61,33 +62,54 @@ Read these from your tracker config (do not bake names into this file):
 
 ---
 
-## 2. Day start & end
+## 2. Work sessions — the day's skeleton
 
-- **First block start = first meaningful activity, rounded to the nearest :30**
-  (usually down). A fixed default start (e.g. the start of your workday) is a fine
-  fallback.
-- Build forward. Mid-day gaps are allowed (drop non-billable lulls), but keep
-  blocks back-to-back unless the log shows a clear multi-hour gap.
-- **Leave real AFK gaps empty — never bridge a billed block across one.** A window
-  with only momentary activity blips (a few sub-minute events totalling a couple of
-  minutes over an hour) *and no commits* is AFK, not work. Close the prior block at
-  the last real activity, start the next at the next real activity, and leave the
-  middle unbilled. (Bridging short pauses for the §2b hours total is fine; placing a
-  block over a dead window is not.)
+**Derive the day's work sessions FIRST, before choosing any client or title.** A
+session is a continuous stretch of work; the blocks you bill are a partition *of*
+those sessions, not a scattering inside them.
+
+**Build sessions from the union of every signal:**
+
+1. Take **all** activity spans from **every group at once** — not one group at a
+   time — plus **every commit** (a commit is work even with no window activity
+   behind it; give it a few minutes of nominal width).
+2. Merge anything separated by **≤ 30 min**. What remains are the day's sessions.
+3. **Round each session outward to :30** — start down, end up. The block should
+   cover the session, not sit inside it.
+
+> **The single biggest source of under-billing is reading one group's activity
+> spans as the day's shape.** Per-group spans are full of holes, because the work
+> moved to another client — the holes are *client switches*, not breaks. A gap in
+> outdoor's spans that storm's activity or anyone's commits fill is not a break.
+> **Per-group spans answer WHICH client, never WHETHER you were working.**
+
+- **Inside a session, blocks are contiguous — back-to-back with no gaps.** If two
+  consecutive blocks would leave 30 or 60 min unbilled between them, that time
+  belongs to one of them; extend a block, don't leave a hole. A session is fully
+  covered from its rounded start to its rounded end.
+- **Between sessions is the only unbilled time.** That is where lunch and real
+  breaks live, and the ≥ 30 min merge gap already found them for you.
+- A fixed default start (e.g. the start of your workday) is a fine fallback when
+  the first session's start is ambiguous.
+- **Genuinely dead windows still stay empty**, but the bar is a real one: no
+  activity in *any* group **and** no commits, for over 30 min. A window with
+  commits in it is never dead, however sparse the window activity.
 
 ---
 
 ## 2b. Billable HOURS model
 
-**Never compute activity time by summing event durations.** Real working time is
-*continuous and bridges short pauses*; it only stops at a real AFK gap. Compute it
-as **bridged sessions**:
+**Never compute activity time by summing event durations**, and never by summing
+one group's spans. Real working time is *continuous and bridges short pauses*; it
+only stops at a real break. It is the total of the **§2 work sessions** — the
+cross-group, commit-inclusive union — so:
 
 1. Use **classified (work-grouped) events only** — never unclassified ones (those
-   include leisure apps and would inflate the total).
-2. Sort by time; **merge any two events whose gap ≤ the AFK threshold** (commonly
-   ~15 min — match your tracker's idle setting). A larger gap is real AFK and closes
-   the session.
+   include leisure apps and would inflate the total). Commits count regardless of
+   which group they land in.
+2. Pool **every group's events together** and sort by time, then merge across the
+   session gap (§2). Merging group-by-group and adding up the results
+   systematically under-counts: it charges you for every client switch.
 3. Working time = sum of the merged session spans (bridged gaps count as work).
 
 Then apply the **billable window** (in local time), which encodes personal billing
