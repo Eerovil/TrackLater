@@ -15,6 +15,9 @@
         "toggl": {
             "global": "#E01A22"
         },
+        "kimai": {
+            "global": "#FF7043"
+        },
         "local": {
             "global": "#5C6BC0"
         },
@@ -50,6 +53,21 @@
             "MODEL": "gpt-5.6-sol",
             "EFFORT": "low",
             "TIMEOUT": 420
+        }
+    },
+
+    "KIMAI": {
+        "global": {
+            "URL": "https://kimai.example.com",
+            "API_KEY": "your-api-token"
+        },
+        "group1": {
+            "NAME": "Customer name as it appears in Kimai",
+            "PROJECTS": {
+                "Development": "default",
+                "Bug fixing": "bug"
+            },
+            "ACTIVITY": 1
         }
     },
 

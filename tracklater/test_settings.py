@@ -107,3 +107,26 @@ THYME = {  # type: ignore
     'global': {
     }
 }
+
+
+KIMAI = {
+    'global': {
+        'URL': 'https://kimai.example.com',
+        'API_KEY': 'test-token',
+    },
+    'group1': {
+        'NAME': 'First Client',
+        'PROJECTS': {
+            'Development': 'default',
+            'Bug fixing': 'bug',
+        },
+        'ACTIVITY': 7,
+    },
+    'group2': {
+        'NAME': 'Second Client',
+        'PROJECTS': {
+            'Development': 'default',
+        },
+    },
+}
+TIMEZONE = 'Europe/Helsinki'
