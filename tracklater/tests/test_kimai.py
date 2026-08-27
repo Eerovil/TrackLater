@@ -165,3 +165,27 @@ def test_missing_end_time_is_rejected(parser):
             title='Unfinished',
             project='group1:Development',
         ), None)
+
+
+def test_entries_carry_group_for_timeline_colouring(parser):
+    """The timeline colours by group; an entry without one renders in the
+    module's global colour, so every write and read must set it."""
+    created = parser.create_entry(
+        Entry(
+            start_time=datetime(2026, 8, 24, 6, 0),
+            end_time=datetime(2026, 8, 24, 7, 0),
+            title='colour me',
+            project='group1:Development',
+        ),
+        None,
+    )
+    assert created.project == 'group1:Development'
+    assert created.group == 'group1'
+
+    updated = parser.update_entry('123', Entry(
+        start_time=datetime(2026, 8, 24, 6, 0),
+        end_time=datetime(2026, 8, 24, 7, 0),
+        title='colour me too',
+        project='group2:Development',
+    ), None)
+    assert updated.group == 'group2'

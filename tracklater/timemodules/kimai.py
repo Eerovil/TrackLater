@@ -145,13 +145,13 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         for entry in data:
             if not entry.get('end'):
                 continue  # still running; it has no duration to place on the timeline
-            entries.append(Entry(
+            entries.append(resolve_entry_group_project(Entry(
                 id=_str(entry['id']),
                 start_time=parse_time(entry['begin']),
                 end_time=parse_time(entry['end']),
                 title=entry.get('description') or '',
                 project=numeric_to_synthetic.get(_str(entry.get('project')) or ''),
-            ))
+            )))
         return entries
 
     def get_projects(self) -> List[Project]:
@@ -214,14 +214,17 @@ class Parser(EntryMixin, AddEntryMixin, UpdateEntryMixin, DeleteEntryMixin, Proj
         }
 
     def _to_entry(self, data: dict) -> Entry:
+        # The group is carried in the synthetic pid ("group:name"); without it
+        # the timeline has nothing to colour an entry by and every row falls
+        # back to the module's global colour.
         _, numeric_to_synthetic = self.project_maps()
-        return Entry(
+        return resolve_entry_group_project(Entry(
             id=_str(data['id']),
             start_time=parse_time(data['begin']),
             end_time=parse_time(data['end']) if data.get('end') else None,
             title=data.get('description') or '',
             project=numeric_to_synthetic.get(_str(data.get('project')) or ''),
-        )
+        ))
 
     def create_entry(self, new_entry: Entry, issue: Optional[Issue]) -> Entry:
         if issue and issue.group:
